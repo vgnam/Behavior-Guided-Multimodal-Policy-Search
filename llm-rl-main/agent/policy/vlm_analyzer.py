@@ -27,7 +27,8 @@ class VLMAnalyzer:
         vlm_model_name: str = "gpt-4o",
         max_retries: int = 3,
         timeout: int = 60,
-        prompts_config_path: str = "agent/policy/templates/vlm_prompts.yaml"
+        prompts_config_path: str = "agent/policy/templates/vlm_prompts.yaml",
+        enable_reasoning: bool = False,
     ):
         """
         Initialize VLM analyzer.
@@ -37,10 +38,12 @@ class VLMAnalyzer:
             max_retries: Maximum number of retry attempts on failure
             timeout: Timeout in seconds for API calls
             prompts_config_path: Path to VLM prompts YAML configuration file
+            enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
         """
         self.vlm_model_name = vlm_model_name
         self.max_retries = max_retries
         self.timeout = timeout
+        self.enable_reasoning = enable_reasoning
         
         # Load prompts from YAML configuration
         self.prompts = self._load_prompts(prompts_config_path)
@@ -177,6 +180,88 @@ class VLMAnalyzer:
         
         return "\n".join(prompt_parts)
     
+    def analyze_single_frame(
+        self,
+        frame: np.ndarray,
+        env_description: str,
+        episode_reward: float,
+        terminated_early: bool = False,
+        timestep: int = -1,
+        state=None,
+        action=None,
+    ) -> tuple[str, float]:
+        """
+        Analyze a single environment frame using VLM.
+        Token-efficient: sends only one image with a concise prompt.
+
+        Args:
+            frame: RGB frame as numpy array
+            env_description: Description of the environment
+            episode_reward: Total episodic reward
+            terminated_early: Whether episode terminated early
+            timestep: Timestep index of this frame
+            state: Agent state at this timestep
+            action: Action taken at this timestep
+
+        Returns:
+            Tuple of (analysis_text, api_time)
+        """
+        config = self.prompts['vlm_analyzer']['single_frame_prompt']
+        termination_status = (
+            config['termination_status']['early'] if terminated_early
+            else config['termination_status']['normal']
+        )
+        prompt = config['task_instruction'].format(
+            env_description=env_description,
+            episode_reward=episode_reward,
+            termination_status=termination_status,
+            timestep=timestep,
+            state=state if state is not None else "N/A",
+            action=action if action is not None else "N/A",
+        )
+
+        img_base64 = self.frame_to_base64(frame)
+        system_text = config['system_instruction']
+        if self.enable_reasoning:
+            system_text = "Think carefully step by step before providing your analysis.\n\n" + system_text
+
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": system_text + "\n\n" + prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_base64}"}}
+            ]
+        }]
+
+        for attempt in range(self.max_retries):
+            try:
+                api_start_time = time.time()
+                response = completion(
+                    model=self.vlm_model_name,
+                    messages=messages,
+                    temperature=0.7,
+                    timeout=self.timeout,
+                )
+                api_time = time.time() - api_start_time
+                analysis = response["choices"][0]["message"]["content"]
+                return analysis, api_time
+            except Exception as e:
+                error_msg = self.prompts['error_messages']['vlm_error_attempt'].format(
+                    attempt=attempt + 1,
+                    max_retries=self.max_retries,
+                    error=e
+                )
+                print(error_msg)
+                if attempt == self.max_retries - 1:
+                    final_error = self.prompts['error_messages']['vlm_analysis_failed'].format(
+                        max_retries=self.max_retries,
+                        error=str(e)
+                    )
+                    return final_error, 0.0
+                time.sleep(5)
+
+        return self.prompts['error_messages']['vlm_analysis_unavailable'], 0.0
+
     def analyze_critical_frames(
         self,
         critical_frames: List[Dict[str, Any]],

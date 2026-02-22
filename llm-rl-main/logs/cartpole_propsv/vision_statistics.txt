@@ -1,0 +1,1 @@
+Iteration, Lambda, VLM Invoked, Phase, Num Critical Frames

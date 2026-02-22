@@ -17,7 +17,6 @@ from agent.policy.linear_policy_no_bias import LinearPolicy as LinearPolicyNoBia
 from agent.policy.linear_policy import LinearPolicy
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias, ReplayBuffer
 from agent.policy.llm_brain_linear_policy import LLMBrain
-from agent.policy.critical_frame_sampler import CriticalFrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
@@ -54,8 +53,8 @@ class LLMNumOptimVisionAgent:
         env_desc_file=None,
         vlm_model_name="gpt-4o",
         decay_horizon=100,
-        reward_change_threshold=0.1,
         enable_vision=True,
+        vlm_enable_reasoning=False,
     ):
         """
         Initialize ProPS-V agent.
@@ -76,8 +75,8 @@ class LLMNumOptimVisionAgent:
             env_desc_file: Environment description text (semantic info)
             vlm_model_name: Name of VLM model for visual analysis
             decay_horizon: T_decay for visual guidance annealing
-            reward_change_threshold: δ threshold for transition states
             enable_vision: Whether to enable vision-guided feedback
+            vlm_enable_reasoning: If True, prepend chain-of-thought instruction to VLM prompt
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -126,14 +125,13 @@ class LLMNumOptimVisionAgent:
         
         # Initialize vision components
         if self.enable_vision:
-            self.critical_frame_sampler = CriticalFrameSampler(
-                reward_change_threshold=reward_change_threshold
-            )
             self.visual_guidance = AdaptiveVisualGuidance(
                 decay_horizon=decay_horizon
             )
             self.vlm_analyzer = VLMAnalyzer(
-                vlm_model_name=vlm_model_name
+                vlm_model_name=vlm_model_name,
+                timeout=120,  # 2 minutes timeout for VLM API calls
+                enable_reasoning=vlm_enable_reasoning,
             )
         
         self.logdir = logdir
@@ -152,16 +150,17 @@ class LLMNumOptimVisionAgent:
         capture_frames=False
     ):
         """
-        Rollout one episode and optionally capture frames for visual analysis.
-        
+        Rollout one episode.
+
         Args:
             world: Environment to interact with
             logging_file: File handle for logging
             record: Whether to record in replay buffer
-            capture_frames: Whether to capture rendered frames
+            capture_frames: If True, capture only the LAST frame for VLM analysis
             
         Returns:
-            Total episodic reward
+            total_reward                          (capture_frames=False)
+            (total_reward, frame_data, terminated) (capture_frames=True)
         """
         state = world.reset()
         state = np.expand_dims(state, axis=0)
@@ -175,7 +174,7 @@ class LLMNumOptimVisionAgent:
         
         done = False
         step_idx = 0
-        trajectory = []
+        last_frame_data = None  # Only keep the last frame
         
         if record:
             self.traj_buffer.start_new_trajectory()
@@ -195,25 +194,20 @@ class LLMNumOptimVisionAgent:
             # Log
             logging_file.write(f"{state.T[0]} | {action[0]} | {reward}\n")
             
-            # Capture frame if requested
-            frame = None
+            # Overwrite last frame at each step (only keep the final one)
             if capture_frames and hasattr(world.env, 'render'):
                 try:
                     frame = world.env.render()
-                    # Ensure frame is numpy array
-                    if not isinstance(frame, np.ndarray):
-                        frame = None
+                    if isinstance(frame, np.ndarray):
+                        last_frame_data = {
+                            'frame': frame,
+                            'state': state.T[0].copy(),
+                            'action': action[0].copy(),
+                            'reward': reward,
+                            'timestep': step_idx,
+                        }
                 except:
-                    frame = None
-            
-            # Store trajectory step
-            if record or capture_frames:
-                trajectory.append({
-                    'state': state.T[0].copy(),
-                    'action': action[0].copy(),
-                    'reward': reward,
-                    'frame': frame
-                })
+                    pass
             
             # Add to replay buffer
             if record:
@@ -231,9 +225,8 @@ class LLMNumOptimVisionAgent:
         # Check if terminated early (failure)
         terminated_early = step_idx < self.max_traj_length
         
-        # Return trajectory info if capturing frames
         if capture_frames:
-            return total_reward, trajectory, terminated_early
+            return total_reward, last_frame_data, terminated_early
         else:
             return total_reward
     
@@ -251,7 +244,7 @@ class LLMNumOptimVisionAgent:
             print(f"Rolling out warmup episode {episode}...")
             
             logging_filename = f"{logdir}/warmup_rollout_{episode}.txt"
-            logging_file = open(logging_filename, "w")
+            logging_file = open(logging_filename, "w", encoding="utf-8")
             
             result = self.rollout_episode(world, logging_file, record=True, capture_frames=False)
             
@@ -331,27 +324,20 @@ class LLMNumOptimVisionAgent:
         # ===== STEP 2: Rollout with current policy and capture frames if needed =====
         print(f"Rolling out episode {self.training_episodes}...")
         logging_filename = f"{logdir}/training_rollout.txt"
-        logging_file = open(logging_filename, "w")
+        logging_file = open(logging_filename, "w", encoding="utf-8")
         
         results = []
-        all_trajectories = []
+        last_frame_data = None
+        terminated_early = False
         
         for idx in range(self.num_evaluation_episodes):
-            if idx == 0:
-                # First episode: record and optionally capture frames
-                if use_vision_this_iter:
-                    result, trajectory, terminated_early = self.rollout_episode(
-                        world, logging_file, record=True, capture_frames=True
-                    )
-                    all_trajectories.append((trajectory, terminated_early))
-                else:
-                    result = self.rollout_episode(
-                        world, logging_file, record=True, capture_frames=False
-                    )
+            if idx == 0 and use_vision_this_iter:
+                result, last_frame_data, terminated_early = self.rollout_episode(
+                    world, logging_file, record=True, capture_frames=True
+                )
             else:
-                # Subsequent episodes: just evaluate
                 result = self.rollout_episode(
-                    world, logging_file, record=False, capture_frames=False
+                    world, logging_file, record=(idx == 0), capture_frames=False
                 )
             results.append(result)
         
@@ -359,67 +345,37 @@ class LLMNumOptimVisionAgent:
         print(f"Results: {results}")
         result = np.mean(results)
         
-        # ===== STEP 3: Perform visual analysis if enabled =====
-        if use_vision_this_iter and len(all_trajectories) > 0:
-            print("\n" + "="*60)
-            print("VISUAL ANALYSIS")
-            print("="*60)
-            
-            trajectory, terminated_early = all_trajectories[0]
-            
-            # Sample critical frames (Eq. 2)
-            critical_indices = self.critical_frame_sampler.sample_critical_frames(
-                trajectory,
+        # ===== STEP 3: Analyze single frame with VLM =====
+        if use_vision_this_iter and last_frame_data is not None and last_frame_data.get('frame') is not None:
+            env_desc = self.env_desc_file if self.env_desc_file else "RL Environment"
+            visual_analysis, vlm_time = self.vlm_analyzer.analyze_single_frame(
+                last_frame_data['frame'],
+                env_desc,
+                result,
                 terminated_early,
-                self.max_traj_length
+                timestep=last_frame_data.get('timestep', -1),
+                state=last_frame_data.get('state'),
+                action=last_frame_data.get('action'),
             )
+            self.vlm_api_time += vlm_time
             
-            critical_frames = self.critical_frame_sampler.get_critical_frames(
-                trajectory,
-                critical_indices
-            )
+            self.visual_analysis_history.append({
+                'iteration': self.training_episodes,
+                'lambda': lambda_t,
+                'reward': result,
+                'analysis': visual_analysis,
+            })
             
-            print(f"Sampled {len(critical_frames)} critical frames:")
-            print(f"  Init: {len(critical_indices['init'])}")
-            print(f"  Term: {len(critical_indices['term'])}")
-            print(f"  Fail: {len(critical_indices['fail'])}")
-            print(f"  Trans: {len(critical_indices['trans'])}")
-            
-            # Perform VLM analysis
-            if len(critical_frames) > 0 and any(f.get('frame') is not None for f in critical_frames):
-                print("\nQuerying VLM for visual analysis...")
-                visual_analysis, vlm_time = self.vlm_analyzer.analyze_critical_frames(
-                    critical_frames,
-                    self.env_desc_file if self.env_desc_file else "RL Environment",
-                    result,
-                    terminated_early
-                )
-                self.vlm_api_time += vlm_time
-                
-                print("\nVLM Analysis:")
-                print("-" * 60)
-                print(visual_analysis)
-                print("-" * 60)
-                
-                # Store visual analysis in history (Ψ)
-                self.visual_analysis_history.append({
-                    'iteration': self.training_episodes,
-                    'lambda': lambda_t,
-                    'reward': result,
-                    'analysis': visual_analysis,
-                    'num_critical_frames': len(critical_frames)
-                })
-                
-                # Save visual analysis to file
-                visual_log_file = f"{logdir}/visual_analysis.txt"
-                with open(visual_log_file, "a") as vf:
-                    vf.write(f"\n{'='*60}\n")
-                    vf.write(f"Iteration {self.training_episodes} (λ={lambda_t:.3f})\n")
-                    vf.write(f"{'='*60}\n")
-                    vf.write(visual_analysis + "\n")
-            else:
-                print("No frames captured for visual analysis")
-                visual_analysis = None
+            visual_log_file = f"{logdir}/vlm_output.txt"
+            with open(visual_log_file, "a", encoding="utf-8") as vf:
+                vf.write(f"\n{'='*60}\n")
+                vf.write(f"Iteration {self.training_episodes} (lambda={lambda_t:.3f}, reward={result:.2f})\n")
+                vf.write(f"Timestep: {last_frame_data.get('timestep', -1)}, Terminated early: {terminated_early}\n")
+                vf.write(f"{'='*60}\n")
+                vf.write(visual_analysis + "\n")
+            print(f"VLM analysis saved to {visual_log_file}")
+        else:
+            pass  # visual_analysis stays None
         
         # ===== STEP 4: Update policy using LLM with vision context =====
         print("\nUpdating policy with LLM...")
@@ -447,12 +403,12 @@ class LLMNumOptimVisionAgent:
         
         # Log parameters
         logging_q_filename = f"{logdir}/parameters.txt"
-        with open(logging_q_filename, "w") as logging_q_file:
+        with open(logging_q_filename, "w", encoding="utf-8") as logging_q_file:
             logging_q_file.write(str(self.policy))
         
         # Log reasoning
         q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        with open(q_reasoning_filename, "w") as q_reasoning_file:
+        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
             q_reasoning_file.write(reasoning)
         
         print("Policy updated!")
@@ -488,7 +444,7 @@ class LLMNumOptimVisionAgent:
         results = []
         for idx in range(self.num_evaluation_episodes):
             logging_filename = f"{logdir}/evaluation_rollout_{idx}.txt"
-            logging_file = open(logging_filename, "w")
+            logging_file = open(logging_filename, "w", encoding="utf-8")
             result = self.rollout_episode(world, logging_file, record=False, capture_frames=False)
             results.append(result)
             logging_file.close()

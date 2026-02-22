@@ -181,11 +181,22 @@ Use your judgment to balance visual analysis and numerical rewards:
             Dictionary with schedule statistics
         """
         lambda_current = self.get_lambda()
+        
+        # Calculate iterations until pure numerical (λ < 0.01, i.e., 1% threshold)
+        threshold = 0.01
+        if lambda_current > threshold:
+            iterations_until_pure = int(np.ceil(
+                np.log(threshold / self.max_lambda) / np.log(0.995)
+            )) - self.current_iteration
+        else:
+            iterations_until_pure = 0
+        
         return {
             'current_iteration': self.current_iteration,
             'current_lambda': lambda_current,
             'decay_rate': 0.995,
             'phase': self.get_guidance_phase_description(),
             'vlm_invocation_probability': lambda_current,
+            'iterations_until_pure_numerical': max(0, iterations_until_pure),
             'expected_vlm_calls_next_100': sum(0.995 ** (self.current_iteration + i) for i in range(100))
         }

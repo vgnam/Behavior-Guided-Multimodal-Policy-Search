@@ -20,7 +20,7 @@ search_step_size: 1.0
 env_desc_file: env_descriptions/cartpole.j2
 
 # ProPS-V specific parameters
-vlm_model_name: gpt-4o  # Vision-Language Model for visual analysis
-decay_horizon: 100  # T_decay: iterations to phase out visual guidance (Eq. 3)
-reward_change_threshold: 0.1  # δ: threshold for transition states (Eq. 2)
-enable_vision: true  # Enable vision-guided feedback
+vlm_model_name: gpt-4o
+decay_horizon: 100
+enable_vision: true
+vlm_enable_reasoning: false

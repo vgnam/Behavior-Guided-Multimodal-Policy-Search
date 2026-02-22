@@ -11,7 +11,7 @@ from runner import llm_num_optim_vision_runner
 from envs import nim, pong
 import os
 
-os.environ["MISTRAL_API_KEY"] = "wjLJ7TRAHtcDNv2VrIgE7dreAhVyYQBD"
+os.environ["NVIDIA_NIM_API_KEY"] = "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"
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(

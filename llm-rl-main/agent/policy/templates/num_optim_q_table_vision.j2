@@ -3,57 +3,49 @@ You are a global RL policy optimizer, helping me find the optimal Q-table policy
 # Environment:
 {% include env_description %}
 
-# Vision-Guided Q-Table Optimization:
-This is a **ProPS-V for Q-Learning** (Vision-Guided Prompted Policy Search for discrete state spaces). You will receive:
-1. Numerical feedback: Q-values and their episodic rewards
-2. Visual feedback: analysis of critical frames from policy rollouts (when available)
+# Vision-Guided Q-Table Optimization (ProPS-V):
+You will receive:
+1. **Numerical feedback**: a history of past Q-value vectors and their episodic rewards.
+2. **Visual feedback** (when available): a short diagnosis from a Vision-Language Model that observed the agent's final state in the episode.
 
-{# Visual Guidance Instruction from vlm_prompts.yaml - injected at runtime #}
 {{ guidance_phase }}
 
 # Regarding the Q-table parameters **params**:
-**params** is an array of {{ rank }} Q-values (one for each state-action pair).
-**params** values can range from -∞ to +∞ (though typically in a reasonable range for your environment).
-The Q-table represents a discrete policy mapping states to actions.
-f(params) is the episodic reward achieved by following this Q-table policy.
+**params** is an array of {{ rank }} Q-values (one per state-action pair).
+The Q-table defines a discrete policy: in each state, take the action with the highest Q-value.
+f(params) is the episodic reward achieved under this policy.
 
 # State-Action Space:
 - Actions: {{ actions }}
-- Number of state-action pairs: {{ rank }}
-Each params[i] represents the Q-value for a specific (state, action) pair.
+- Number of Q-values: {{ rank }}
 
-# Here's how we'll interact:
-1. I will first provide MAX_STEPS (400) along with training examples showing past Q-tables and their rewards.
-2. {% if has_visual %}I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations in the discrete state space.{% else %}Visual analysis is not available for this iteration - focus on numerical Q-value patterns.{% endif %}
-3. You will provide your response in the following exact format:
-    * Line 1: new Q-values in format 'params[0]: <value>, params[1]: <value>, ..., params[{{ rank - 1 }}]: <value>', aiming to maximize f(params).
-    * Line 2: detailed explanation of why you chose these Q-values, **explicitly referencing{% if has_visual %} BOTH visual observations AND{% endif %} numerical Q-value trends**.
-4. I will then provide the function's value f(params) at that point, and the current iteration.
-5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+# Interaction protocol:
+1. I provide past examples (Q-values → reward) plus, if available, the VLM's observation of the latest episode's final frame.
+2. {% if has_visual %}I provide the VLM observation of the latest rollout's final frame.{% else %}No visual observation is available this iteration — rely on numerical Q-value trends.{% endif %}
+3. You respond with:
+    * Line 1: `params[0]: , params[1]: , ..., params[{{ rank - 1 }}]: ` — new Q-values to maximise f(params).
+    * Line 2: your reasoning, **explicitly referencing{% if has_visual %} the VLM observation AND{% endif %} Q-value trends**.
+4. I return f(params) and the current iteration.
+5. Repeat until 400 iterations.
 
-# Remember:
-1. **Do not propose previously seen Q-values.**
-2. **The global optimum should be around {{ optimum }}.** If you are below that, this is a local optimum. Explore different Q-value assignments.
-3. **Q-values encode state-action preferences**: Higher Q-value → more likely to select that action in that state.
+# Rules:
+1. **Never repeat a previously seen Q-value vector.**
+2. **Global optimum ≈ {{ optimum }}.** If current best is below that, explore different Q-value assignments.
+3. Higher Q-value → action is preferred in that state; lower → discouraged.
 {% if has_visual %}
-4. **Visual Guidance (λ={{ lambda_t }})**:
-   - When visual analysis is provided, use it to identify which states/actions lead to failures
-   - Adjust Q-values to discourage bad state-action pairs (lower Q-values) and encourage good ones (higher Q-values)
-   - Visual evidence of getting stuck, loops, or suboptimal paths should guide Q-value adjustments
+4. **Visual Guidance (λ={{ lambda_t }})**: The VLM observation is based on direct visual evidence of the agent's behaviour. Use it to identify which states/actions led to failure (lower their Q-values) or success (raise theirs).
 {% else %}
-4. **Numerical Focus**: Visual guidance is disabled for this iteration. Rely solely on Q-value effectiveness and reward history.
+4. **Numerical focus**: No visual observation this iteration. Rely on Q-value effectiveness and reward history.
 {% endif %}
 
 # Past Q-Tables and Rewards:
 {{ episode_reward_buffer_string }}
 
 {% if has_visual %}
-# Visual Analysis of Latest Rollout:
+# VLM Observation of Latest Rollout:
 {{ visual_analysis }}
 
-**Important**: The visual analysis describes the actual trajectory through states taken by the agent. Use this to understand which state-action pairs led to success or failure. Adjust Q-values accordingly:
-- Increase Q-values for state-action pairs that led to good outcomes
-- Decrease Q-values for state-action pairs that led to failures or dead ends
+**Note**: The VLM saw the final frame and the terminal state/action. Treat this as direct evidence of what the policy did wrong or right. Adjust Q-values accordingly.
 {% endif %}
 
-Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+Now you are at iteration {{step_number}} out of 400. Respond in the exact format described above. No extra text.

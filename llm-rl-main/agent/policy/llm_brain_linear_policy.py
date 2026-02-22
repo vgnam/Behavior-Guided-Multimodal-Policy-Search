@@ -1,6 +1,7 @@
 import time
+import os
 from jinja2 import Template
-from litellm import completion
+from openai import OpenAI
 
 
 class LLMBrain:
@@ -9,17 +10,32 @@ class LLMBrain:
         llm_si_template: Template,
         llm_output_conversion_template: Template,
         llm_model_name: str,
+        api_key: str = None,
+        base_url: str = None,
     ):
         self.llm_si_template = llm_si_template
         self.llm_output_conversion_template = llm_output_conversion_template
-        self.llm_model_name = llm_model_name
         self.llm_conversation = []
+
+        # Strip litellm provider prefix (e.g. "nvidia_nim/meta/..." → "meta/...")
+        if "/" in llm_model_name and llm_model_name.split("/")[0] in ("nvidia_nim", "openai", "anthropic"):
+            provider, self.llm_model_name = llm_model_name.split("/", 1)
+            # Auto-configure NVIDIA NIM endpoint
+            if provider == "nvidia_nim" and base_url is None:
+                base_url = "https://integrate.api.nvidia.com/v1"
+                api_key = api_key or os.environ.get("NVIDIA_NIM_API_KEY") or os.environ.get("NVIDIA_API_KEY")
+        else:
+            self.llm_model_name = llm_model_name
+
+        self._client = OpenAI(
+            api_key=api_key or os.environ.get("OPENAI_API_KEY", ""),
+            base_url=base_url,
+        )
 
     def reset_llm_conversation(self):
         self.llm_conversation = []
 
     def add_llm_conversation(self, text: str, role: str):
-        """Always use OpenAI-style messages. LiteLLM handles conversion internally."""
         if role not in ("user", "assistant", "system"):
             raise ValueError(f"Invalid role: {role}. Use 'user', 'assistant', or 'system'.")
         self.llm_conversation.append({"role": role, "content": text})
@@ -27,14 +43,13 @@ class LLMBrain:
     def query_llm(self, temperature=1.0):
         for attempt in range(5):
             try:
-                response = completion(
+                response = self._client.chat.completions.create(
                     model=self.llm_model_name,
                     messages=self.llm_conversation,
                     temperature=temperature,
                     timeout=60,
                 )
-                text = response["choices"][0]["message"]["content"]
-                # Append assistant response to conversation history
+                text = response.choices[0].message.content
                 self.add_llm_conversation(text, "assistant")
                 return text
             except Exception as e:
@@ -47,7 +62,7 @@ class LLMBrain:
     def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
         for attempt in range(3):
             try:
-                response = completion(
+                response = self._client.chat.completions.create(
                     model=self.llm_model_name,
                     messages=self.llm_conversation,
                     n=num_responses,
