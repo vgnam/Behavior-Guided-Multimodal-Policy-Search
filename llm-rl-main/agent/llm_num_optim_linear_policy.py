@@ -151,7 +151,7 @@ class LLMNumOptimAgent:
         logging_q_file.write(str(self.policy))
         logging_q_file.close()
         q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        q_reasoning_file = open(q_reasoning_filename, "w")
+        q_reasoning_file = open(q_reasoning_filename, "w", encoding="utf-8")
         q_reasoning_file.write(reasoning)
         q_reasoning_file.close()
         print("Policy updated!")

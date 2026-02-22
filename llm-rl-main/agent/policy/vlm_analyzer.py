@@ -1,81 +1,63 @@
 """
 Vision-Language Model Analyzer for ProPS-V
 
-This module provides VLM integration for analyzing critical frames
+This module provides VLM integration for analyzing episode frames
 and generating diagnostic feedback for policy optimization.
+Prompts are loaded from Jinja2 .j2 template files.
+Uses NVIDIA API (meta/llama-4-scout-17b-16e-instruct) via requests.
 """
 
 import base64
 import io
 import time
-import yaml
 import os
+import requests
+import json
 from typing import List, Dict, Any, Optional
 import numpy as np
 from PIL import Image
-from litellm import completion
+from jinja2 import Environment, FileSystemLoader
 
 
 class VLMAnalyzer:
     """
     Analyzes episode frames using Vision-Language Models to provide
     visual diagnostic feedback for policy search.
+    Uses NVIDIA API (meta/llama-4-scout-17b-16e-instruct) via requests.
     """
     
+    # NVIDIA API Configuration
+    NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+    NVIDIA_API_KEY = "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"
+    NVIDIA_MODEL = "mistralai/mistral-large-3-675b-instruct-2512"
+
     def __init__(
         self,
-        vlm_model_name: str = "gpt-4o",
+        vlm_model_name: str = "meta/llama-4-scout-17b-16e-instruct",
         max_retries: int = 3,
         timeout: int = 60,
-        prompts_config_path: str = "agent/policy/templates/vlm_prompts.yaml"
+        template_dir: str = "agent/policy/templates",
+        enable_reasoning: bool = False,
     ):
         """
-        Initialize VLM analyzer.
-        
+        Initialize VLM analyzer using NVIDIA API.
+
         Args:
-            vlm_model_name: Name of the VLM model to use
+            vlm_model_name: Name of the VLM model (ignored, uses NVIDIA model)
             max_retries: Maximum number of retry attempts on failure
             timeout: Timeout in seconds for API calls
-            prompts_config_path: Path to VLM prompts YAML configuration file
+            template_dir: Directory containing Jinja2 .j2 prompt templates
+            enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
         """
-        self.vlm_model_name = vlm_model_name
+        self.vlm_model_name = self.NVIDIA_MODEL  # Always use NVIDIA model
         self.max_retries = max_retries
         self.timeout = timeout
-        
-        # Load prompts from YAML configuration
-        self.prompts = self._load_prompts(prompts_config_path)
-    
-    def _load_prompts(self, config_path: str) -> dict:
-        """
-        Load VLM prompts from YAML configuration file.
-        
-        Args:
-            config_path: Path to YAML config file
-            
-        Returns:
-            Dictionary of prompt templates
-        """
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
-            return config
-        except FileNotFoundError:
-            print(f"[WARNING] VLM prompts config not found at {config_path}, using defaults")
-            return self._get_default_prompts()
-        except Exception as e:
-            print(f"[WARNING] Error loading VLM prompts config: {e}, using defaults")
-            return self._get_default_prompts()
-    
-    def _get_default_prompts(self) -> dict:
-        """Return default prompts if YAML file is not available."""
-        return {
-            'vlm_analyzer': {
-                'analysis_prompt': {
-                    'system_instruction': "You are an expert RL policy analyst.",
-                    'task_instruction': "Analyze the frames and provide insights."
-                }
-            }
-        }
+        self.enable_reasoning = enable_reasoning
+
+        self._jinja_env = Environment(
+            loader=FileSystemLoader(template_dir),
+            keep_trailing_newline=True,
+        )
         
     def frame_to_base64(self, frame: np.ndarray) -> str:
         """
@@ -101,161 +83,200 @@ class VLMAnalyzer:
         
         return img_base64
     
-    def create_analysis_prompt(
-        self,
-        critical_frames: List[Dict[str, Any]],
-        env_description: str,
-        episode_reward: float,
-        terminated_early: bool
-    ) -> str:
+    def _call_nvidia_api(self, messages: List[Dict[str, Any]], temperature: float = 0.7) -> tuple[str, float]:
         """
-        Create the text prompt for VLM analysis.
+        Call NVIDIA API with streaming support.
         
         Args:
-            critical_frames: List of critical frame dictionaries
+            messages: List of message dicts with role and content
+            temperature: Temperature for sampling
+            
+        Returns:
+            Tuple of (response_text, api_time)
+        """
+        headers = {
+            "Authorization": f"Bearer {self.NVIDIA_API_KEY}",
+            "Accept": "text/event-stream"
+        }
+        
+        payload = {
+            "model": self.NVIDIA_MODEL,
+            "messages": messages,
+            "max_tokens": 512,
+            "temperature": temperature,
+            "top_p": 1.0,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": True
+        }
+        
+        api_start_time = time.time()
+        response_text = ""
+        
+        try:
+            response = requests.post(
+                self.NVIDIA_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=self.timeout,
+                stream=True
+            )
+            response.raise_for_status()
+            
+            # Parse streaming response
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode("utf-8") if isinstance(line, bytes) else line
+                    if line_str.startswith("data: "):
+                        data_str = line_str[6:]  # Remove "data: " prefix
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                if "content" in delta:
+                                    response_text += delta["content"]
+                        except json.JSONDecodeError:
+                            continue
+            
+            api_time = time.time() - api_start_time
+            return response_text.strip(), api_time
+            
+        except requests.exceptions.RequestException as e:
+            api_time = time.time() - api_start_time
+            raise e
+    
+    def _call_nvidia_api_simple(self, messages: List[Dict[str, Any]], temperature: float = 0.7) -> tuple[str, float]:
+        """
+        Call NVIDIA API without streaming (fallback).
+        
+        Args:
+            messages: List of message dicts with role and content
+            temperature: Temperature for sampling
+            
+        Returns:
+            Tuple of (response_text, api_time)
+        """
+        headers = {
+            "Authorization": f"Bearer {self.NVIDIA_API_KEY}",
+            "Accept": "application/json"
+        }
+        
+        payload = {
+            "model": self.NVIDIA_MODEL,
+            "messages": messages,
+            "max_tokens": 512,
+            "temperature": temperature,
+            "top_p": 1.0,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False
+        }
+        
+        api_start_time = time.time()
+        
+        try:
+            response = requests.post(
+                self.NVIDIA_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            response_text = data["choices"][0]["message"]["content"]
+            api_time = time.time() - api_start_time
+            
+            return response_text, api_time
+            
+        except requests.exceptions.RequestException as e:
+            api_time = time.time() - api_start_time
+            raise e
+
+    def create_analysis_prompt(
+        self,
+        frames: List[Dict[str, Any]],
+        env_description: str,
+        episode_reward: float,
+        terminated_early: bool,
+    ) -> str:
+        """
+        Render the VLM analysis prompt from vlm_analysis_prompt.j2.
+
+        Args:
+            frames: List of sampled frame dicts
             env_description: Description of the environment
             episode_reward: Total episodic reward
             terminated_early: Whether episode terminated early (failure)
-            
+
         Returns:
-            Prompt string for VLM
+            Rendered prompt string
         """
-        config = self.prompts['vlm_analyzer']['analysis_prompt']
-        
-        # Build prompt from YAML templates
-        prompt_parts = []
-        
-        # System instruction
-        prompt_parts.append(config['system_instruction'])
-        prompt_parts.append("")
-        
-        # Environment section
-        prompt_parts.append(config['environment_section'].format(
-            env_description=env_description
-        ))
-        prompt_parts.append("")
-        
-        # Episode summary section
-        termination_status = (
-            config['termination_status']['early'] if terminated_early 
-            else config['termination_status']['normal']
-        )
-        prompt_parts.append(config['episode_summary_section'].format(
+        template = self._jinja_env.get_template("vlm_analysis_prompt.j2")
+        return template.render(
+            env_description=env_description,
             episode_reward=episode_reward,
-            termination_status=termination_status,
-            num_frames=len(critical_frames)
-        ))
-        prompt_parts.append("")
-        
-        # Critical frames intro
-        prompt_parts.append(config['critical_frames_intro'].format(
-            num_frames=len(critical_frames)
-        ))
-        prompt_parts.append("")
-        
-        # Task instruction
-        prompt_parts.append(config['task_instruction'])
-        
-        # Add frame-specific context
-        for i, frame_data in enumerate(critical_frames):
-            frame_info = config['frame_info_template'].format(
-                frame_num=i+1,
-                timestep=frame_data['timestep'],
-                frame_type=frame_data['frame_type'],
-                reward=frame_data['reward']
-            )
-            prompt_parts.append(frame_info)
-            
-            if 'state' in frame_data:
-                prompt_parts.append(config['frame_state_template'].format(
-                    state=frame_data['state']
-                ))
-            if 'action' in frame_data:
-                prompt_parts.append(config['frame_action_template'].format(
-                    action=frame_data['action']
-                ))
-        
-        return "\n".join(prompt_parts)
+            terminated_early=terminated_early,
+            frames=frames,
+        )
     
-    def analyze_critical_frames(
+    def analyze_frames(
         self,
-        critical_frames: List[Dict[str, Any]],
+        frames: List[Dict[str, Any]],
         env_description: str,
         episode_reward: float,
         terminated_early: bool = False
     ) -> tuple[str, float]:
         """
-        Analyze critical frames using VLM and return diagnostic feedback.
-        
+        Analyze sampled episode frames using VLM and return diagnostic feedback.
+
         Args:
-            critical_frames: List of critical frame dictionaries with 'frame' key
+            frames: List of frame dicts with 'frame' key
             env_description: Description of the environment
-            episode_reward: Total episodic reward  
+            episode_reward: Total episodic reward
             terminated_early: Whether episode terminated early
-            
+
         Returns:
             Tuple of (analysis_text, api_time)
         """
         # Create text prompt
         text_prompt = self.create_analysis_prompt(
-            critical_frames,
+            frames,
             env_description,
             episode_reward,
             terminated_early
         )
-        
-        # Prepare messages with images
-        messages = [{"role": "user", "content": []}]
-        
-        # Add text
-        messages[0]["content"].append({
-            "type": "text",
-            "text": text_prompt
-        })
-        
-        # Add images
-        for i, frame_data in enumerate(critical_frames):
+
+        # Build message with inline images (NVIDIA format)
+        image_tags = ""
+        for frame_data in frames:
             if 'frame' in frame_data and frame_data['frame'] is not None:
                 img_base64 = self.frame_to_base64(frame_data['frame'])
-                messages[0]["content"].append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{img_base64}"
-                    }
-                })
+                image_tags += f'<img src="data:image/png;base64,{img_base64}" /> '
+
+        messages = [
+            {
+                "role": "user",
+                "content": f"{text_prompt} {image_tags}"
+            }
+        ]
         
         # Query VLM
         for attempt in range(self.max_retries):
             try:
-                api_start_time = time.time()
-                response = completion(
-                    model=self.vlm_model_name,
-                    messages=messages,
-                    temperature=0.7,
-                    timeout=self.timeout,
-                )
-                api_time = time.time() - api_start_time
-                
-                analysis = response["choices"][0]["message"]["content"]
+                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
                 return analysis, api_time
                 
             except Exception as e:
-                error_msg = self.prompts['error_messages']['vlm_error_attempt'].format(
-                    attempt=attempt + 1,
-                    max_retries=self.max_retries,
-                    error=e
-                )
-                print(error_msg)
+                print(f"[VLM ERROR] Attempt {attempt + 1}/{self.max_retries}: {e}")
                 if attempt == self.max_retries - 1:
-                    final_error = self.prompts['error_messages']['vlm_analysis_failed'].format(
-                        max_retries=self.max_retries,
-                        error=str(e)
-                    )
-                    return final_error, 0.0
+                    return f"VLM analysis failed after {self.max_retries} attempts: {e}", 0.0
                 time.sleep(5)
-        
-        return self.prompts['error_messages']['vlm_analysis_unavailable'], 0.0
-    
+
+        return "VLM analysis unavailable", 0.0
+
     def analyze_trajectory_comparison(
         self,
         frames_current: List[Dict[str, Any]],
@@ -266,84 +287,57 @@ class VLMAnalyzer:
     ) -> tuple[str, float]:
         """
         Compare two trajectories visually to identify improvements or regressions.
-        
+
         Args:
-            frames_current: Critical frames from current trajectory
-            frames_previous: Critical frames from previous trajectory
+            frames_current: Sampled frames from current trajectory
+            frames_previous: Sampled frames from previous trajectory
             reward_current: Reward of current trajectory
             reward_previous: Reward of previous trajectory
             env_description: Environment description
-            
+
         Returns:
             Tuple of (comparative_analysis, api_time)
         """
-        config = self.prompts['vlm_analyzer']['trajectory_comparison_prompt']
-        
-        # Build prompt from YAML templates
-        prompt_parts = []
-        prompt_parts.append(config['system_instruction'])
-        prompt_parts.append("")
-        prompt_parts.append(config['environment_section'].format(
-            env_description=env_description
-        ))
-        prompt_parts.append("")
-        prompt_parts.append(config['comparison_section'].format(
+        template = self._jinja_env.get_template("vlm_comparison_prompt.j2")
+        prompt = template.render(
+            env_description=env_description,
             reward_previous=reward_previous,
             reward_current=reward_current,
-            reward_change=reward_current - reward_previous
-        ))
-        prompt_parts.append("")
-        prompt_parts.append(config['task_instruction'])
+        )
         
-        prompt = "\n".join(prompt_parts)
-        
-        messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        
-        # Add previous frames
-        for frame_data in frames_previous[:3]:  # Limit to 3 frames
+        # Build message with inline images (NVIDIA format)
+        prev_images = ""
+        for frame_data in frames_previous[:3]:
             if 'frame' in frame_data and frame_data['frame'] is not None:
                 img_base64 = self.frame_to_base64(frame_data['frame'])
-                messages[0]["content"].append({
-                    "type": "image_url",  
-                    "image_url": {"url": f"data:image/png;base64,{img_base64}"}
-                })
-        
-        # Add current frames
-        for frame_data in frames_current[:3]:  # Limit to 3 frames
+                prev_images += f'<img src="data:image/png;base64,{img_base64}" /> '
+
+        curr_images = ""
+        for frame_data in frames_current[:3]:
             if 'frame' in frame_data and frame_data['frame'] is not None:
                 img_base64 = self.frame_to_base64(frame_data['frame'])
-                messages[0]["content"].append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/png;base64,{img_base64}"}
-                })
+                curr_images += f'<img src="data:image/png;base64,{img_base64}" /> '
+
+        messages = [
+            {
+                "role": "user",
+                "content": f"{prompt}\n\nPrevious trajectory frames: {prev_images}\nCurrent trajectory frames: {curr_images}"
+            }
+        ]
         
         # Query VLM
+        num_prev = sum(1 for f in frames_previous[:3] if f.get('frame') is not None)
+        num_curr = sum(1 for f in frames_current[:3] if f.get('frame') is not None)
+        print(f"[VLM] Comparison call | prev_frames={num_prev} reward={reward_previous:.2f} | curr_frames={num_curr} reward={reward_current:.2f}")
         for attempt in range(self.max_retries):
             try:
-                api_start_time = time.time()
-                response = completion(
-                    model=self.vlm_model_name,
-                    messages=messages,
-                    temperature=0.7,
-                    timeout=self.timeout,
-                )
-                api_time = time.time() - api_start_time
-                
-                analysis = response["choices"][0]["message"]["content"]
+                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
+                print(f"[VLM] Comparison response received in {api_time:.1f}s ({len(analysis)} chars)")
                 return analysis, api_time
-                
             except Exception as e:
-                error_msg = self.prompts['error_messages']['vlm_comparison_error'].format(
-                    attempt=attempt + 1,
-                    max_retries=self.max_retries,
-                    error=e
-                )
-                print(error_msg)
+                print(f"[VLM ERROR] Comparison attempt {attempt + 1}/{self.max_retries}: {e}")
                 if attempt == self.max_retries - 1:
-                    final_error = self.prompts['error_messages']['comparison_failed'].format(
-                        error=str(e)
-                    )
-                    return final_error, 0.0
+                    return f"VLM comparison failed after {self.max_retries} attempts: {e}", 0.0
                 time.sleep(5)
-        
-        return self.prompts['error_messages']['comparison_unavailable'], 0.0
+
+        return "VLM comparison unavailable", 0.0

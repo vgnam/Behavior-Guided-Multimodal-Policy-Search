@@ -7,7 +7,7 @@ This module implements the ProPS-V agent that combines:
 3. Vision-guided feedback (new in ProPS-V)
 
 Key components:
-- Critical frame sampling (Eq. 2)
+- Periodic frame sampling
 - Adaptive visual guidance annealing (Eq. 3)
 - VLM-based visual analysis
 - Integrated update rule (Eq. 4)
@@ -17,7 +17,7 @@ from agent.policy.linear_policy_no_bias import LinearPolicy as LinearPolicyNoBia
 from agent.policy.linear_policy import LinearPolicy
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias, ReplayBuffer
 from agent.policy.llm_brain_linear_policy import LLMBrain
-from agent.policy.critical_frame_sampler import CriticalFrameSampler
+from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
@@ -32,7 +32,7 @@ class LLMNumOptimVisionAgent:
     ProPS-V Agent: Vision-Guided Prompted Policy Search
     
     Implements the full ProPS-V algorithm with:
-    - Critical frame sampling
+    - Periodic frame sampling
     - Adaptive visual guidance schedule  
     - VLM analysis integration
     """
@@ -54,7 +54,7 @@ class LLMNumOptimVisionAgent:
         env_desc_file=None,
         vlm_model_name="gpt-4o",
         decay_horizon=100,
-        reward_change_threshold=0.1,
+        frame_sample_period=50,
         enable_vision=True,
     ):
         """
@@ -76,7 +76,7 @@ class LLMNumOptimVisionAgent:
             env_desc_file: Environment description text (semantic info)
             vlm_model_name: Name of VLM model for visual analysis
             decay_horizon: T_decay for visual guidance annealing
-            reward_change_threshold: δ threshold for transition states
+            frame_sample_period: P — capture a VLM frame every P timesteps
             enable_vision: Whether to enable vision-guided feedback
         """
         self.start_time = time.process_time()
@@ -126,8 +126,8 @@ class LLMNumOptimVisionAgent:
         
         # Initialize vision components
         if self.enable_vision:
-            self.critical_frame_sampler = CriticalFrameSampler(
-                reward_change_threshold=reward_change_threshold
+            self.frame_sampler = FrameSampler(
+                sample_period=frame_sample_period
             )
             self.visual_guidance = AdaptiveVisualGuidance(
                 decay_horizon=decay_horizon
@@ -268,7 +268,7 @@ class LLMNumOptimVisionAgent:
         Train policy for one iteration using ProPS-V.
         
         Implements:
-        - Critical frame sampling (Eq. 2)
+        - Periodic frame sampling
         - Adaptive visual guidance (Eq. 3)
         - Vision-guided parameter update (Eq. 4)
         
@@ -361,62 +361,43 @@ class LLMNumOptimVisionAgent:
         
         # ===== STEP 3: Perform visual analysis if enabled =====
         if use_vision_this_iter and len(all_trajectories) > 0:
-            print("\n" + "="*60)
-            print("VISUAL ANALYSIS")
-            print("="*60)
-            
             trajectory, terminated_early = all_trajectories[0]
             
-            # Sample critical frames (Eq. 2)
-            critical_indices = self.critical_frame_sampler.sample_critical_frames(
+            # Sample frames periodically
+            frame_indices = self.frame_sampler.sample_frames(
                 trajectory,
                 terminated_early,
                 self.max_traj_length
             )
-            
-            critical_frames = self.critical_frame_sampler.get_critical_frames(
+
+            frames = self.frame_sampler.get_frames(
                 trajectory,
-                critical_indices
+                frame_indices
             )
-            
-            print(f"Sampled {len(critical_frames)} critical frames:")
-            print(f"  Init: {len(critical_indices['init'])}")
-            print(f"  Term: {len(critical_indices['term'])}")
-            print(f"  Fail: {len(critical_indices['fail'])}")
-            print(f"  Trans: {len(critical_indices['trans'])}")
-            
+
             # Perform VLM analysis
-            if len(critical_frames) > 0 and any(f.get('frame') is not None for f in critical_frames):
-                print("\nQuerying VLM for visual analysis...")
-                visual_analysis, vlm_time = self.vlm_analyzer.analyze_critical_frames(
-                    critical_frames,
+            if len(frames) > 0 and any(f.get('frame') is not None for f in frames):
+                visual_analysis, vlm_time = self.vlm_analyzer.analyze_frames(
+                    frames,
                     self.env_desc_file if self.env_desc_file else "RL Environment",
                     result,
                     terminated_early
                 )
                 self.vlm_api_time += vlm_time
-                
-                print("\nVLM Analysis:")
-                print("-" * 60)
-                print(visual_analysis)
-                print("-" * 60)
-                
+
                 # Store visual analysis in history (Ψ)
                 self.visual_analysis_history.append({
                     'iteration': self.training_episodes,
                     'lambda': lambda_t,
                     'reward': result,
                     'analysis': visual_analysis,
-                    'num_critical_frames': len(critical_frames)
+                    'num_frames': len(frames)
                 })
-                
+
                 # Save visual analysis to file
-                visual_log_file = f"{logdir}/visual_analysis.txt"
-                with open(visual_log_file, "a") as vf:
-                    vf.write(f"\n{'='*60}\n")
-                    vf.write(f"Iteration {self.training_episodes} (λ={lambda_t:.3f})\n")
-                    vf.write(f"{'='*60}\n")
-                    vf.write(visual_analysis + "\n")
+                visual_log_file = f"{logdir}/vlm_analysis.txt"
+                with open(visual_log_file, "w", encoding="utf-8") as vf:
+                    vf.write(visual_analysis)
             else:
                 print("No frames captured for visual analysis")
                 visual_analysis = None
@@ -452,7 +433,7 @@ class LLMNumOptimVisionAgent:
         
         # Log reasoning
         q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        with open(q_reasoning_filename, "w") as q_reasoning_file:
+        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
             q_reasoning_file.write(reasoning)
         
         print("Policy updated!")

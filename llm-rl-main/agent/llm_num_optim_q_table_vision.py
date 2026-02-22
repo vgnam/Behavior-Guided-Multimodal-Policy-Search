@@ -4,7 +4,7 @@ ProPS-V Q-Table Agent: Vision-Guided Q-Learning
 This module implements ProPS-V for discrete state spaces (Q-tables).
 Key components:
 - Q-table policy for discrete state-action spaces
-- Critical frame sampling
+- Periodic frame sampling
 - Adaptive visual guidance annealing
 - VLM-based visual analysis
 """
@@ -12,7 +12,7 @@ Key components:
 from agent.policy.q_table import QTable
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias
 from agent.policy.llm_brain_linear_policy import LLMBrain
-from agent.policy.critical_frame_sampler import CriticalFrameSampler
+from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
@@ -27,7 +27,7 @@ class LLMNumOptimQTableVisionAgent:
     ProPS-V Agent for Q-table learning with vision-guided optimization.
     
     Extends standard Q-learning with:
-    - Critical frame sampling
+    - Periodic frame sampling
     - Adaptive visual guidance schedule
     - VLM analysis for policy improvement
     """
@@ -47,7 +47,7 @@ class LLMNumOptimQTableVisionAgent:
         env_desc_file=None,
         vlm_model_name="gpt-4o",
         decay_horizon=100,
-        reward_change_threshold=0.1,
+        frame_sample_period=50,
         enable_vision=True,
         env_kwargs=None,
     ):
@@ -68,9 +68,8 @@ class LLMNumOptimQTableVisionAgent:
             env_desc_file: Path to environment description file
             vlm_model_name: Name of VLM model for visual analysis
             decay_horizon: T_decay for visual guidance annealing
-            reward_change_threshold: δ for transition state detection
-            enable_vision: Whether to enable vision-guided features
-            env_kwargs: Additional environment kwargs
+            frame_sample_period: P — capture a VLM frame every P timesteps
+            enable_vision: Whether to enable vision-guided features            env_kwargs: Additional environment kwargs
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -103,8 +102,8 @@ class LLMNumOptimQTableVisionAgent:
         
         # Initialize vision components if enabled
         if self.enable_vision:
-            self.critical_frame_sampler = CriticalFrameSampler(
-                reward_change_threshold=reward_change_threshold
+            self.frame_sampler = FrameSampler(
+                sample_period=frame_sample_period
             )
             self.visual_guidance = AdaptiveVisualGuidance(
                 decay_horizon=decay_horizon
@@ -264,44 +263,44 @@ class LLMNumOptimQTableVisionAgent:
                         world, logging_file, record=False, capture_frames=True
                     )
                 
-                # ===== STEP 3: Sample critical frames and analyze with VLM =====
-                critical_indices = self.critical_frame_sampler.sample_critical_frames(
+                # ===== STEP 3: Sample frames and analyze with VLM =====
+                frame_indices = self.frame_sampler.sample_frames(
                     trajectory, terminated_early, self.max_traj_length
                 )
-                critical_frames = self.critical_frame_sampler.get_critical_frames(
-                    trajectory, critical_indices
+                frames = self.frame_sampler.get_frames(
+                    trajectory, frame_indices
                 )
-                
-                print(f"Sampled {len(critical_frames)} critical frames")
-                
-                if len(critical_frames) > 0:
+
+                if len(frames) > 0:
                     # Load environment description
                     if self.env_desc_file:
                         with open(f"agent/policy/templates/{self.env_desc_file}", "r") as f:
                             env_description = f.read()
                     else:
                         env_description = "Q-learning environment"
-                    
+
                     # Analyze with VLM
-                    print("Analyzing critical frames with VLM...")
-                    visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_critical_frames(
-                        critical_frames,
+                    visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_frames(
+                        frames,
                         env_description,
                         episode_reward,
                         terminated_early
                     )
                     self.api_call_time += vlm_api_time
-                    
+
                     # Store visual analysis
                     self.visual_analysis_history.append({
                         'iteration': self.training_episodes,
                         'lambda_t': lambda_t,
-                        'num_critical_frames': len(critical_frames),
+                        'num_frames': len(frames),
                         'analysis': visual_analysis,
                         'reward': episode_reward
                     })
-                    
-                    print(f"VLM Analysis:\n{visual_analysis}\n")
+
+                    # Save to file
+                    visual_log_file = f"{logdir}/vlm_analysis.txt"
+                    with open(visual_log_file, "w", encoding="utf-8") as vf:
+                        vf.write(visual_analysis)
                 else:
                     print("No frames captured for visual analysis")
                     visual_analysis = None
@@ -348,7 +347,7 @@ class LLMNumOptimQTableVisionAgent:
             logging_q_file.write(str(self.q_table.mapping))
         
         q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        with open(q_reasoning_filename, "w") as q_reasoning_file:
+        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
             q_reasoning_file.write(reasoning)
         
         print("Q-table policy updated!")

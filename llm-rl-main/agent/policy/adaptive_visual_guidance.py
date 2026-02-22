@@ -10,7 +10,7 @@ rather than phase-specific instructions.
 """
 
 import numpy as np
-import yaml
+from jinja2 import Environment, FileSystemLoader
 
 
 class AdaptiveVisualGuidance:
@@ -29,62 +29,27 @@ class AdaptiveVisualGuidance:
     """
     
     def __init__(
-        self, 
+        self,
         decay_horizon: int = 100,
         min_lambda: float = 0.0,
         max_lambda: float = 1.0,
-        prompts_config_path: str = "agent/policy/templates/vlm_prompts.yaml"
+        template_dir: str = "agent/policy/templates"
     ):
         """
         Initialize adaptive visual guidance scheduler.
-        
+
         Args:
             decay_horizon: [DEPRECATED] Not used with exponential decay. Kept for backward compatibility.
             min_lambda: Minimum lambda value (floor for exponential decay)
             max_lambda: Maximum lambda value (initial value at t=0)
-            prompts_config_path: Path to VLM prompts YAML configuration file
+            template_dir: Directory containing Jinja2 prompt templates
         """
         self.T_decay = decay_horizon  # Kept for backward compatibility
         self.min_lambda = min_lambda
         self.max_lambda = max_lambda
         self.current_iteration = 0
-        
-        # Load prompts from YAML configuration
-        self.prompts = self._load_prompts(prompts_config_path)
-    
-    def _load_prompts(self, config_path: str) -> dict:
-        """
-        Load VLM prompts from YAML configuration file.
-        
-        Args:
-            config_path: Path to YAML config file
-            
-        Returns:
-            Dictionary of prompt templates
-        """
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
-            return config
-        except FileNotFoundError:
-            print(f"[WARNING] VLM prompts config not found at {config_path}, using defaults")
-            return self._get_default_prompts()
-        except Exception as e:
-            print(f"[WARNING] Error loading VLM prompts config: {e}, using defaults")
-            return self._get_default_prompts()
-    
-    def _get_default_prompts(self) -> dict:
-        """Return default prompts if YAML file is not available."""
-        return {
-            'adaptive_visual_guidance': {
-                'phases': {
-                    'early_exploration': {'threshold': 0.75},
-                    'balanced_guidance': {'threshold': 0.5},
-                    'numerical_emphasis': {'threshold': 0.25},
-                    'fine_tuning': {'threshold': 0.0}
-                }
-            }
-        }
+
+        self._jinja_env = Environment(loader=FileSystemLoader(template_dir))
         
     def get_lambda(self, iteration: int = None) -> float:
         """
@@ -152,18 +117,8 @@ class AdaptiveVisualGuidance:
         Returns:
             Instruction string to include in LLM prompt
         """
-        try:
-            return self.prompts['visual_guidance']['instruction']
-        except KeyError:
-            # Fallback if YAML structure changed
-            return """
-# How to Use Visual and Numerical Feedback:
-
-Use your judgment to balance visual analysis and numerical rewards:
-- Prioritize visual feedback when behavior is clearly wrong
-- Prioritize numerical feedback when behavior is good and you're optimizing
-- Use both sources synergistically when available
-"""
+        template = self._jinja_env.get_template("vlm_guidance_instruction.j2")
+        return template.render()
     
     def increment_iteration(self):
         """Increment the internal iteration counter."""

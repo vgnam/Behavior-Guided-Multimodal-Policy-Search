@@ -39,7 +39,7 @@ def run_training_loop(
     env_desc_file=None,
     vlm_model_name="gpt-4o",
     decay_horizon=100,
-    reward_change_threshold=0.1,
+    frame_sample_period=50,
     enable_vision=True,
 ):
     """
@@ -70,7 +70,7 @@ def run_training_loop(
         env_desc_file: Path to environment description file
         vlm_model_name: Vision-Language Model for visual analysis
         decay_horizon: T_decay for visual guidance annealing (Eq. 3)
-        reward_change_threshold: δ threshold for transition states (Eq. 2)
+        frame_sample_period: P — capture a frame every P timesteps for VLM
         enable_vision: Whether to enable vision-guided feedback
     """
     assert task in ["cont_state_llm_num_optim_vision"], \
@@ -83,12 +83,8 @@ def run_training_loop(
         llm_output_conversion_template_name
     )
     
-    # Load environment description if provided
-    if env_desc_file and os.path.exists(env_desc_file):
-        with open(env_desc_file, 'r') as f:
-            env_description = f.read()
-    else:
-        env_description = "RL Environment"
+    # env_desc_file is passed as a template name for {% include %} in j2 templates
+    env_description = env_desc_file if env_desc_file else None
     
     # Initialize world
     # For vision, we need rgb_array rendering to capture frames
@@ -119,7 +115,7 @@ def run_training_loop(
         env_desc_file=env_description,
         vlm_model_name=vlm_model_name,
         decay_horizon=decay_horizon,
-        reward_change_threshold=reward_change_threshold,
+        frame_sample_period=frame_sample_period,
         enable_vision=enable_vision,
     )
     
@@ -128,7 +124,7 @@ def run_training_loop(
     print(f'  VLM: {vlm_model_name}')
     print(f'  Vision Enabled: {enable_vision}')
     print(f'  Decay Horizon: {decay_horizon}')
-    print(f'  Reward Change Threshold: {reward_change_threshold}')
+    print(f'  Frame Sample Period: {frame_sample_period}')
     
     # Warmup phase
     if not warmup_dir:
@@ -142,13 +138,13 @@ def run_training_loop(
         agent.replay_buffer.load(warmup_dir)
     
     # Training loop
-    overall_log_file = open(f"{logdir}/overall_log.txt", "w")
+    overall_log_file = open(f"{logdir}/overall_log.txt", "w", encoding="utf-8")
     overall_log_file.write("Iteration, CPU Time, API Time (LLM+VLM), Total Episodes, Total Steps, Total Reward\n")
     overall_log_file.flush()
     
     # Create vision statistics log
-    vision_stats_file = open(f"{logdir}/vision_statistics.txt", "w")
-    vision_stats_file.write("Iteration, Lambda, VLM Invoked, Phase, Num Critical Frames\n")
+    vision_stats_file = open(f"{logdir}/vision_statistics.txt", "w", encoding="utf-8")
+    vision_stats_file.write("Iteration, Lambda, VLM Invoked, Phase, Num Frames\n")
     vision_stats_file.flush()
     
     print('\n' + '='*70)
@@ -165,15 +161,7 @@ def run_training_loop(
         print(f"Creating log directory: {curr_episode_dir}")
         os.makedirs(curr_episode_dir, exist_ok=True)
         
-        # Log current guidance statistics
-        if enable_vision:
-            stats = agent.visual_guidance.get_statistics()
-            print(f"\nGuidance Statistics:")
-            print(f"  λ_t = {stats['current_lambda']:.3f}")
-            print(f"  Phase: {stats['phase']}")
-            print(f"  VLM Invocation Prob: {stats['vlm_invocation_probability']:.1%}")
-            print(f"  Iterations until pure numerical: {stats['iterations_until_pure_numerical']}")
-        
+
         # Train policy (with retries)
         for trial_idx in range(5):
             try:
@@ -196,7 +184,7 @@ def run_training_loop(
                         agent.visual_analysis_history[-1]['iteration'] == episode
                     )
                     num_frames = (
-                        agent.visual_analysis_history[-1]['num_critical_frames'] 
+                        agent.visual_analysis_history[-1]['num_frames'] 
                         if vlm_invoked else 0
                     )
                     
