@@ -1,0 +1,10 @@
+venv/
+.idea/
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+gym_navigation.egg-info/
+*.log
+coverage/
+scripts/
+.coverage

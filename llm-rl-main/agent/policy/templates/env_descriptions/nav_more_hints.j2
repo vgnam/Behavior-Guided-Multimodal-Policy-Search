@@ -1,0 +1,13 @@
+The navigation environment is a 2D world where the agent (robot) is navigating in a track. The goal of this environment is to navigate the robot on a track without crashing into the walls. Initially, the robot is placed randomly into the track but at a safe distance from the walls. The state space consists of 5 range measurements, demonstrating 5 wall distance measurements from left to right. The action space consists of 3 actions (0: move_forward, 1: rotate_left, 2: rotate_right). Furthermore, both actions and states have additive white Gaussian noise. The robot is rewarded +5 for moving forward and -0.5 for rotating. If the robot crashes into the wall it is penalized with -200.  
+The policy is a linear policy with 18 parameters and works as follows: 
+action = argmax([sensor[0], sensor[1], sensor[2], sensor[3], sensor[4]] dot W + B)
+where 
+W = [[params[0], params[1]], [params[2]]
+     [params[3]], [params[4], params[5]]
+     [params[6]], [params[7], params[8]]
+     [params[9]], [params[10], params[11]]
+     [params[12]], [params[13], params[14]]
+     ]
+B = [params[15], params[16], params[17]]
+
+The optimal policy would follow the following behavior: When the robot is far from the wall, the agent should move forward (take action[0]). When the robot is close to the wall, the agent should rotate. If the sensors on the left show a shorter distance, the agent should rotate right (take action[2]). If the sensors on the right show a shorter distance, the agent should rotate left (take action[1]).

@@ -1,0 +1,11 @@
+The environment is the cliff walking environment.
+The cliff walking environment is a 2D 4x12 grid world (4 rows, 12 columns) where the agent can move up, right, down, or left.
+The state is between 0 and 47, representing the which grid the agent is in. The top row is 0 to 11, so on so forth. The agent always starts at the bottom left grid (3, 0) (state 36).
+The environment is slippery, which means when the agent takes an action, it will go to 3 directions with equal probability.
+- When the agent takes action 0, it will left, up, or right with equal probability.
+- When the agent takes action 1, it will move up, right, or down with equal probability.
+- When the agent takes action 2, it will move right, down, or left with equal probability.
+- When the agent takes action 3, it will move down, left, or up with equal probability.
+The goal is to reach the state 47 (the right bottom grid).
+The policy is a function that maps the state to the action to take. The policy is represented by an array of 48 numbers. The value of params[i] represents the action to take when the state is i. The value of params[0] means which action to take when the agent is on the top left grid (0, 0). The value of params[1] means which action to take when the agent is on the top second grid (0, 1). So on and so forth.
+The reward is -1 for each step. The goal is to reach the state 47 (the right bottom grid) while avoiding the cliff (the bottom row). The cliff is between state 37 and state 46. If the agent falls into the cliff, it will get a reward of -100. The agent should pick actions that do not have possibility of falling into the cliff.

@@ -1,0 +1,54 @@
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+{% include env_description %}
+
+# Vision-Guided Optimization:
+This is a **ProPS-V** (Vision-Guided Prompted Policy Search) session. You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: analysis of critical frames from policy rollouts (when available)
+
+{# Visual Guidance Instruction from vlm_prompts.yaml - injected at runtime #}
+{{ guidance_phase }}
+
+# Regarding the parameters **params**:
+**params** is an array of {{ rank }} float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. {% if has_visual %}I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.{% else %}Visual analysis is not available for this iteration - focus on numerical patterns.{% endif %}
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[{{ rank - 1 }}]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing{% if has_visual %} BOTH visual observations AND{% endif %} numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around {{ optimum }}.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of {{ step_size }}**.
+{% if has_visual %}
+4. **Visual Guidance (λ={{ lambda_t }})**:
+   - When visual analysis is provided, use it to identify failure modes and adjust parameters accordingly.
+   - Visual evidence of instability, collisions, or poor trajectories should strongly influence your parameter choices.
+   - Balance visual insights with numerical reward trends based on the current phase.
+{% else %}
+4. **Numerical Focus**: Visual guidance is disabled for this iteration. Rely solely on reward trends and parameter history.
+{% endif %}
+
+
+# Past Parameters and Rewards:
+{{ episode_reward_buffer_string }}
+
+{% if has_visual %}
+# Visual Analysis of Latest Rollout:
+{{ visual_analysis }}
+
+**Important**: The visual analysis above describes what the policy actually DID during the rollout. Use this information to understand failure modes, spatial relationships, and behavioral patterns that numerical rewards alone cannot capture. Adjust parameters to address visually-observed issues.
+{% endif %}
+
+Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

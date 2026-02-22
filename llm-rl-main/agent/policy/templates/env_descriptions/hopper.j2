@@ -1,0 +1,40 @@
+The hopper is a two-dimensional one-legged figure consisting of four main body parts - the torso at the top, the thigh in the middle, the leg at the bottom, and a single foot on which the entire body rests. The goal is to make hops that move in the forward (right) direction by applying torque to the three hinges that connect the four body parts. 
+The state is a vector of 11 elements, representing the following:
+- state[0] z-coordinate of the torso (height of hopper) (-inf to inf m)
+- state[1] angle of the torso (-inf to inf rad)
+- state[2] angle of the thigh joint (-inf to inf rad)
+- state[3] angle of the leg joint (-inf to inf rad)
+- state[4] angle of the foot joint (-inf to inf rad)
+- state[5] velocity of the x-coordinate of the torso (-inf to inf m/s)
+- state[6] velocity of the z-coordinate (height) of the torso (-inf to inf m/s)
+- state[7] angular velocity of the angle of the torso (-inf to inf rad/s) 
+- state[8] angular velocity of the thigh hinge (-inf to inf rad/s)
+- state[9] angular velocity of the leg hinge (-inf to inf rad/s)
+- state[10] angular velocity of the foot hinge (-inf to inf rad/s) 
+The action space is a vector of 3 float numbers, representing the torques applied at the hinge joints (-1 to 1 N).
+- action[0] Torque applied on the thigh rotor (-1 to 1 N)
+- action[1] Torque applied on the leg rotor (-1 to 1 N)
+- action[2] Torque applied on the foot rotor (-1 to 1 N)
+The policy is a linear policy with 5 parameters and works as follows: 
+action = argmax(state @ W + B), where
+state = [state[0], state[1], state[2], state[3], state[4], state[5], state[6], state[7], state[8], state[9], state[10]]
+W = [[params[0], params[1], params[2]],
+    [params[3], params[4], params[5]],
+    [params[6], params[7], params[8]],
+    [params[9], params[10], params[11]],
+    [params[12], params[13], params[14]],
+    [params[15], params[16], params[17]],
+    [params[18], params[19], params[20]],
+    [params[21], params[22], params[23]],
+    [params[24], params[25], params[26]],
+    [params[27], params[28], params[29]],
+    [params[30], params[31], params[32]]]
+b = [params[33], params[34], params[35]]
+The goal is to try to move forward without falling over.
+reward = healthy_reward + forward_reward - ctrl_cost
+where
+- healthy_reward = 1.0 if the Hopper is healthy (see below)
+- forward_reward = torso's x-velocity
+- ctrl_cost = 1e-3 * ||action||^2
+The Hopper is considered healthy if the torso's z-coordinate is higher than 0.7 m and the torso's angle is between -0.2 and 0.2 radians (does not fall over).
+The episode ends when the Hopper is not healthy.

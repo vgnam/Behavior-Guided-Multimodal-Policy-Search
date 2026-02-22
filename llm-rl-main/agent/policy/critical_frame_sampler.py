@@ -1,0 +1,156 @@
+"""
+Critical Frame Sampling for Vision-Guided Policy Search
+
+This module implements the critical frame sampling strategy defined in Eq. (2):
+I_crit = I_init ∪ I_term ∪ I_fail ∪ I_trans
+
+Where:
+- I_init: Initial state frame  
+- I_term: Terminal state frame
+- I_fail: Failure states (early termination)
+- I_trans: Transition states with significant reward changes
+"""
+
+import numpy as np
+from typing import List, Dict, Tuple, Any
+
+
+class CriticalFrameSampler:
+    """
+    Samples critical frames from a trajectory based on pivotal moments.
+    """
+    
+    def __init__(self, reward_change_threshold: float = 0.1):
+        """
+        Initialize the critical frame sampler.
+        
+        Args:
+            reward_change_threshold: Threshold δ for detecting transition states
+                                    where |ΔR_t| > δ
+        """
+        self.delta = reward_change_threshold
+        
+    def sample_critical_frames(
+        self, 
+        trajectory: List[Dict[str, Any]],
+        terminated: bool,
+        max_traj_length: int
+    ) -> Dict[str, List[int]]:
+        """
+        Extract critical frame indices from a trajectory.
+        
+        Args:
+            trajectory: List of trajectory steps, each containing:
+                       {'state': np.array, 'action': np.array, 'reward': float, 'frame': np.array}
+            terminated: Whether episode terminated early (failure)
+            max_traj_length: Maximum trajectory length
+            
+        Returns:
+            Dictionary with keys: 'init', 'term', 'fail', 'trans', 'all'
+            Each containing list of frame indices
+        """
+        if len(trajectory) == 0:
+            return {'init': [], 'term': [], 'fail': [], 'trans': [], 'all': []}
+        
+        critical_indices = {
+            'init': [],
+            'term': [],
+            'fail': [],
+            'trans': [],
+            'all': []
+        }
+        
+        # I_init: Initial state (t=0)
+        critical_indices['init'].append(0)
+        
+        # I_term: Terminal state (last frame)
+        terminal_idx = len(trajectory) - 1
+        critical_indices['term'].append(terminal_idx)
+        
+        # I_fail: Failure states (early termination)
+        if terminated and terminal_idx < max_traj_length - 1:
+            critical_indices['fail'].append(terminal_idx)
+        
+        # I_trans: Transition states with significant reward changes
+        # Compute |ΔR_t| = |R_t - R_{t-1}|
+        for t in range(1, len(trajectory)):
+            reward_t = trajectory[t]['reward']
+            reward_t_prev = trajectory[t-1]['reward']
+            delta_reward = abs(reward_t - reward_t_prev)
+            
+            if delta_reward > self.delta:
+                critical_indices['trans'].append(t)
+        
+        # Combine all critical indices (union) and sort
+        all_critical = set()
+        for key in ['init', 'term', 'fail', 'trans']:
+            all_critical.update(critical_indices[key])
+        
+        critical_indices['all'] = sorted(list(all_critical))
+        
+        return critical_indices
+    
+    def get_critical_frames(
+        self,
+        trajectory: List[Dict[str, Any]],
+        critical_indices: Dict[str, List[int]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract the actual frames at critical indices.
+        
+        Args:
+            trajectory: Full trajectory
+            critical_indices: Dictionary of critical frame indices
+            
+        Returns:
+            List of frames at critical timesteps, each containing:
+            {'timestep': int, 'state': np.array, 'action': np.array, 
+             'reward': float, 'frame': np.array, 'frame_type': str}
+        """
+        critical_frames = []
+        
+        for idx in critical_indices['all']:
+            if idx < len(trajectory):
+                frame_data = trajectory[idx].copy()
+                frame_data['timestep'] = idx
+                
+                # Determine frame type(s)
+                frame_types = []
+                if idx in critical_indices['init']:
+                    frame_types.append('init')
+                if idx in critical_indices['term']:
+                    frame_types.append('term')
+                if idx in critical_indices['fail']:
+                    frame_types.append('fail')
+                if idx in critical_indices['trans']:
+                    frame_types.append('trans')
+                
+                frame_data['frame_type'] = ','.join(frame_types)
+                critical_frames.append(frame_data)
+        
+        return critical_frames
+    
+    def format_critical_frames_summary(
+        self,
+        critical_frames: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Generate a text summary of critical frames for logging.
+        
+        Args:
+            critical_frames: List of critical frame dictionaries
+            
+        Returns:
+            Formatted string summary
+        """
+        summary = f"Critical Frames Summary (Total: {len(critical_frames)})\n"
+        summary += "=" * 60 + "\n"
+        
+        for frame in critical_frames:
+            summary += f"Timestep {frame['timestep']} [{frame['frame_type']}]:\n"
+            summary += f"  State: {frame['state']}\n"
+            summary += f"  Action: {frame['action']}\n"
+            summary += f"  Reward: {frame['reward']:.4f}\n"
+            summary += "-" * 60 + "\n"
+        
+        return summary
