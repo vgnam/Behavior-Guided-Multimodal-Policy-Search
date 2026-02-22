@@ -22,6 +22,5 @@ env_desc_file: env_descriptions/mountaincarcontinuous.j2
 # ProPS-V specific parameters
 vlm_model_name: gpt-4o
 decay_horizon: 100
+reward_change_threshold: 0.5
 enable_vision: true
-vlm_enable_reasoning: false
-

@@ -6,48 +6,6 @@
 # ========================================
 
 vlm_analyzer:
-  # Single frame analysis prompt (lightweight, token-efficient)
-  single_frame_prompt:
-    system_instruction: |
-      You are an expert reinforcement learning analyst specializing in visual diagnosis of policy failures.
-      Your role is to observe a screenshot from a policy rollout and provide precise, actionable feedback
-      that will help a numerical optimizer adjust the policy parameters.
-    
-    task_instruction: |
-      ## Environment Description
-      {env_description}
-
-      ## Episode Data
-      - Episode reward: {episode_reward:.2f}
-      - Early termination (failure): {termination_status}
-      - Final timestep: {timestep}
-      - Final state vector: {state}
-      - Last action taken: {action}
-
-      ## Screenshot
-      The image above shows the environment at the FINAL timestep of this episode.
-
-      ## Your Task
-      Analyze the screenshot together with the episode data and answer the following three questions.
-      Be specific and concise — your output will be passed directly to a policy optimizer.
-
-      **1. Visual Observation**
-      Describe exactly what you see in the image: the agent's position, pose/angle, and any signs of instability or good control. Reference specific state values if relevant.
-
-      **2. Failure / Success Analysis**
-      If the episode terminated early (failure), explain the root cause based on what you see.
-      If it completed successfully, identify what the policy did well that should be preserved.
-
-      **3. Parameter Adjustment Recommendation**
-      Given the state and the policy definition above, suggest which input signals (e.g., position, velocity, angle, angular velocity) appear to be under-weighted or over-weighted, and in which direction the corresponding policy parameters should change.
-      Be as specific as possible (e.g., "the response to pole angular velocity seems too weak — increase its weight").
-
-      Keep your total response to 5–8 sentences. Do not include generic advice.
-    
-    termination_status:
-      early: "YES — episode ended early (failure)"
-      normal: "NO — episode ran to completion"
-
   # Main analysis prompt for critical frames
   analysis_prompt:
     system_instruction: "You are an expert RL policy analyst. Analyze the following critical frames from a policy rollout and provide diagnostic feedback."

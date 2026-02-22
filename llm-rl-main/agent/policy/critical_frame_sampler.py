@@ -20,27 +20,15 @@ class CriticalFrameSampler:
     Samples critical frames from a trajectory based on pivotal moments.
     """
     
-    def __init__(
-        self, 
-        reward_change_threshold: float = 0.1,
-        sample_strategy: str = 'reward',
-        num_middle_frames: int = 2
-    ):
+    def __init__(self, reward_change_threshold: float = 0.1):
         """
         Initialize the critical frame sampler.
         
         Args:
             reward_change_threshold: Threshold δ for detecting transition states
                                     where |ΔR_t| > δ
-            sample_strategy: Strategy for sampling transition states
-                           - 'reward': Based on reward changes (default)
-                           - 'uniform': Uniformly sample middle frames
-                           - 'state': Based on state changes (for constant-reward envs)
-            num_middle_frames: Number of middle frames to sample for uniform/state strategy
         """
         self.delta = reward_change_threshold
-        self.sample_strategy = sample_strategy
-        self.num_middle_frames = num_middle_frames
         
     def sample_critical_frames(
         self, 
@@ -83,50 +71,15 @@ class CriticalFrameSampler:
         if terminated and terminal_idx < max_traj_length - 1:
             critical_indices['fail'].append(terminal_idx)
         
-        # I_trans: Transition states - strategy depends on configuration
-        if self.sample_strategy == 'reward':
-            # Original: Based on reward changes |ΔR_t| > δ
-            for t in range(1, len(trajectory)):
-                reward_t = trajectory[t]['reward']
-                reward_t_prev = trajectory[t-1]['reward']
-                delta_reward = abs(reward_t - reward_t_prev)
-                
-                if delta_reward > self.delta:
-                    critical_indices['trans'].append(t)
-                    
-        elif self.sample_strategy == 'uniform':
-            # For constant-reward environments (e.g., CartPole)
-            # Sample uniformly spaced middle frames
-            if len(trajectory) > 2:
-                middle_indices = np.linspace(
-                    1, 
-                    len(trajectory) - 2, 
-                    min(self.num_middle_frames, len(trajectory) - 2)
-                ).astype(int)
-                critical_indices['trans'].extend(middle_indices.tolist())
-                
-        elif self.sample_strategy == 'state':
-            # Sample based on state changes (for environments with minimal reward variance)
-            # Detect significant state changes
-            for t in range(1, len(trajectory)):
-                state_t = trajectory[t]['state']
-                state_t_prev = trajectory[t-1]['state']
-                
-                # Compute normalized state change
-                state_change = np.linalg.norm(state_t - state_t_prev)
-                
-                # Use adaptive threshold: top percentile of state changes
-                if t > 1:  # Need at least 2 samples
-                    all_changes = []
-                    for i in range(1, t + 1):
-                        s_change = np.linalg.norm(
-                            trajectory[i]['state'] - trajectory[i-1]['state']
-                        )
-                        all_changes.append(s_change)
-                    
-                    threshold = np.percentile(all_changes, 75)  # Top 25%
-                    if state_change > threshold:
-                        critical_indices['trans'].append(t)
+        # I_trans: Transition states with significant reward changes
+        # Compute |ΔR_t| = |R_t - R_{t-1}|
+        for t in range(1, len(trajectory)):
+            reward_t = trajectory[t]['reward']
+            reward_t_prev = trajectory[t-1]['reward']
+            delta_reward = abs(reward_t - reward_t_prev)
+            
+            if delta_reward > self.delta:
+                critical_indices['trans'].append(t)
         
         # Combine all critical indices (union) and sort
         all_critical = set()

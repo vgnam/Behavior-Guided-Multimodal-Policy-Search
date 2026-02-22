@@ -12,6 +12,7 @@ Key components:
 from agent.policy.q_table import QTable
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias
 from agent.policy.llm_brain_linear_policy import LLMBrain
+from agent.policy.critical_frame_sampler import CriticalFrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
@@ -46,8 +47,8 @@ class LLMNumOptimQTableVisionAgent:
         env_desc_file=None,
         vlm_model_name="gpt-4o",
         decay_horizon=100,
+        reward_change_threshold=0.1,
         enable_vision=True,
-        vlm_enable_reasoning=False,
         env_kwargs=None,
     ):
         """
@@ -67,8 +68,8 @@ class LLMNumOptimQTableVisionAgent:
             env_desc_file: Path to environment description file
             vlm_model_name: Name of VLM model for visual analysis
             decay_horizon: T_decay for visual guidance annealing
+            reward_change_threshold: δ for transition state detection
             enable_vision: Whether to enable vision-guided features
-            vlm_enable_reasoning: If True, prepend chain-of-thought instruction to VLM prompt
             env_kwargs: Additional environment kwargs
         """
         self.start_time = time.process_time()
@@ -102,13 +103,14 @@ class LLMNumOptimQTableVisionAgent:
         
         # Initialize vision components if enabled
         if self.enable_vision:
+            self.critical_frame_sampler = CriticalFrameSampler(
+                reward_change_threshold=reward_change_threshold
+            )
             self.visual_guidance = AdaptiveVisualGuidance(
                 decay_horizon=decay_horizon
             )
             self.vlm_analyzer = VLMAnalyzer(
-                vlm_model_name=vlm_model_name,
-                timeout=120,  # 2 minutes timeout for VLM API calls
-                enable_reasoning=vlm_enable_reasoning,
+                vlm_model_name=vlm_model_name
             )
             print(f"[ProPS-V Q-Table] Vision features enabled (VLM: {vlm_model_name}, T_decay: {decay_horizon})")
         else:
@@ -122,60 +124,69 @@ class LLMNumOptimQTableVisionAgent:
         capture_frames=False
     ):
         """
-        Rollout one episode, optionally capturing only the last frame for VLM analysis.
-
+        Rollout one episode and optionally capture frames for visual analysis.
+        
+        Args:
+            world: Environment
+            logging_file: File for logging
+            record: Whether to record in replay buffer
+            capture_frames: Whether to capture rendered frames
+            
         Returns:
-            (total_reward, last_frame_data, terminated_early)  when capture_frames=True
-            (total_reward, None, terminated_early)              when capture_frames=False
+            Tuple of (total_reward, trajectory_with_frames, terminated_early)
         """
         state = world.reset()
         logging_file.write(f"state | action | reward\n")
         done = False
         step_idx = 0
-        last_frame_data = None
-
+        trajectory = []
+        
         while not done:
             action = self.q_table.get_action(state)
             action = int(np.reshape(action, (1,)))
-
-            next_state, reward, done = world.step(action)
-            logging_file.write(f"{state} | {action} | {reward}\n")
-
-            # Overwrite last frame at every step (only keep the final one)
+            
+            # Capture frame if requested
+            frame = None
             if capture_frames and hasattr(world.env, 'render'):
                 try:
                     frame = world.env.render()
-                    if isinstance(frame, np.ndarray):
-                        last_frame_data = {
-                            'frame': frame,
-                            'state': state,
-                            'action': action,
-                            'reward': reward,
-                            'timestep': step_idx,
-                        }
+                    # Ensure frame is numpy array
+                    if not isinstance(frame, np.ndarray):
+                        frame = None
                 except:
-                    pass
-
+                    frame = None
+            
+            next_state, reward, done = world.step(action)
+            logging_file.write(f"{state} | {action} | {reward}\n")
+            
+            # Store trajectory step with frame
+            trajectory.append({
+                'state': state,
+                'action': action,
+                'reward': reward,
+                'frame': frame
+            })
+            
             state = next_state
             step_idx += 1
             self.total_steps += 1
-
+            
             if step_idx >= self.max_traj_length:
                 break
-
+        
         total_reward = world.get_accu_reward()
         terminated_early = (step_idx < self.max_traj_length)
-
+        
         logging_file.write(f"Total reward: {total_reward}\n")
         self.total_episodes += 1
-
+        
         if record:
             self.replay_buffer.add(
                 np.array([self.q_table.mapping[i] for i in range(len(self.q_table.mapping))]),
                 total_reward,
             )
-
-        return total_reward, last_frame_data, terminated_early
+        
+        return total_reward, trajectory, terminated_early
 
     def rollout_episode(self, world: BaseWorld, logging_file, record=True):
         """Standard rollout without frame capture (for compatibility)."""
@@ -190,7 +201,7 @@ class LLMNumOptimQTableVisionAgent:
             self.q_table.initialize_policy()
             print(f"Rolling out warmup episode {episode}...")
             logging_filename = f"{logdir}/warmup_rollout_{episode}.txt"
-            logging_file = open(logging_filename, "w", encoding="utf-8")
+            logging_file = open(logging_filename, "w")
             result = self.rollout_episode(world, logging_file)
             print(f"Result: {result}")
 
@@ -242,50 +253,58 @@ class LLMNumOptimQTableVisionAgent:
                 np.random.RandomState(self.training_episodes)
             )
             
-            print(f"\n[ProPS-V] lambda_t = {lambda_t:.3f}, VLM Invocation: {should_invoke_vlm}")
+            print(f"\n[ProPS-V] λ_t = {lambda_t:.3f}, VLM Invocation: {should_invoke_vlm}")
             
-            # ===== STEP 2: Run episode, capture last frame if VLM needed =====
+            # ===== STEP 2: Run episode with frame capture if VLM will be used =====
             if should_invoke_vlm:
+                print("Running episode with frame capture for VLM analysis...")
                 logging_filename = f"{logdir}/training_rollout.txt"
-                with open(logging_filename, "w", encoding="utf-8") as logging_file:
-                    episode_reward, last_frame_data, terminated_early = self.rollout_episode_with_frames(
+                with open(logging_filename, "w") as logging_file:
+                    episode_reward, trajectory, terminated_early = self.rollout_episode_with_frames(
                         world, logging_file, record=False, capture_frames=True
                     )
                 
-                # ===== STEP 3: Analyze single frame with VLM =====
-                if last_frame_data is not None and last_frame_data.get('frame') is not None:
+                # ===== STEP 3: Sample critical frames and analyze with VLM =====
+                critical_indices = self.critical_frame_sampler.sample_critical_frames(
+                    trajectory, terminated_early, self.max_traj_length
+                )
+                critical_frames = self.critical_frame_sampler.get_critical_frames(
+                    trajectory, critical_indices
+                )
+                
+                print(f"Sampled {len(critical_frames)} critical frames")
+                
+                if len(critical_frames) > 0:
+                    # Load environment description
                     if self.env_desc_file:
-                        with open(f"agent/policy/templates/{self.env_desc_file}", "r", encoding="utf-8") as f:
+                        with open(f"agent/policy/templates/{self.env_desc_file}", "r") as f:
                             env_description = f.read()
                     else:
                         env_description = "Q-learning environment"
                     
-                    visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_single_frame(
-                        last_frame_data['frame'],
+                    # Analyze with VLM
+                    print("Analyzing critical frames with VLM...")
+                    visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_critical_frames(
+                        critical_frames,
                         env_description,
                         episode_reward,
-                        terminated_early,
-                        timestep=last_frame_data.get('timestep', -1),
-                        state=last_frame_data.get('state'),
-                        action=last_frame_data.get('action'),
+                        terminated_early
                     )
                     self.api_call_time += vlm_api_time
                     
+                    # Store visual analysis
                     self.visual_analysis_history.append({
                         'iteration': self.training_episodes,
                         'lambda_t': lambda_t,
+                        'num_critical_frames': len(critical_frames),
                         'analysis': visual_analysis,
                         'reward': episode_reward
                     })
                     
-                    visual_log_file = f"{logdir}/vlm_output.txt"
-                    with open(visual_log_file, "a", encoding="utf-8") as vf:
-                        vf.write(f"\n{'='*60}\n")
-                        vf.write(f"Iteration {self.training_episodes} (lambda={lambda_t:.3f}, reward={episode_reward:.2f})\n")
-                        vf.write(f"Timestep: {last_frame_data.get('timestep', -1)}, Terminated early: {terminated_early}\n")
-                        vf.write(f"{'='*60}\n")
-                        vf.write(visual_analysis + "\n")
-                    print(f"VLM analysis saved to {visual_log_file}")
+                    print(f"VLM Analysis:\n{visual_analysis}\n")
+                else:
+                    print("No frames captured for visual analysis")
+                    visual_analysis = None
         
         # ===== STEP 4: Update Q-table using LLM with vision context =====
         print("\nUpdating Q-table policy with LLM...")
@@ -325,11 +344,11 @@ class LLMNumOptimQTableVisionAgent:
         
         # Log Q-table
         logging_q_filename = f"{logdir}/parameters.txt"
-        with open(logging_q_filename, "w", encoding="utf-8") as logging_q_file:
+        with open(logging_q_filename, "w") as logging_q_file:
             logging_q_file.write(str(self.q_table.mapping))
         
         q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
+        with open(q_reasoning_filename, "w") as q_reasoning_file:
             q_reasoning_file.write(reasoning)
         
         print("Q-table policy updated!")
@@ -337,7 +356,7 @@ class LLMNumOptimQTableVisionAgent:
         # ===== STEP 5: Evaluate new Q-table =====
         print(f"Evaluating Q-table (episode {self.training_episodes})...")
         logging_filename = f"{logdir}/training_rollout_final.txt"
-        with open(logging_filename, "w", encoding="utf-8") as logging_file:
+        with open(logging_filename, "w") as logging_file:
             results = []
             for idx in range(self.num_evaluation_episodes):
                 result = self.rollout_episode(world, logging_file, record=False)
@@ -365,7 +384,7 @@ class LLMNumOptimQTableVisionAgent:
         results = []
         for idx in range(self.num_evaluation_episodes):
             logging_filename = f"{logdir}/evaluation_rollout_{idx}.txt"
-            with open(logging_filename, "w", encoding="utf-8") as logging_file:
+            with open(logging_filename, "w") as logging_file:
                 result = self.rollout_episode(world, logging_file, record=False)
                 results.append(result)
         return results

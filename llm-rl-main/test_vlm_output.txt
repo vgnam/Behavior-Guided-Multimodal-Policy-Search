@@ -1,5 +1,0 @@
-reasoning: False
-api_time : 0.00s
-wall_time: 0.04s
-
-VLM analysis failed after 1 attempts: litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable

@@ -39,8 +39,8 @@ def run_training_loop(
     env_desc_file=None,
     vlm_model_name="gpt-4o",
     decay_horizon=100,
+    reward_change_threshold=0.1,
     enable_vision=True,
-    vlm_enable_reasoning=False,
 ):
     """
     Run ProPS-V training loop.
@@ -70,8 +70,8 @@ def run_training_loop(
         env_desc_file: Path to environment description file
         vlm_model_name: Vision-Language Model for visual analysis
         decay_horizon: T_decay for visual guidance annealing (Eq. 3)
+        reward_change_threshold: δ threshold for transition states (Eq. 2)
         enable_vision: Whether to enable vision-guided feedback
-        vlm_enable_reasoning: If True, prepend chain-of-thought instruction to VLM prompt
     """
     assert task in ["cont_state_llm_num_optim_vision"], \
         f"ProPS-V runner only supports 'cont_state_llm_num_optim_vision', got '{task}'"
@@ -119,16 +119,16 @@ def run_training_loop(
         env_desc_file=env_description,
         vlm_model_name=vlm_model_name,
         decay_horizon=decay_horizon,
+        reward_change_threshold=reward_change_threshold,
         enable_vision=enable_vision,
-        vlm_enable_reasoning=vlm_enable_reasoning,
     )
     
     print('[ProPS-V] Initialization done')
     print(f'  LLM: {llm_model_name}')
     print(f'  VLM: {vlm_model_name}')
     print(f'  Vision Enabled: {enable_vision}')
-    print(f'  VLM Reasoning: {vlm_enable_reasoning}')
     print(f'  Decay Horizon: {decay_horizon}')
+    print(f'  Reward Change Threshold: {reward_change_threshold}')
     
     # Warmup phase
     if not warmup_dir:
@@ -172,6 +172,7 @@ def run_training_loop(
             print(f"  λ_t = {stats['current_lambda']:.3f}")
             print(f"  Phase: {stats['phase']}")
             print(f"  VLM Invocation Prob: {stats['vlm_invocation_probability']:.1%}")
+            print(f"  Iterations until pure numerical: {stats['iterations_until_pure_numerical']}")
         
         # Train policy (with retries)
         for trial_idx in range(5):
