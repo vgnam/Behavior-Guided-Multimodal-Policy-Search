@@ -102,7 +102,7 @@ class VLMAnalyzer:
         payload = {
             "model": self.NVIDIA_MODEL,
             "messages": messages,
-            "max_tokens": 512,
+            "max_tokens": 1024,
             "temperature": temperature,
             "top_p": 1.0,
             "frequency_penalty": 0.0,
@@ -166,7 +166,7 @@ class VLMAnalyzer:
         payload = {
             "model": self.NVIDIA_MODEL,
             "messages": messages,
-            "max_tokens": 512,
+            "max_tokens": 2048,
             "temperature": temperature,
             "top_p": 1.0,
             "frequency_penalty": 0.0,
@@ -201,6 +201,7 @@ class VLMAnalyzer:
         env_description: str,
         episode_reward: float,
         terminated_early: bool,
+        current_params=None,
     ) -> str:
         """
         Render the VLM analysis prompt from vlm_analysis_prompt.j2.
@@ -220,6 +221,7 @@ class VLMAnalyzer:
             episode_reward=episode_reward,
             terminated_early=terminated_early,
             frames=frames,
+            current_params=current_params,
         )
     
     def analyze_frames(
@@ -227,7 +229,8 @@ class VLMAnalyzer:
         frames: List[Dict[str, Any]],
         env_description: str,
         episode_reward: float,
-        terminated_early: bool = False
+        terminated_early: bool = False,
+        current_params=None,
     ) -> tuple[str, float]:
         """
         Analyze sampled episode frames using VLM and return diagnostic feedback.
@@ -246,7 +249,8 @@ class VLMAnalyzer:
             frames,
             env_description,
             episode_reward,
-            terminated_early
+            terminated_early,
+            current_params=current_params,
         )
 
         # Build message with inline images (NVIDIA format)
@@ -341,3 +345,94 @@ class VLMAnalyzer:
                 time.sleep(5)
 
         return "VLM comparison unavailable", 0.0
+
+    def analyze_candidate_diversity(
+        self,
+        candidates: List[Dict[str, Any]],
+        env_description: str,
+        frames_per_candidate: int = 2,
+    ) -> tuple[str, float]:
+        """
+        Assess behavioral diversity across multiple policy candidates visually.
+
+        Sends one representative frame per candidate to the VLM and asks whether
+        the candidates are producing distinct behavioral strategies or collapsing
+        to the same visual mode.
+
+        Args:
+            candidates: List of dicts, each with keys:
+                - 'params': policy parameters (any type, or None)
+                - 'reward': float episode reward
+                - 'frames': List of frame dicts containing a 'frame' key (np.ndarray)
+            env_description: Environment description string
+            frames_per_candidate: Max frames to include per candidate (default 2)
+
+        Returns:
+            Tuple of (diversity_analysis_text, api_time)
+        """
+        if len(candidates) < 2:
+            return "Diversity analysis requires at least 2 candidates.", 0.0
+
+        # Render template
+        template = self._jinja_env.get_template("vlm_diversity_prompt.j2")
+        template_candidates = [
+            {
+                "reward": c["reward"],
+                "params": c.get("params", None),
+            }
+            for c in candidates
+        ]
+        prompt = template.render(
+            env_description=env_description,
+            candidates=template_candidates,
+        )
+
+        # Build inline images: group by candidate, label each [C1], [C2], ...
+        image_block = ""
+        for idx, c in enumerate(candidates, start=1):
+            frames = c.get("frames", [])
+            count = 0
+            for frame_data in frames:
+                if count >= frames_per_candidate:
+                    break
+                if "frame" in frame_data and frame_data["frame"] is not None:
+                    img_b64 = self.frame_to_base64(frame_data["frame"])
+                    image_block += (
+                        f"[C{idx}] "
+                        f'<img src="data:image/png;base64,{img_b64}" /> '
+                    )
+                    count += 1
+
+        messages = [
+            {
+                "role": "user",
+                "content": f"{prompt}\n\n{image_block}",
+            }
+        ]
+
+        n_candidates = len(candidates)
+        rewards_str = ", ".join(f"{c['reward']:.2f}" for c in candidates)
+        print(
+            f"[VLM] Diversity call | candidates={n_candidates} rewards=[{rewards_str}]"
+        )
+
+        for attempt in range(self.max_retries):
+            try:
+                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
+                print(
+                    f"[VLM] Diversity response received in {api_time:.1f}s "
+                    f"({len(analysis)} chars)"
+                )
+                return analysis, api_time
+            except Exception as e:
+                print(
+                    f"[VLM ERROR] Diversity attempt {attempt + 1}/{self.max_retries}: {e}"
+                )
+                if attempt == self.max_retries - 1:
+                    return (
+                        f"VLM diversity analysis failed after {self.max_retries} attempts: {e}",
+                        0.0,
+                    )
+                time.sleep(5)
+
+        return "VLM diversity analysis unavailable", 0.0

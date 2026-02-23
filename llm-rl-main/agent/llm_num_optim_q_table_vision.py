@@ -73,6 +73,7 @@ class LLMNumOptimQTableVisionAgent:
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
+        self.vlm_api_time = 0
         self.total_steps = 0
         self.total_episodes = 0
         self.actions = actions
@@ -286,6 +287,7 @@ class LLMNumOptimQTableVisionAgent:
                         episode_reward,
                         terminated_early
                     )
+                    self.vlm_api_time += vlm_api_time
                     self.api_call_time += vlm_api_time
 
                     # Store visual analysis
@@ -317,7 +319,6 @@ class LLMNumOptimQTableVisionAgent:
                 self.env_desc_file if self.env_desc_file else "env_descriptions/default.j2",
                 visual_analysis,
                 lambda_t,
-                self.visual_guidance.get_prompt_instruction(self.training_episodes),
                 self.actions,
                 self.rank,
                 self.optimum

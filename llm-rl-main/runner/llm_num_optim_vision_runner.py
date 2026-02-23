@@ -8,6 +8,7 @@ integrating vision-language model feedback with policy optimization.
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
 from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
+from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
 from jinja2 import Environment, FileSystemLoader
 import os
 import traceback
@@ -73,8 +74,8 @@ def run_training_loop(
         frame_sample_period: P — capture a frame every P timesteps for VLM
         enable_vision: Whether to enable vision-guided feedback
     """
-    assert task in ["cont_state_llm_num_optim_vision"], \
-        f"ProPS-V runner only supports 'cont_state_llm_num_optim_vision', got '{task}'"
+    assert task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"], \
+        f"ProPS-V runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
 
     # Load Jinja2 templates
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
@@ -92,32 +93,56 @@ def run_training_loop(
         render_mode = "rgb_array"
         print(f"[ProPS-V] Enabling rgb_array rendering for frame capture")
     
-    world = ContinualSpaceGeneralWorld(
-        gym_env_name,
-        render_mode,
-        max_traj_length,
-    )
-    
-    # Initialize ProPS-V agent
-    agent = LLMNumOptimVisionAgent(
-        logdir,
-        dim_actions,
-        dim_states,
-        max_traj_count,
-        max_traj_length,
-        llm_si_template,
-        llm_output_conversion_template,
-        llm_model_name,
-        num_evaluation_episodes,
-        bias,
-        optimum,
-        search_step_size,
-        env_desc_file=env_description,
-        vlm_model_name=vlm_model_name,
-        decay_horizon=decay_horizon,
-        frame_sample_period=frame_sample_period,
-        enable_vision=enable_vision,
-    )
+    if task == "dist_state_llm_num_optim_vision":
+        world = DiscreteStateGeneralWorld(
+            gym_env_name,
+            render_mode,
+            max_traj_length,
+            env_kwargs=env_kwargs,
+        )
+        agent = LLMNumOptimQTableVisionAgent(
+            logdir,
+            dim_actions,
+            dim_states,
+            max_traj_count,
+            max_traj_length,
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            num_evaluation_episodes,
+            optimum,
+            env_desc_file=env_description,
+            vlm_model_name=vlm_model_name,
+            decay_horizon=decay_horizon,
+            frame_sample_period=frame_sample_period,
+            enable_vision=enable_vision,
+            env_kwargs=env_kwargs,
+        )
+    else:
+        world = ContinualSpaceGeneralWorld(
+            gym_env_name,
+            render_mode,
+            max_traj_length,
+        )
+        agent = LLMNumOptimVisionAgent(
+            logdir,
+            dim_actions,
+            dim_states,
+            max_traj_count,
+            max_traj_length,
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            num_evaluation_episodes,
+            bias,
+            optimum,
+            search_step_size,
+            env_desc_file=env_description,
+            vlm_model_name=vlm_model_name,
+            decay_horizon=decay_horizon,
+            frame_sample_period=frame_sample_period,
+            enable_vision=enable_vision,
+        )
     
     print('[ProPS-V] Initialization done')
     print(f'  LLM: {llm_model_name}')
