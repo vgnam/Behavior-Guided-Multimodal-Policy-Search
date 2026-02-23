@@ -308,7 +308,8 @@ class LLMBrain:
     def llm_update_parameters_num_optim_vision(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
         visual_analysis, lambda_t,
-        rank=None, optimum=None, search_step_size=0.1, actions=None, visual_params=None
+        rank=None, optimum=None, search_step_size=0.1, actions=None, visual_params=None,
+        best_visual_analysis=None, best_visual_entry=None
     ):
         """
         Update parameters using vision-guided feedback (ProPS-V).
@@ -344,6 +345,10 @@ class LLMBrain:
             "lambda_t": f"{lambda_t:.3f}",
             "has_visual": visual_analysis is not None,
             "visual_params": visual_params,
+            "best_visual_analysis": best_visual_analysis,
+            "best_visual_iter": best_visual_entry['iteration'] if best_visual_entry else None,
+            "best_visual_reward": f"{best_visual_entry['reward']:.2f}" if best_visual_entry else None,
+            "has_best_visual": best_visual_analysis is not None,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()

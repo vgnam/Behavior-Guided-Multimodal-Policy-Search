@@ -32,9 +32,14 @@ Next, you will see examples of params, there episodic reward f(params), and the 
 {{ episode_reward_buffer_string }}
 
 {% if has_visual %}
-Visual Feedback{% if visual_params is not none %} (from policy with {{ visual_params }}){% endif %}:
+## Visual Feedback — Current Policy (iter {{ step_number }}){% if visual_params is not none %} with {{ visual_params }}{% endif %}:
 {{ visual_analysis }}
-**Important**: The visual analysis above describes what the policy actually DID during the rollout. Use this information to understand failure modes, spatial relationships, and behavioral patterns that numerical rewards alone cannot capture. Adjust parameters to address visually-observed issues.
+**Important**: The analysis above describes what the CURRENT policy is doing right now. Identify failure modes and adjust parameters to fix them.
+{% endif %}
+{% if has_best_visual %}
+## Visual Feedback — Best Known Policy (iter {{ best_visual_iter }}, reward={{ best_visual_reward }}):
+{{ best_visual_analysis }}
+**Important**: The analysis above describes the BEST behavior seen so far. Use it as a reference target — adjust current parameters to move toward this behavior pattern.
 {% endif %}
 
 Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

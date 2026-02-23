@@ -311,10 +311,10 @@ class LLMNumOptimVisionAgent:
                 text += l
             return text
 
-        # ===== STEP 1: Determine lambda and best visual from history =====
-        use_vision_this_iter = False
+        # ===== STEP 1: Determine lambda and whether VLM will run =====
         visual_analysis = None
         lambda_t = 0.0
+        use_vision_this_iter = False
 
         if self.enable_vision:
             lambda_t = self.visual_guidance.get_lambda(self.training_episodes)
@@ -326,76 +326,24 @@ class LLMNumOptimVisionAgent:
             print(f"λ_t = {lambda_t:.3f}")
             print(f"VLM invocation: {use_vision_this_iter}")
 
-        # Use best visual analysis from history (highest reward)
+        # Get best visual analysis from history BEFORE running VLM this iter
+        best_visual_analysis = None
+        best_visual_entry = None
         if self.visual_analysis_history:
-            best_entry = max(self.visual_analysis_history, key=lambda x: x['reward'])
-            best_visual_analysis = best_entry['analysis']
-            best_visual_params = best_entry.get('params', None)
-            print(f"Using best visual analysis from iteration {best_entry['iteration']} (reward={best_entry['reward']:.2f})")
-        else:
-            best_visual_analysis = None
-            best_visual_params = None
+            best_visual_entry = max(self.visual_analysis_history, key=lambda x: x['reward'])
+            best_visual_analysis = best_visual_entry['analysis']
+            print(f"[VLM] Best history: iter {best_visual_entry['iteration']} reward={best_visual_entry['reward']:.2f}")
 
-        # ===== STEP 3: Update policy using LLM with vision context =====
-        print("\nUpdating policy with LLM...")
-        new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_vision(
-            str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
-            parse_parameters,
-            self.training_episodes,
-            self.env_desc_file,
-            best_visual_analysis,
-            lambda_t,
-            self.rank,
-            self.optimum,
-            self.search_step_size,
-            visual_params=best_visual_params,
-        )
-        self.api_call_time += api_time
-
-        self.policy.update_policy(new_parameter_list)
-
-        # Log parameters
-        logging_q_filename = f"{logdir}/parameters.txt"
-        with open(logging_q_filename, "w") as logging_q_file:
-            logging_q_file.write(str(self.policy))
-        q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
-        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
-            q_reasoning_file.write(reasoning)
-        print("Policy updated!")
-
-        # ===== STEP 4: Rollout with NEW policy and optionally capture frames =====
-        print(f"Rolling out episode {self.training_episodes}...")
-        logging_filename = f"{logdir}/training_rollout.txt"
-        logging_file = open(logging_filename, "w")
-
-        results = []
-        all_trajectories = []
-
-        for idx in range(self.num_evaluation_episodes):
-            if idx == 0:
-                if use_vision_this_iter:
-                    result, trajectory, terminated_early = self.rollout_episode(
-                        world, logging_file, record=True, capture_frames=True
-                    )
-                    all_trajectories.append((trajectory, terminated_early))
-                else:
-                    result = self.rollout_episode(
-                        world, logging_file, record=True, capture_frames=False
-                    )
-            else:
-                result = self.rollout_episode(
-                    world, logging_file, record=False, capture_frames=False
+        # ===== STEP 2: Rollout current policy with frame capture for VLM ======
+        if use_vision_this_iter:
+            print("Running episode with frame capture for VLM analysis...")
+            pre_log_filename = f"{logdir}/training_rollout_pre.txt"
+            with open(pre_log_filename, "w") as pre_log:
+                pre_result, trajectory, terminated_early = self.rollout_episode(
+                    world, pre_log, record=False, capture_frames=True
                 )
-            results.append(result)
 
-        logging_file.close()
-        print(f"Results: {results}")
-        result = np.mean(results)
-
-        # ===== STEP 5: Perform visual analysis if enabled =====
-        if use_vision_this_iter and len(all_trajectories) > 0:
-            trajectory, terminated_early = all_trajectories[0]
-
+            # ===== STEP 3: Sample frames and run VLM =====
             frame_indices = self.frame_sampler.sample_frames(
                 trajectory, terminated_early, self.max_traj_length
             )
@@ -407,16 +355,17 @@ class LLMNumOptimVisionAgent:
                 visual_analysis, vlm_time = self.vlm_analyzer.analyze_frames(
                     frames,
                     self.env_desc_file if self.env_desc_file else "RL Environment",
-                    result,
+                    pre_result,
                     terminated_early,
                     current_params=params_str,
                 )
                 self.vlm_api_time += vlm_time
+                self.api_call_time += vlm_time
 
                 self.visual_analysis_history.append({
                     'iteration': self.training_episodes,
                     'lambda': lambda_t,
-                    'reward': result,
+                    'reward': pre_result,
                     'analysis': visual_analysis,
                     'num_frames': len(frames),
                     'params': params_str,
@@ -425,8 +374,56 @@ class LLMNumOptimVisionAgent:
                 visual_log_file = f"{logdir}/vlm_analysis.txt"
                 with open(visual_log_file, "w", encoding="utf-8") as vf:
                     vf.write(visual_analysis)
+
+                print(f"[VLM] Analysis complete ({len(visual_analysis)} chars)")
             else:
                 print("No frames captured for visual analysis")
+
+        # ===== STEP 4: Update policy using LLM with vision context =====
+        print("\nUpdating policy with LLM...")
+        current_params_for_llm = self.policy.get_parameters().reshape(-1)
+        params_str_for_llm = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params_for_llm))
+        new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_vision(
+            str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
+            parse_parameters,
+            self.training_episodes,
+            self.env_desc_file,
+            visual_analysis,
+            lambda_t,
+            self.rank,
+            self.optimum,
+            self.search_step_size,
+            visual_params=params_str_for_llm if visual_analysis else None,
+            best_visual_analysis=best_visual_analysis,
+            best_visual_entry=best_visual_entry,
+        )
+        self.api_call_time += api_time
+
+        self.policy.update_policy(new_parameter_list)
+
+        # Log parameters and reasoning (reasoning now contains visual_analysis in system prompt)
+        logging_q_filename = f"{logdir}/parameters.txt"
+        with open(logging_q_filename, "w") as logging_q_file:
+            logging_q_file.write(str(self.policy))
+        q_reasoning_filename = f"{logdir}/parameters_reasoning.txt"
+        with open(q_reasoning_filename, "w", encoding="utf-8") as q_reasoning_file:
+            q_reasoning_file.write(reasoning)
+        print("Policy updated!")
+
+        # ===== STEP 5: Evaluate new policy =====
+        print(f"Rolling out episode {self.training_episodes}...")
+        logging_filename = f"{logdir}/training_rollout.txt"
+        results = []
+        with open(logging_filename, "w") as logging_file:
+            for idx in range(self.num_evaluation_episodes):
+                result = self.rollout_episode(
+                    world, logging_file,
+                    record=(idx == 0),
+                    capture_frames=False
+                )
+                results.append(result)
+        print(f"Results: {results}")
+        result = np.mean(results)
 
         # ===== STEP 6: Add to replay buffer =====
         self.replay_buffer.add(new_parameter_list, result)

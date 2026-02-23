@@ -16,6 +16,7 @@ from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
+import io
 import traceback
 import numpy as np
 import re
@@ -205,6 +206,37 @@ class LLMNumOptimQTableVisionAgent:
             result = self.rollout_episode(world, logging_file)
             print(f"Result: {result}")
 
+    def _rollout_params_with_frames(self, world: BaseWorld, params: np.ndarray):
+        """
+        Temporarily apply a param vector to the Q-table, rollout with frame capture,
+        then restore the original Q-table state.
+
+        Returns:
+            Tuple of (frames, episode_reward, terminated_early)
+        """
+        # Save current mapping
+        saved_mapping = dict(self.q_table.mapping)
+
+        # Apply candidate params
+        self.q_table.update_policy(params)
+
+        # Rollout with frame capture (write log to throwaway buffer)
+        log_buf = io.StringIO()
+        episode_reward, trajectory, terminated_early = self.rollout_episode_with_frames(
+            world, log_buf, record=False, capture_frames=True
+        )
+
+        # Sample frames
+        frame_indices = self.frame_sampler.sample_frames(
+            trajectory, terminated_early, self.max_traj_length
+        )
+        frames = self.frame_sampler.get_frames(trajectory, frame_indices)
+
+        # Restore original Q-table
+        self.q_table.mapping = saved_mapping
+
+        return frames, episode_reward, terminated_early
+
     def train_policy(self, world: BaseWorld, logdir):
         """
         Train Q-table policy with optional vision-guided feedback.
@@ -272,14 +304,14 @@ class LLMNumOptimQTableVisionAgent:
                     trajectory, frame_indices
                 )
 
-                if len(frames) > 0:
-                    # Load environment description
-                    if self.env_desc_file:
-                        with open(f"agent/policy/templates/{self.env_desc_file}", "r") as f:
-                            env_description = f.read()
-                    else:
-                        env_description = "Q-learning environment"
+                # Load environment description once (shared by analysis + comparison)
+                if self.env_desc_file:
+                    with open(f"agent/policy/templates/{self.env_desc_file}", "r") as f:
+                        env_description = f.read()
+                else:
+                    env_description = "Q-learning environment"
 
+                if len(frames) > 0:
                     # Analyze with VLM
                     visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_frames(
                         frames,
@@ -306,6 +338,42 @@ class LLMNumOptimQTableVisionAgent:
                 else:
                     print("No frames captured for visual analysis")
                     visual_analysis = None
+
+                # ===== STEP 3b: Random pairwise comparison from replay buffer =====
+                if len(self.replay_buffer.buffer) >= 2:
+                    print("\n[ProPS-V] Running random candidate comparison...")
+                    buf_list = list(self.replay_buffer.buffer)
+                    indices = np.random.choice(len(buf_list), size=2, replace=False)
+                    params_a, _ = buf_list[indices[0]]
+                    params_b, _ = buf_list[indices[1]]
+
+                    frames_a, reward_a, _ = self._rollout_params_with_frames(world, params_a)
+                    frames_b, reward_b, _ = self._rollout_params_with_frames(world, params_b)
+
+                    if len(frames_a) > 0 and len(frames_b) > 0:
+                        comparison_analysis, cmp_api_time = self.vlm_analyzer.analyze_trajectory_comparison(
+                            frames_current=frames_b,
+                            frames_previous=frames_a,
+                            reward_current=reward_b,
+                            reward_previous=reward_a,
+                            env_description=env_description,
+                        )
+                        self.vlm_api_time += cmp_api_time
+                        self.api_call_time += cmp_api_time
+
+                        # Save comparison log
+                        cmp_log_file = f"{logdir}/vlm_comparison.txt"
+                        with open(cmp_log_file, "w", encoding="utf-8") as cf:
+                            cf.write(comparison_analysis)
+
+                        # Append to visual_analysis so LLM sees both
+                        comparison_block = "\n\n=== Candidate Comparison ===\n" + comparison_analysis
+                        visual_analysis = (visual_analysis or "") + comparison_block
+                        print(f"[ProPS-V] Comparison analysis appended ({len(comparison_analysis)} chars)")
+                    else:
+                        print("[ProPS-V] Skipping comparison: insufficient frames from candidates")
+                else:
+                    print("[ProPS-V] Skipping comparison: not enough entries in replay buffer")
         
         # ===== STEP 4: Update Q-table using LLM with vision context =====
         print("\nUpdating Q-table policy with LLM...")

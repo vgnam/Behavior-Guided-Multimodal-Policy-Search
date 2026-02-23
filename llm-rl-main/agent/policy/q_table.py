@@ -109,5 +109,13 @@ class QTable(Policy):
             policy.update_policy(new_q_table)
         """
 
+        if len(self.actions) == 1:
+            valid_actions = self.actions[0]
+        else:
+            valid_actions = list(itertools.product(*self.actions))
+        min_action = min(valid_actions)
+        max_action = max(valid_actions)
+
         for idx, action in enumerate(new_q_table):
-            self.update_q_value(self.states[idx], action)
+            clamped_action = int(np.clip(round(float(action)), min_action, max_action))
+            self.update_q_value(self.states[idx], clamped_action)
