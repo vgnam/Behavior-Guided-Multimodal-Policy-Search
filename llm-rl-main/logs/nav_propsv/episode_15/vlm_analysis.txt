@@ -1,0 +1,5 @@
+The agent exhibits an **oscillatory and unstable behavioral trajectory** with erratic corrections. Initially, it drifts forward (Frames 1–4) with small directional adjustments (actions 1 and 2), but by Frame 5, it abruptly switches to sustained forward thrust (action 0), accelerating rapidly. This leads to overshooting its target, triggering sharp reversals (Frames 9–12) that culminate in a catastrophic failure (Frame 12) when it collides or tips over.
+
+The movement is **abrupt and overcorrected**, lacking smooth transitions; accelerations and decelerations occur suddenly, with no gradual stabilization. The agent’s oscillations worsen over time, particularly after Frame 8, where repeated thrust reversals (actions 1/2) fail to dampen momentum, indicating **divergent instability**.
+
+Critical instability is evident at **Frame 9**, where the agent’s position spikes (state=3.05), followed by panic-like braking (Frames 10–12) that cannot prevent failure. The policy produces an **aggressive, thrashing control style**, prioritizing immediate but excessive corrections over measured adjustments.

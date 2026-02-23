@@ -1,0 +1,26 @@
+task: dist_state_llm_num_optim_vision
+num_episodes: 400
+gym_env_name: FrozenLake-v1
+render_mode: rgb_array  # Required for frame capture
+logdir: logs/frozenlake_propsv
+dim_actions: [[0, 1, 2, 3]]
+dim_states: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]
+max_traj_count: 1000
+max_traj_length: 100
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_q_table_vision.j2
+llm_output_conversion_template_name: num_optim_q_table_vision.j2
+llm_model_name: nvidia_nim/qwen/qwen3-235b-a22b
+num_evaluation_episodes: 20
+warmup_episodes: 20
+warmup_dir: null
+optimum: 1.0
+env_desc_file: env_descriptions/frozenlake.j2
+env_kwargs:
+  is_slippery: true
+
+# ProPS-V specific parameters
+vlm_model_name: meta/llama-4-scout-17b-16e-instruct
+decay_horizon: 100
+frame_sample_period: 10  # Short episodes (~100 steps)
+enable_vision: true

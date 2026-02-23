@@ -1,0 +1,29 @@
+# Environment: {{ env_description }}
+# Reward: {{ "%.2f" | format(episode_reward) }} | Terminated early: {{ "Yes" if terminated_early else "No" }}
+{% if current_params is not none %}# Policy params: {{ current_params }}{% endif %}
+
+{% for frame in frames %}
+Frame {{ loop.index }} (t={{ frame.timestep }}, type={{ frame.frame_type }}): reward={{ "%.4f" | format(frame.reward) }} state={{ frame.state }} action={{ frame.action }}
+{% endfor %}
+
+# Your Task:
+Describe how the agent behaves across the sequence of frames:
+1. **Behavioral Trajectory**
+   - Describe how the agent's position, orientation, and motion change from the first frame to the last.
+   - Note visible acceleration/deceleration, direction changes, posture shifts, or repeated motion patterns.
+   - Explain how actions visually affect the agent’s movement across time.
+
+2. **Temporal Consistency**
+   - Does the movement appear smooth, abrupt, erratic, delayed, or overcorrected?
+   - Are corrections gradual or sudden?
+   - Does the behavior stabilize or diverge over time?
+
+3. **Critical Moments**
+   - Identify specific frames where instability, collision, tipping, drifting, oscillation, or failure becomes visually evident.
+   - Reference approximate frame numbers when describing these moments.
+
+4. **Outcome Pattern**
+   - Describe the overall behavioral style produced by this policy
+     (e.g., cautious stabilization, aggressive thrusting, oscillatory control, persistent drift, controlled landing, chaotic motion).
+
+Keep the response to 3-5 sentences. Describe only what is visually observable. Do NOT suggest parameter changes.

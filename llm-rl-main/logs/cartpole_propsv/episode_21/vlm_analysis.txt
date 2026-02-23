@@ -1,0 +1,9 @@
+The agent in the CartPole environment exhibits **erratic and unstable behavior** across the frames:
+
+1. **Behavioral Trajectory**: Initially (Frame 1), the pole is nearly upright (state=0.02) with the cart moving right (action=1). By Frame 2, the pole tilts slightly left (state=0.007) but the agent continues pushing right, failing to correct the drift. By Frame 3, the pole tips sharply left (state=-0.084) and the agent abruptly switches to action=0 (push left), but too late, causing failure.
+
+2. **Temporal Consistency**: The movement is **abrupt and overcorrected**, with sudden action switches (right → left) that amplify instability. No gradual stabilization is visible; corrections are delayed and extreme.
+
+3. **Critical Moments**: Instability becomes evident by **Frame 2** (mild left tilt) and culminates in failure at **Frame 3** (sharp leftward collapse). The agent’s late reversal (action=0) accelerates tipping instead of mitigating it.
+
+4. **Outcome Pattern**: The policy produces **aggressive, oscillatory control**—overcompensating in one direction before abruptly jerking the opposite way, leading to rapid divergence. The behavior suggests poor balance between correction magnitude and timing.
