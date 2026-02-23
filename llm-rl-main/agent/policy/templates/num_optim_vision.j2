@@ -34,12 +34,10 @@ Next, you will see examples of params, there episodic reward f(params), and the 
 {% if has_visual %}
 ## Visual Feedback — Current Policy (iter {{ step_number }}){% if visual_params is not none %} with {{ visual_params }}{% endif %}:
 {{ visual_analysis }}
-**Important**: The analysis above describes what the CURRENT policy is doing right now. Identify failure modes and adjust parameters to fix them.
 {% endif %}
 {% if has_best_visual %}
-## Visual Feedback — Best Known Policy (iter {{ best_visual_iter }}, reward={{ best_visual_reward }}):
+## Visual Feedback — Best Known Policy (iter {{ best_visual_iter }}, reward={{ best_visual_reward }}{% if best_visual_params is not none %} with {{ best_visual_params }}{% endif %}):
 {{ best_visual_analysis }}
-**Important**: The analysis above describes the BEST behavior seen so far. Use it as a reference target — adjust current parameters to move toward this behavior pattern.
 {% endif %}
 
 Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

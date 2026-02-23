@@ -4,196 +4,127 @@ Vision-Language Model Analyzer for ProPS-V
 This module provides VLM integration for analyzing episode frames
 and generating diagnostic feedback for policy optimization.
 Prompts are loaded from Jinja2 .j2 template files.
-Uses NVIDIA API (meta/llama-4-scout-17b-16e-instruct) via requests.
+Uses Google Gen AI SDK (gemini-2.5-flash-lite).
 """
 
-import base64
 import io
 import time
 import os
-import requests
-import json
 from typing import List, Dict, Any, Optional
 import numpy as np
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
+from google import genai
+from google.genai import types
 
 
 class VLMAnalyzer:
     """
     Analyzes episode frames using Vision-Language Models to provide
     visual diagnostic feedback for policy search.
-    Uses NVIDIA API (meta/llama-4-scout-17b-16e-instruct) via requests.
+    Uses Google Gen AI SDK (gemini-2.5-flash-lite).
     """
-    
-    # NVIDIA API Configuration
-    NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-    NVIDIA_API_KEY = "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"
-    NVIDIA_MODEL = "mistralai/mistral-large-3-675b-instruct-2512"
+
+    GEMINI_MODEL = "gemini-2.5-flash-lite"
 
     def __init__(
         self,
-        vlm_model_name: str = "meta/llama-4-scout-17b-16e-instruct",
+        vlm_model_name: str = "gemini-2.5-flash-lite",
         max_retries: int = 3,
         timeout: int = 60,
         template_dir: str = "agent/policy/templates",
         enable_reasoning: bool = False,
     ):
         """
-        Initialize VLM analyzer using NVIDIA API.
+        Initialize VLM analyzer using Google Gen AI SDK.
 
         Args:
-            vlm_model_name: Name of the VLM model (ignored, uses NVIDIA model)
+            vlm_model_name: Name of the VLM model (ignored, uses GEMINI_MODEL)
             max_retries: Maximum number of retry attempts on failure
             timeout: Timeout in seconds for API calls
             template_dir: Directory containing Jinja2 .j2 prompt templates
             enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
         """
-        self.vlm_model_name = self.NVIDIA_MODEL  # Always use NVIDIA model
+        self.vlm_model_name = self.GEMINI_MODEL
         self.max_retries = max_retries
         self.timeout = timeout
         self.enable_reasoning = enable_reasoning
+
+        self._client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         self._jinja_env = Environment(
             loader=FileSystemLoader(template_dir),
             keep_trailing_newline=True,
         )
-        
-    def frame_to_base64(self, frame: np.ndarray) -> str:
+
+    def frame_to_png_bytes(self, frame: np.ndarray) -> bytes:
         """
-        Convert numpy frame to base64-encoded string.
-        
+        Convert numpy frame to raw PNG bytes.
+
         Args:
             frame: RGB frame as numpy array (H, W, 3)
-            
+
         Returns:
-            Base64-encoded image string
+            PNG image bytes
         """
-        # Ensure frame is in uint8 format
         if frame.dtype != np.uint8:
             frame = (frame * 255).astype(np.uint8) if frame.max() <= 1.0 else frame.astype(np.uint8)
-        
-        # Convert to PIL Image
         img = Image.fromarray(frame)
-        
-        # Encode to base64
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        
-        return img_base64
-    
-    def _call_nvidia_api(self, messages: List[Dict[str, Any]], temperature: float = 0.7) -> tuple[str, float]:
+        return buffered.getvalue()
+
+    def _build_parts(
+        self,
+        text_prompt: str,
+        image_frames: List[np.ndarray],
+    ) -> List[types.Part]:
         """
-        Call NVIDIA API with streaming support.
-        
+        Build a list of SDK Part objects from a text prompt and image frames.
+
         Args:
-            messages: List of message dicts with role and content
-            temperature: Temperature for sampling
-            
+            text_prompt: The text portion of the message
+            image_frames: List of RGB numpy arrays
+
+        Returns:
+            List of types.Part (text first, then images)
+        """
+        parts: List[types.Part] = [types.Part.from_text(text=text_prompt)]
+        for frame in image_frames:
+            png_bytes = self.frame_to_png_bytes(frame)
+            parts.append(types.Part.from_bytes(data=png_bytes, mime_type="image/png"))
+        return parts
+
+    def _call_gemini_api(
+        self,
+        parts: List[types.Part],
+        temperature: float = 0.7,
+    ) -> tuple[str, float]:
+        """
+        Call Gemini via Google Gen AI SDK.
+
+        Args:
+            parts: List of types.Part (text + images)
+            temperature: Sampling temperature
+
         Returns:
             Tuple of (response_text, api_time)
         """
-        headers = {
-            "Authorization": f"Bearer {self.NVIDIA_API_KEY}",
-            "Accept": "text/event-stream"
-        }
-        
-        payload = {
-            "model": self.NVIDIA_MODEL,
-            "messages": messages,
-            "max_tokens": 1024,
-            "temperature": temperature,
-            "top_p": 1.0,
-            "frequency_penalty": 0.0,
-            "presence_penalty": 0.0,
-            "stream": True
-        }
-        
         api_start_time = time.time()
-        response_text = ""
-        
-        try:
-            response = requests.post(
-                self.NVIDIA_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=self.timeout,
-                stream=True
-            )
-            response.raise_for_status()
-            
-            # Parse streaming response
-            for line in response.iter_lines():
-                if line:
-                    line_str = line.decode("utf-8") if isinstance(line, bytes) else line
-                    if line_str.startswith("data: "):
-                        data_str = line_str[6:]  # Remove "data: " prefix
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            if "choices" in data and len(data["choices"]) > 0:
-                                delta = data["choices"][0].get("delta", {})
-                                if "content" in delta:
-                                    response_text += delta["content"]
-                        except json.JSONDecodeError:
-                            continue
-            
-            api_time = time.time() - api_start_time
-            return response_text.strip(), api_time
-            
-        except requests.exceptions.RequestException as e:
-            api_time = time.time() - api_start_time
-            raise e
-    
-    def _call_nvidia_api_simple(self, messages: List[Dict[str, Any]], temperature: float = 0.7) -> tuple[str, float]:
-        """
-        Call NVIDIA API without streaming (fallback).
-        
-        Args:
-            messages: List of message dicts with role and content
-            temperature: Temperature for sampling
-            
-        Returns:
-            Tuple of (response_text, api_time)
-        """
-        headers = {
-            "Authorization": f"Bearer {self.NVIDIA_API_KEY}",
-            "Accept": "application/json"
-        }
-        
-        payload = {
-            "model": self.NVIDIA_MODEL,
-            "messages": messages,
-            "max_tokens": 2048,
-            "temperature": temperature,
-            "top_p": 1.0,
-            "frequency_penalty": 0.0,
-            "presence_penalty": 0.0,
-            "stream": False
-        }
-        
-        api_start_time = time.time()
-        
-        try:
-            response = requests.post(
-                self.NVIDIA_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-            
-            data = response.json()
-            response_text = data["choices"][0]["message"]["content"]
-            api_time = time.time() - api_start_time
-            
-            return response_text, api_time
-            
-        except requests.exceptions.RequestException as e:
-            api_time = time.time() - api_start_time
-            raise e
+
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            max_output_tokens=1024,
+        )
+
+        response = self._client.models.generate_content(
+            model=self.GEMINI_MODEL,
+            contents=parts,
+            config=config,
+        )
+
+        api_time = time.time() - api_start_time
+        return response.text.strip(), api_time
 
     def create_analysis_prompt(
         self,
@@ -223,7 +154,7 @@ class VLMAnalyzer:
             frames=frames,
             current_params=current_params,
         )
-    
+
     def analyze_frames(
         self,
         frames: List[Dict[str, Any]],
@@ -253,26 +184,17 @@ class VLMAnalyzer:
             current_params=current_params,
         )
 
-        # Build message with inline images (NVIDIA format)
-        image_tags = ""
-        for frame_data in frames:
-            if 'frame' in frame_data and frame_data['frame'] is not None:
-                img_base64 = self.frame_to_base64(frame_data['frame'])
-                image_tags += f'<img src="data:image/png;base64,{img_base64}" /> '
-
-        messages = [
-            {
-                "role": "user",
-                "content": f"{text_prompt} {image_tags}"
-            }
+        image_frames = [
+            fd["frame"]
+            for fd in frames
+            if "frame" in fd and fd["frame"] is not None
         ]
-        
-        # Query VLM
+        parts = self._build_parts(text_prompt, image_frames)
+
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
+                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
                 return analysis, api_time
-                
             except Exception as e:
                 print(f"[VLM ERROR] Attempt {attempt + 1}/{self.max_retries}: {e}")
                 if attempt == self.max_retries - 1:
@@ -308,34 +230,34 @@ class VLMAnalyzer:
             reward_previous=reward_previous,
             reward_current=reward_current,
         )
-        
-        # Build message with inline images (NVIDIA format)
-        prev_images = ""
-        for frame_data in frames_previous[:3]:
-            if 'frame' in frame_data and frame_data['frame'] is not None:
-                img_base64 = self.frame_to_base64(frame_data['frame'])
-                prev_images += f'<img src="data:image/png;base64,{img_base64}" /> '
 
-        curr_images = ""
-        for frame_data in frames_current[:3]:
-            if 'frame' in frame_data and frame_data['frame'] is not None:
-                img_base64 = self.frame_to_base64(frame_data['frame'])
-                curr_images += f'<img src="data:image/png;base64,{img_base64}" /> '
-
-        messages = [
-            {
-                "role": "user",
-                "content": f"{prompt}\n\nPrevious trajectory frames: {prev_images}\nCurrent trajectory frames: {curr_images}"
-            }
+        prev_image_frames = [
+            fd["frame"]
+            for fd in frames_previous[:3]
+            if "frame" in fd and fd["frame"] is not None
         ]
-        
-        # Query VLM
-        num_prev = sum(1 for f in frames_previous[:3] if f.get('frame') is not None)
-        num_curr = sum(1 for f in frames_current[:3] if f.get('frame') is not None)
-        print(f"[VLM] Comparison call | prev_frames={num_prev} reward={reward_previous:.2f} | curr_frames={num_curr} reward={reward_current:.2f}")
+        curr_image_frames = [
+            fd["frame"]
+            for fd in frames_current[:3]
+            if "frame" in fd and fd["frame"] is not None
+        ]
+
+        full_prompt = (
+            f"{prompt}\n\n"
+            f"Previous trajectory ({len(prev_image_frames)} frames below):\n"
+            f"Current trajectory ({len(curr_image_frames)} frames below):"
+        )
+        parts = self._build_parts(full_prompt, prev_image_frames + curr_image_frames)
+
+        num_prev = len(prev_image_frames)
+        num_curr = len(curr_image_frames)
+        print(
+            f"[VLM] Comparison call | prev_frames={num_prev} reward={reward_previous:.2f} "
+            f"| curr_frames={num_curr} reward={reward_current:.2f}"
+        )
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
+                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
                 print(f"[VLM] Comparison response received in {api_time:.1f}s ({len(analysis)} chars)")
                 return analysis, api_time
             except Exception as e:
@@ -387,8 +309,8 @@ class VLMAnalyzer:
             candidates=template_candidates,
         )
 
-        # Build inline images: group by candidate, label each [C1], [C2], ...
-        image_block = ""
+        all_image_frames: List[np.ndarray] = []
+        label_lines: List[str] = []
         for idx, c in enumerate(candidates, start=1):
             frames = c.get("frames", [])
             count = 0
@@ -396,29 +318,20 @@ class VLMAnalyzer:
                 if count >= frames_per_candidate:
                     break
                 if "frame" in frame_data and frame_data["frame"] is not None:
-                    img_b64 = self.frame_to_base64(frame_data["frame"])
-                    image_block += (
-                        f"[C{idx}] "
-                        f'<img src="data:image/png;base64,{img_b64}" /> '
-                    )
+                    all_image_frames.append(frame_data["frame"])
                     count += 1
+            label_lines.append(f"  [C{idx}] reward={c['reward']:.2f}, {count} frame(s)")
 
-        messages = [
-            {
-                "role": "user",
-                "content": f"{prompt}\n\n{image_block}",
-            }
-        ]
+        full_prompt = prompt + "\n\nCandidate frames order:\n" + "\n".join(label_lines)
+        parts = self._build_parts(full_prompt, all_image_frames)
 
         n_candidates = len(candidates)
         rewards_str = ", ".join(f"{c['reward']:.2f}" for c in candidates)
-        print(
-            f"[VLM] Diversity call | candidates={n_candidates} rewards=[{rewards_str}]"
-        )
+        print(f"[VLM] Diversity call | candidates={n_candidates} rewards=[{rewards_str}]")
 
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_nvidia_api(messages, temperature=0.7)
+                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
                 print(
                     f"[VLM] Diversity response received in {api_time:.1f}s "
                     f"({len(analysis)} chars)"

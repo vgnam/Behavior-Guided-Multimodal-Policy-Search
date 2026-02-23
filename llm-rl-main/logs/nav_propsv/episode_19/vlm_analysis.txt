@@ -1,0 +1,19 @@
+The agent’s behavior in this navigation task exhibits **abrupt, unstable, and ultimately catastrophic motion**, leading to early termination with a strong negative reward. Here’s a detailed breakdown of its observable behavior across the two frames:
+
+1. **Initial Position and Orientation (Frame 1, t=0):**
+   The agent begins at a moderately high altitude (state ≈ 3.42) with an initial positive reward (5.0), suggesting it may have started near a target or safe zone. Its first action (action=0) likely corresponds to a **strong downward or thrust command**, as its altitude rapidly decreases immediately afterward. The visual frame shows the agent already tilted or misaligned, hinting at poor initial orientation control.
+
+2. **Motion Characteristics:**
+   The motion is **highly erratic and uncontrolled**. The agent appears to apply **consistent, aggressive thrust in a single direction** (action=0 repeatedly), without compensatory adjustments. There is **no evidence of stabilization or balancing behavior**: no oscillatory correction, no gradual deceleration, and no posture recovery.
+
+3. **Acceleration and Direction:**
+   The agent undergoes **rapid downward acceleration**—its state drops from 3.42 to 1.39 in just 5 timesteps, indicating it is falling or diving uncontrollably. This suggests **persistent over-thrusting in one direction**, possibly due to misconfigured policy weights that prevent it from reversing or modulating thrust. There are **no visible changes in action selection** (action remains 0), implying a lack of sensory feedback response or policy adaptability.
+
+4. **Posture and Control Instability:**
+   The visual trajectory in the second frame shows **severe misalignment or tumbling**. The agent’s orientation appears **divergent and unrecoverable**, with no attempt to reorient or level out. The posture shifts from vertical descent to what looks like **sideways drift or uncontrolled spin**, signaling a complete loss of attitude control.
+
+5. **Termination (Frame 2, t=5):**
+   The agent crashes or exits the safe operational zone, resulting in a **catastrophic failure** (reward = -200) and early termination. There is **no smooth deceleration, no landing attempt, and no stabilization**—only a direct, forceful descent into failure.
+
+### Overall Behavioral Style:
+The agent demonstrates **aggressive, unidirectional thrusting with no corrective feedback**, leading to **persistent divergence and catastrophic loss of control**. Its motion is **abrupt, non-oscillatory, and terminally unstable**, characterized by **unrecovered descent and irrecoverable posture drift**. The behavior suggests a **policy trapped in a single-action regime**, unable to respond to state changes, resulting in **chaotic, uncontrolled motion** until failure.

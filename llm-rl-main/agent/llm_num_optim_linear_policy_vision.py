@@ -175,12 +175,16 @@ class LLMNumOptimVisionAgent:
         
         done = False
         step_idx = 0
+        episode_num = 1
         trajectory = []
+        first_episode_done = False
+        first_episode_reward = None
+        first_episode_steps = None
         
         if record:
             self.traj_buffer.start_new_trajectory()
         
-        while not done:
+        while True:
             # Get action from policy
             action = self.policy.get_action(state.T)
             action = np.reshape(action, (1, self.dim_action))
@@ -195,16 +199,22 @@ class LLMNumOptimVisionAgent:
             # Log
             logging_file.write(f"{state.T[0]} | {action[0]} | {reward}\n")
             
-            # Capture frame if requested
+            # Capture frame only at sampled timesteps to avoid rendering every step
             frame = None
             if capture_frames and hasattr(world.env, 'render'):
-                try:
-                    frame = world.env.render()
-                    # Ensure frame is numpy array
-                    if not isinstance(frame, np.ndarray):
+                is_sampled_step = (
+                    step_idx == 0
+                    or step_idx % self.frame_sampler.sample_period == 0
+                    or done
+                    or step_idx == self.max_traj_length - 1
+                )
+                if is_sampled_step:
+                    try:
+                        frame = world.env.render()
+                        if not isinstance(frame, np.ndarray):
+                            frame = None
+                    except:
                         frame = None
-                except:
-                    frame = None
             
             # Store trajectory step
             if record or capture_frames:
@@ -212,24 +222,50 @@ class LLMNumOptimVisionAgent:
                     'state': state.T[0].copy(),
                     'action': action[0].copy(),
                     'reward': reward,
-                    'frame': frame
+                    'frame': frame,
+                    'episode_num': episode_num,
                 })
             
             # Add to replay buffer
             if record:
                 self.traj_buffer.add_step(state, action, reward)
             
-            state = next_state
             step_idx += 1
             self.total_steps += 1
+            
+            if done:
+                # Record first natural episode completion for reward/terminated_early
+                if not first_episode_done:
+                    first_episode_done = True
+                    first_episode_reward = world.get_accu_reward()
+                    first_episode_steps = step_idx
+                
+                if capture_frames and step_idx < self.max_traj_length:
+                    # Pre-rollout: auto-reset and keep collecting frames for VLM
+                    # so we always have a full max_traj_length trajectory
+                    episode_num += 1
+                    state = world.reset()
+                    state = np.expand_dims(state, axis=0)
+                    continue
+                else:
+                    break
+            else:
+                state = next_state
+            
+            if step_idx >= self.max_traj_length:
+                break
+        
+        # Use reward/steps from the first natural episode end when available
+        if first_episode_reward is not None:
+            total_reward = first_episode_reward
+            terminated_early = first_episode_steps < self.max_traj_length
+        else:
+            total_reward = world.get_accu_reward()
+            terminated_early = step_idx < self.max_traj_length
         
         # Log total reward
-        total_reward = world.get_accu_reward()
         logging_file.write(f"Total reward: {total_reward}\n")
         self.total_episodes += 1
-        
-        # Check if terminated early (failure)
-        terminated_early = step_idx < self.max_traj_length
         
         # Return trajectory info if capturing frames
         if capture_frames:

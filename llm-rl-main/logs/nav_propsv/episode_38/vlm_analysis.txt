@@ -1,0 +1,15 @@
+The agent’s behavior in this frame sequence exhibits a clear pattern of **oscillatory control with overcorrection and instability**, ultimately leading to a loss of control. Here’s a detailed breakdown:
+
+1. **Initial Drift and Directional Adjustment (Frames 1–2):**
+   The agent starts at position `3.27` with a negative reward, applying a consistent action (action `1`) that initially propels it backward (state decreases to `2.41`). The motion is smooth but slow, suggesting weak or overly cautious thrusting in one direction. There is no visible attempt to stabilize or counteract drift.
+
+2. **Overcorrection and Acceleration (Frames 3–5):**
+   At `t=100`, the agent abruptly switches to action `0`, generating a strong positive reward (`+5.0`) and rapidly accelerating forward (state drops to `0.92`). This abrupt thrust likely causes overshooting, as the agent then overcompensates again at `t=150` by shifting to action `2`, moving backward (state rises to `1.42`). This alternating forward-backward pattern — combined with the large magnitude of state changes — signals erratic thrusting and a lack of smooth modulation.
+
+3. **Persistent Oscillation and Instability (Frames 5–7):**
+   The agent keeps alternating between actions `0` and `2`, swinging between states `2.05` and `1.18`. Each thrust is strong, but poorly timed, leading to pronounced oscillations around a target zone. The motion is **abrupt, delayed, and overcorrected**, with no evidence of velocity damping or stable posture. The agent fails to settle, suggesting poor integrative control over acceleration and deceleration.
+
+4. **Divergence and Loss of Control (Frame 8):**
+   By `t=321`, the agent’s oscillations amplify catastrophically. Despite choosing what should be a stabilizing action (`0`), it crashes (state `0.58`), triggering a large negative reward (`-200`). The motion has clearly **diverged**, with the agent unable to arrest its momentum or recover from its own overcorrections.
+
+**Overall behavioral style:** **Aggressive, oscillatory thrusting with persistent overcorrection**, transitioning into **chaotic motion** and terminal instability. The agent’s actions reflect reactive, poorly calibrated responses rather than controlled, stabilizing behavior.

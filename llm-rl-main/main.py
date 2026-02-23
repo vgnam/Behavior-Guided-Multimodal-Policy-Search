@@ -14,6 +14,9 @@ os.environ["OPENROUTER_API_KEY"] = "sk-or-v1-e6361f344eed0be5a47c9177b6c527b1bfb
 
 os.environ["NVIDIA_NIM_API_KEY"] = "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"
 os.environ["MISTRAL_API_KEY"] = "wjLJ7TRAHtcDNv2VrIgE7dreAhVyYQBD"
+
+os.environ["GEMINI_API_KEY"] = ("AIzaSyDoMFuM881ierGjBmpT4O-"
+                                "tQyIrayjBPcw")
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(

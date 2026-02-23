@@ -1,0 +1,11 @@
+# Environment: {{ env_description }}
+# Reward: {{ "%.2f" | format(episode_reward) }} | Terminated early: {{ "Yes" if terminated_early else "No" }}
+# Note: The frame sequence may span multiple episode resets (the agent was rolled out for a fixed number of steps). Abrupt visual resets to initial state are normal episode boundaries, not failures.
+{% if current_params is not none %}# Policy params: {{ current_params }}{% endif %}
+
+{% for frame in frames %}
+Frame {{ loop.index }} (ep={{ frame.episode_num }}, t={{ frame.timestep }}, type={{ frame.frame_type }}): reward={{ "%.4f" | format(frame.reward) }} state={{ frame.state }} action={{ frame.action }}
+{% endfor %}
+
+# Your Task:
+Describe the agent’s visually observable behavior across the frame sequence (3–4 sentences). Explain how its position, orientation, and motion evolve over time, including acceleration, direction changes, posture shifts, or repeated patterns. Indicate whether movement appears smooth, abrupt, erratic, delayed, or overcorrected, and whether it stabilizes or diverges. Highlight any noticeable instability, drift, oscillation, or loss of control as it develops. Conclude with the overall behavioral style (e.g., cautious stabilization, aggressive thrusting, oscillatory control, persistent drift, controlled landing, chaotic motion). Do not suggest parameter changes.

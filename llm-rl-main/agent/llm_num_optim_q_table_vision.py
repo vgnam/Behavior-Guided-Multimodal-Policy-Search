@@ -140,24 +140,41 @@ class LLMNumOptimQTableVisionAgent:
         logging_file.write(f"state | action | reward\n")
         done = False
         step_idx = 0
+        episode_num = 1
         trajectory = []
+        first_episode_done = False
+        first_episode_reward = None
+        first_episode_steps = None
         
-        while not done:
+        while True:
             action = self.q_table.get_action(state)
             action = int(np.reshape(action, (1,)))
             
-            # Capture frame if requested
+            # Capture frame only at sampled timesteps to avoid rendering every step
             frame = None
             if capture_frames and hasattr(world.env, 'render'):
+                is_sampled_step = (
+                    step_idx == 0
+                    or step_idx % self.frame_sampler.sample_period == 0
+                    or step_idx == self.max_traj_length - 1
+                )
+                if is_sampled_step:
+                    try:
+                        frame = world.env.render()
+                        if not isinstance(frame, np.ndarray):
+                            frame = None
+                    except:
+                        frame = None
+            
+            next_state, reward, done = world.step(action)
+            # Also render on done (last frame of episode) if not already rendered
+            if done and capture_frames and frame is None and hasattr(world.env, 'render'):
                 try:
                     frame = world.env.render()
-                    # Ensure frame is numpy array
                     if not isinstance(frame, np.ndarray):
                         frame = None
                 except:
                     frame = None
-            
-            next_state, reward, done = world.step(action)
             logging_file.write(f"{state} | {action} | {reward}\n")
             
             # Store trajectory step with frame
@@ -165,18 +182,41 @@ class LLMNumOptimQTableVisionAgent:
                 'state': state,
                 'action': action,
                 'reward': reward,
-                'frame': frame
+                'frame': frame,
+                'episode_num': episode_num,
             })
             
-            state = next_state
             step_idx += 1
             self.total_steps += 1
+            
+            if done:
+                # Record first natural episode completion for reward/terminated_early
+                if not first_episode_done:
+                    first_episode_done = True
+                    first_episode_reward = world.get_accu_reward()
+                    first_episode_steps = step_idx
+                
+                if capture_frames and step_idx < self.max_traj_length:
+                    # Pre-rollout: auto-reset and keep collecting frames for VLM
+                    # so we always have a full max_traj_length trajectory
+                    episode_num += 1
+                    state = world.reset()
+                    continue
+                else:
+                    break
+            else:
+                state = next_state
             
             if step_idx >= self.max_traj_length:
                 break
         
-        total_reward = world.get_accu_reward()
-        terminated_early = (step_idx < self.max_traj_length)
+        # Use reward/steps from the first natural episode end when available
+        if first_episode_reward is not None:
+            total_reward = first_episode_reward
+            terminated_early = (first_episode_steps < self.max_traj_length)
+        else:
+            total_reward = world.get_accu_reward()
+            terminated_early = (step_idx < self.max_traj_length)
         
         logging_file.write(f"Total reward: {total_reward}\n")
         self.total_episodes += 1

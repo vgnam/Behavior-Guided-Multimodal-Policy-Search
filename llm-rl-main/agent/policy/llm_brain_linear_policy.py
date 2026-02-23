@@ -24,110 +24,110 @@ class LLMBrain:
             raise ValueError(f"Invalid role: {role}. Use 'user', 'assistant', or 'system'.")
         self.llm_conversation.append({"role": role, "content": text})
 
-    # def query_llm(self, temperature=1.0):
-    #     for attempt in range(5):
-    #         try:
-    #             response = completion(
-    #                 model=self.llm_model_name,
-    #                 messages=self.llm_conversation,
-    #                 temperature=temperature,
-    #                 timeout=60,
-    #             )
-    #             text = response["choices"][0]["message"]["content"]
-    #             # Append assistant response to conversation history
-    #             self.add_llm_conversation(text, "assistant")
-    #             return text
-    #         except Exception as e:
-    #             print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
-    #             if attempt == 4:
-    #                 raise RuntimeError("Failed to get LLM response after 5 attempts") from e
-    #             time.sleep(10)
-    #     return ""  # unreachable
-    #
-    # def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
-    #     for attempt in range(3):
-    #         try:
-    #             response = completion(
-    #                 model=self.llm_model_name,
-    #                 messages=self.llm_conversation,
-    #                 n=num_responses,
-    #                 temperature=temperature,
-    #                 timeout=60,
-    #             )
-    #             responses = [choice.message.content for choice in response.choices]
-    #             if len(responses) == num_responses:
-    #                 return responses
-    #             else:
-    #                 raise ValueError(f"Expected {num_responses} responses, got {len(responses)}")
-    #         except Exception as e:
-    #             print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
-    #             if attempt == 2:
-    #                 raise RuntimeError("Failed to get multiple LLM responses after 3 attempts") from e
-    #             time.sleep(5)
-    #     return []
-
     def query_llm(self, temperature=1.0):
         for attempt in range(5):
             try:
                 response = completion(
-                    model="openai/gpt-oss-120b",  # ví dụ: "openai/DeepSeek-V3.2-Speciale"
+                    model=self.llm_model_name,
                     messages=self.llm_conversation,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
-                    api_base="https://mkp-api.fptcloud.com/v1",
-                    stream=False,  # vì bạn đang lấy full text
                 )
-
                 text = response["choices"][0]["message"]["content"]
-
                 # Append assistant response to conversation history
                 self.add_llm_conversation(text, "assistant")
                 return text
-
             except Exception as e:
                 print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
                 if attempt == 4:
                     raise RuntimeError("Failed to get LLM response after 5 attempts") from e
                 time.sleep(10)
-
         return ""  # unreachable
 
     def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
         for attempt in range(3):
             try:
                 response = completion(
-                    model="openai/DeepSeek-R1",
+                    model=self.llm_model_name,
                     messages=self.llm_conversation,
                     n=num_responses,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
-                    api_base="https://mkp-api.fptcloud.com/v1",
-                    stream=False,
                 )
-
-                responses = [
-                    choice["message"]["content"]
-                    for choice in response["choices"]
-                ]
-
+                responses = [choice.message.content for choice in response.choices]
                 if len(responses) == num_responses:
                     return responses
                 else:
-                    raise ValueError(
-                        f"Expected {num_responses} responses, got {len(responses)}"
-                    )
-
+                    raise ValueError(f"Expected {num_responses} responses, got {len(responses)}")
             except Exception as e:
                 print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
                 if attempt == 2:
-                    raise RuntimeError(
-                        "Failed to get multiple LLM responses after 3 attempts"
-                    ) from e
+                    raise RuntimeError("Failed to get multiple LLM responses after 3 attempts") from e
                 time.sleep(5)
-
         return []
+
+    # def query_llm(self, temperature=1.0):
+    #     for attempt in range(5):
+    #         try:
+    #             response = completion(
+    #                 model="openai/gpt-oss-120b",  # ví dụ: "openai/DeepSeek-V3.2-Speciale"
+    #                 messages=self.llm_conversation,
+    #                 temperature=temperature,
+    #                 timeout=60,
+    #                 api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+    #                 api_base="https://mkp-api.fptcloud.com/v1",
+    #                 stream=False,  # vì bạn đang lấy full text
+    #             )
+    #
+    #             text = response["choices"][0]["message"]["content"]
+    #
+    #             # Append assistant response to conversation history
+    #             self.add_llm_conversation(text, "assistant")
+    #             return text
+    #
+    #         except Exception as e:
+    #             print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
+    #             if attempt == 4:
+    #                 raise RuntimeError("Failed to get LLM response after 5 attempts") from e
+    #             time.sleep(10)
+    #
+    #     return ""  # unreachable
+    #
+    # def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
+    #     for attempt in range(3):
+    #         try:
+    #             response = completion(
+    #                 model="openai/DeepSeek-R1",
+    #                 messages=self.llm_conversation,
+    #                 n=num_responses,
+    #                 temperature=temperature,
+    #                 timeout=60,
+    #                 api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+    #                 api_base="https://mkp-api.fptcloud.com/v1",
+    #                 stream=False,
+    #             )
+    #
+    #             responses = [
+    #                 choice["message"]["content"]
+    #                 for choice in response["choices"]
+    #             ]
+    #
+    #             if len(responses) == num_responses:
+    #                 return responses
+    #             else:
+    #                 raise ValueError(
+    #                     f"Expected {num_responses} responses, got {len(responses)}"
+    #                 )
+    #
+    #         except Exception as e:
+    #             print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
+    #             if attempt == 2:
+    #                 raise RuntimeError(
+    #                     "Failed to get multiple LLM responses after 3 attempts"
+    #                 ) from e
+    #             time.sleep(5)
+    #
+    #     return []
 
     def parse_parameters(self, parameters_string: str):
         new_parameters_list = []
@@ -348,6 +348,7 @@ class LLMBrain:
             "best_visual_analysis": best_visual_analysis,
             "best_visual_iter": best_visual_entry['iteration'] if best_visual_entry else None,
             "best_visual_reward": f"{best_visual_entry['reward']:.2f}" if best_visual_entry else None,
+            "best_visual_params": best_visual_entry['params'] if best_visual_entry else None,
             "has_best_visual": best_visual_analysis is not None,
         })
         self.add_llm_conversation(system_prompt, "user")

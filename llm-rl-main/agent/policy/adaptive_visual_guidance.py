@@ -65,7 +65,7 @@ class AdaptiveVisualGuidance:
             iteration = self.current_iteration
             
         # Exponential decay: λ_t = 0.995^t
-        lambda_t = self.max_lambda * (0.995 ** iteration)
+        lambda_t = self.max_lambda * (1 ** iteration)
         
         # Clamp to min_lambda
         lambda_t = max(self.min_lambda, lambda_t)

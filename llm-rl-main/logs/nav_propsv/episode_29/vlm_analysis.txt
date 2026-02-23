@@ -1,0 +1,13 @@
+The agent's visually observable behavior in this navigation task exhibits a clear pattern of **oscillatory instability with abrupt overcorrection**, ultimately leading to loss of control. Here’s a breakdown of its motion:
+
+1. **Initial Movement (Frames 1–5)**:
+   The agent begins with smooth, linear motion in a single direction (action=0), maintaining a consistent orientation and modest forward acceleration. Its trajectory appears stable, with no significant deviations or posture shifts, as evidenced by the gradually changing state values.
+
+2. **Emerging Instability (Frame 6)**:
+   At t=250, the agent abruptly switches to the opposite action (action=1), initiating a sharp directional reversal. This suggests an overcompensating response to perceived positional error, introducing angular velocity and destabilizing its trajectory. The negative reward (−0.5) signals deviation from the desired path or unwanted acceleration.
+
+3. **Divergence and Loss of Control (Frame 7)**:
+   Following the reversal, the agent fails to stabilize, instead undergoing erratic motion characterized by uncontrolled spin or drift. The final frame (t=275) shows a catastrophic failure—likely a collision or boundary violation—with a steep negative reward (−200). The state value’s abrupt drop and termination indicate a complete loss of orientation and positional control.
+
+4. **Overall Behavior Style**:
+   The agent’s movement evolves from **smooth, controlled thrusting** into **oscillatory overcorrection**, quickly escalating into **chaotic, divergent motion**. The repeated abrupt shifts in action suggest a reactive control policy lacking predictive damping, leading to instability rather than graceful stabilization. The lack of gradual adjustment results in persistent oscillations that ultimately destabilize the system.
