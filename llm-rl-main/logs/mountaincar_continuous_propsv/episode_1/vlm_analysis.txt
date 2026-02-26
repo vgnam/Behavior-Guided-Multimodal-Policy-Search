@@ -1,0 +1,32 @@
+TheThe **agent consistently displays an aggressive thrusting behavior** driven by high-magnitude positive and negative actions. Here’s a detailed breakdown of its motion, posture, and observed patterns:
+
+### **Position and Orientation Over Time**
+1. **Acceleration and Direction Changes**
+   - The agent alternates rapidly between extreme forward (`+1.7`) and backward (`-3`) thrusts, generating abrupt, oscillatory motion.
+   - This back-and-forth pattern is visually evident in the frames, where the car’s position swings erratically around a central point without making steady progress toward the goal.
+
+2. **Posture Shifts**
+   - The car’s orientation remains largely horizontal due to the nature of the 1D environment, but its **acceleration profile** leads to sharp changes in velocity.
+   - The **repeated high-magnitude actions** cause the car to "rock" violently, resembling a metronome-like oscillation.
+
+3. **Motion Smoothness and Instability**
+   - The movement is **not smooth** but rather **abrupt and erratic**, with frequent overcorrections.
+   - The **oscillatory control** lacks finesse, resulting in **persistent drift** without stabilization. The car struggles to maintain a steady velocity or position, instead overshooting and reversing direction.
+
+### **Repeated Patterns**
+- **Binary Thrusting Cycle**
+  The agent’s policy alternates between two extreme states:
+  - **Full forward thrust (`params[0]: -3`)**
+  - **Full backward thrust (`params[1]: -2`)**
+  This creates a **pendulum-like motion** with no dampening, resembling a poorly tuned PID controller with an overly aggressive $P$ term.
+
+- **Loss of Control**
+  - The car’s velocity swings wildly, accumulating **high negative rewards** due to excessive thrust and inefficient energy use.
+  - The **lack of intermediate thrust values** suggests the agent has not learned a nuanced control strategy, relying instead on a simplistic all-or-nothing approach.
+
+### **Notable Instability**
+- The **oscillatory frequency** increases with time, as the agent repeatedly fails to dampen its motion.
+- The **failure to stabilize** leads to termination after `998` steps, indicating the agent never achieves its goal of reaching the flag.
+
+### **Overall Behavioral Style**
+The agent’s behavior can be characterized as **aggressive thrusting** with **oscillatory control**, resulting in **persistent drift** and **chaotic motion**. This style reflects a suboptimal policy that prioritizes immediate, extreme actions over smooth, goal-directed progress. The agent’s strategy is akin to a **bang-bang controller**, which is typically inefficient for tasks requiring precision and stability.

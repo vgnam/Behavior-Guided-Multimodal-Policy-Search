@@ -1,0 +1,151 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The mountain car continuous environment is a 2D world where the agent (car) is in a U shaped valley, and a torque can be applied to the car (left is negative and right is positive). 
+The state is a vector of 2 elements, representing position (-1.2 to 0.6) and velocity (-0.07 to 0.07) respectively. Negative means left and positive means right for both position and velocity. The goal is to reach the flag at the far right side of the hill. 
+The policy is a linear policy with 3 parameters and works as follows: 
+action = position * params[0] + velocity * params[1] + params[2]
+The reward is -0.1 * action^2 for each step, and 100 if the cart reaches goal. The goal is to reach the flag at the far right side of the hill. 
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 3 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[2]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing BOTH visual observations AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 90.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: -1.9; params[1]: 1.9; params[2]: -3.3; f(params): -333.25
+params[0]: -3.5; params[1]: 4.5; params[2]: 1.6; f(params): -713.54
+params[0]: 2.9; params[1]: 4.2; params[2]: -0.6; f(params): -1033.10
+params[0]: 2; params[1]: -4; params[2]: 0.7; f(params): -34.91
+params[0]: -0.1; params[1]: 0; params[2]: 1.1; f(params): -125.94
+params[0]: -0.9; params[1]: 2.6; params[2]: -1.2; f(params): -42.48
+params[0]: 2.2; params[1]: 0.7; params[2]: -1.5; f(params): -1060.70
+params[0]: 2.3; params[1]: 1.4; params[2]: -2.5; f(params): -1999.22
+params[0]: -5.3; params[1]: -3.5; params[2]: 0.6; f(params): -508.09
+params[0]: 0.9; params[1]: -1.2; params[2]: 4.7; f(params): -1969.52
+params[0]: -4.6; params[1]: -0.2; params[2]: -0.9; f(params): -60.52
+params[0]: -0.9; params[1]: -7.3; params[2]: -0.9; f(params): -13.15
+params[0]: 0.2; params[1]: 0.3; params[2]: 2.4; f(params): -547.54
+params[0]: -3.7; params[1]: -1.5; params[2]: -2.1; f(params): -0.90
+params[0]: 5.5; params[1]: -1.5; params[2]: 0; f(params): -1793.11
+params[0]: 1.6; params[1]: 2.6; params[2]: 0.9; f(params): -6.65
+params[0]: -2.4; params[1]: 0.4; params[2]: 1.1; f(params): -329.74
+params[0]: 5.3; params[1]: 2.1; params[2]: 4.3; f(params): -805.26
+params[0]: -2.6; params[1]: -1.9; params[2]: 2.9; f(params): -1256.02
+params[0]: 5.4; params[1]: 2.7; params[2]: 4.8; f(params): -1023.08
+params[0]: -3; params[1]: -2; params[2]: 0.5; f(params): -210.02
+params[0]: -3.7; params[1]: -1.5; params[2]: -1.1; f(params): -25.62
+params[0]: -2.7; params[1]: -0.5; params[2]: 0.9; f(params): -292.40
+params[0]: 0.5; params[1]: 0.5; params[2]: 1; f(params): -70.73
+params[0]: -4; params[1]: -4; params[2]: 6; f(params): -5119.08
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.34
+params[0]: -2.7; params[1]: -0.5; params[2]: 0; f(params): -91.88
+params[0]: -4; params[1]: -2; params[2]: 2; f(params): -995.13
+params[0]: 3.5; params[1]: -1; params[2]: -2; f(params): -2338.21
+params[0]: 2; params[1]: 2; params[2]: 1; f(params): -8.32
+params[0]: -4.5; params[1]: -4.5; params[2]: -1; f(params): -53.66
+params[0]: 5; params[1]: 0; params[2]: 4; f(params): -770.03
+params[0]: 3; params[1]: 3; params[2]: 2; f(params): -105.95
+params[0]: -2; params[1]: -2; params[2]: 2; f(params): -655.90
+params[0]: -3; params[1]: -2; params[2]: 3; f(params): -1486.95
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.36
+params[0]: -5; params[1]: 0; params[2]: 0; f(params): -293.52
+params[0]: 3; params[1]: 2; params[2]: 1; f(params): -196.19
+params[0]: 2; params[1]: 2; params[2]: 0; f(params): -272.14
+params[0]: 1.5; params[1]: 2.5; params[2]: 1; f(params): 7.19
+params[0]: 2; params[1]: 3; params[2]: 2; f(params): -224.76
+params[0]: 1; params[1]: 1; params[2]: 3; f(params): -742.02
+params[0]: 1; params[1]: 2; params[2]: 2; f(params): -301.76
+params[0]: 0.5; params[1]: 1.5; params[2]: 0.5; f(params): -7.34
+params[0]: 1.5; params[1]: 2.5; params[2]: 1.5; f(params): -77.12
+params[0]: 3; params[1]: 1; params[2]: 0; f(params): -623.68
+params[0]: 1; params[1]: 2; params[2]: 0.5; f(params): -1.06
+params[0]: 0; params[1]: 0; params[2]: 0.5; f(params): -24.97
+params[0]: 2; params[1]: 3; params[2]: 1; f(params): -32.40
+params[0]: 2; params[1]: 2.5; params[2]: 2; f(params): -224.34
+params[0]: -1; params[1]: 0.5; params[2]: 0.5; f(params): -71.15
+params[0]: 1; params[1]: 2.5; params[2]: 0.8; f(params): 19.20
+params[0]: 1; params[1]: 3; params[2]: 1.2; f(params): 16.90
+params[0]: 1; params[1]: 3.5; params[2]: 0.8; f(params): 54.51
+params[0]: 1; params[1]: 4; params[2]: 1.5; f(params): -137.53
+params[0]: 1; params[1]: 3.6; params[2]: 0.9; f(params): 40.43
+params[0]: 0.8; params[1]: 3.5; params[2]: 0.6; f(params): 62.22
+params[0]: 0.5; params[1]: 3.5; params[2]: 0.5; f(params): 51.53
+params[0]: 1; params[1]: 3.5; params[2]: 0.9; f(params): 46.09
+params[0]: 1; params[1]: 3.6; params[2]: 0.7; f(params): 36.63
+params[0]: 1; params[1]: 3.3; params[2]: 0.9; f(params): 41.47
+params[0]: 1; params[1]: 3.7; params[2]: 0.6; f(params): 44.43
+
+
+
+## Visual Feedback — Current Policy (iter 42) with params[0]: 1, params[1]: 3.7, params[2]: 0.6:
+TheThe agent in the MountainCarContinuous environment begins with an initially cautious and somewhat oscillatory motion as it attempts to gain enough momentum to reach the goal. The car's position starts near the bottom of the valley, and it exhibits the following behavioral characteristics over the sequence:
+
+1. **Initial Acceleration and Posture:**
+   - **Frames 1-6:** The agent's motions are small and cautious, applying minimal force in either direction. The car oscillates slightly, pushing left and right but not gaining significant height or momentum.
+
+2. **Gradual Momentum Building:**
+   - **Frames 7-13:** The agent increases the applied forces, pushing more aggressively to the left and right. The car begins to climb higher up the valley on each side, but not consistently, reflecting attempts to build momentum. The oscillation frequency increases as the agent tries to gather more kinetic energy.
+
+3. **Sustained Thrusting:**
+   - **Frames 14-19:** The car engages in a more aggressive thrusting behavior, consistently pushing to the right for elongated periods to maximize upward momentum. This action helps it climb further up the right slope, indicating it has learned to apply force effectively in one direction for sustained periods.
+
+4. **Critical Momentum and Goal Achievement:**
+   - **Frame 20:** The car reaches the goal at the rightmost position of the environment. It now exhibits controlled motion, applying a strong, consistent force to reach the target. This is the final frame where the agent successfully completes the task by pushing the car to the flag.
+
+The agent’s movement pattern evolves from erratic and uncertain to more stable and directionally consistent, showing effective utilization of thrust to gain forward motion. The behavior stabilizes into a more controlled and goal-directed approach, culminating in the successful completion of the task. This progression highlights a transition from exploration to a more refined, exploitative control strategy.
+
+
+## Visual Feedback — Best Known Policy (iter 40, reward=89.25 with params[0]: 1, params[1]: 3.6, params[2]: 0.7):
+The agent exhibits a **persistent, strongly oscillatory style of motion**, characterized by abrupt, large-magnitude thrusts and abrupt braking with rapid direction changes. Here’s how its behavior evolves across the sequence:
+
+### **Key Observations:**
+1. **Acceleration and Directional Thrusts:**
+   - The agent frequently applies **full or near-full positive thrust (around +1.0 to +1.22)**, rapidly propelling itself forward with brief but powerful bursts. These thrusts are **not sustained**—they last only a few frames before abruptly switching.
+   - Shortly after, it just as abruptly applies **full or near-full negative thrusts (around -0.7 to -1.0)**, creating sharp braking and backward acceleration. This pattern repeats in rapid succession, creating erratic oscillations in its velocity.
+
+2. **Posture and Position Shifts:**
+   - The agent’s **orientation remains mostly horizontal** but experiences minor tilting due to the abrupt thrust reversals.
+   - Its **position fluctuates erratically** along the track, shifting back and forth between **negative and positive positions**, with no smooth stabilization or sustained forward movement.
+
+3. **Repeated Patterns and Oscillation:**
+   - The agent’s motion forms **repetitive cycles** of thrusting forward, braking, and then thrusting backward, creating **large velocity swings**.
+   - These cycles are **highly regular in their abruptness**, and the agent never settles into a stable velocity or position, instead continuously overshooting and correcting with excessive force.
+
+4. **Abruptness and Overcorrection:**
+   - Each thrust switch is **sharp and delayed**, with the agent reacting to its current velocity only after it has already overshot an optimal position or velocity. This results in a **"yo-yo effect"**, where the agent oscillates violently back and forth without making steady progress.
+
+5. **No Stabilization or Convergence:**
+   - Over time, the agent **does not stabilize**—its oscillatory behavior remains consistent and diverges from a controlled, smooth trajectory. Instead of converging toward a target velocity or position, it consistently overcorrects, maintaining erratic oscillations until the episode ends (triggering early termination).
+
+### **Overall Behavioral Style:**
+This agent exemplifies a **chaotic, oscillatory control strategy**, characterized by **aggressive, abrupt thrusting with delayed and excessive braking**. It fails to learn or apply smooth, proportional control, instead employing a **highly reactive and unstable approach** that leads to persistent, divergent oscillations. The motion lacks finesse or adaptability, indicative of an untuned or poorly generalized policy.
+
+
+Now you are at iteration 42 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 0.9, params[1]: 3.7, params[2]: 0.7
+I chose these values because the best known policy (1, 3.6, 0.7) already yields a high reward (~89). The visual feedback shows that a slightly lower position‑weight (param 0) combined with a strong velocity‑weight (param 1) and a modest bias (param 2) produces a more balanced thrust: the car builds momentum without overshooting, as seen in the smoother acceleration phase of the current rollout. Reducing param 0 from 1 to 0.9 should temper the initial aggressive pushes, while keeping param 1 at 3.7 maintains the strong forward drive observed in the successful rollout. Keeping the bias near 0.7 preserves the consistent rightward thrust needed to reach the goal. This slight shift aims to improve stability and push the reward above the current best.

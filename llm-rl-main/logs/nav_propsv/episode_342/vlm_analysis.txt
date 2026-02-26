@@ -1,0 +1,14 @@
+The agent demonstrates a **repeated oscillatory behavior** with abrupt corrections, reflecting an unstable control strategy.
+
+1. **Behavioral Trajectory**
+   The agent alternates between two actions (0 and 1) in a rhythmic pattern, causing its state (position or orientation) to swing between low and high values. When action=1 (e.g., frames 1, 6, 13, 17, 21), the state jumps sharply upward (e.g., from ~1.7 to ~4.6), followed by a gradual descent under action=0 (e.g., frames 3–5, 7–12), suggesting opposing forces (e.g., thrust vs. gravity or damping). The transitions at frames 13 and 17 show **sudden overshooting**, hinting at delayed or overcorrected responses.
+
+2. **Temporal Consistency**
+   The motion is **jerky and cyclic**, with abrupt switches between actions every ~50–100 timesteps. Corrections are **sudden** (e.g., switching from action=1 to 0 when the state peaks), leading to a **sawtooth-like oscillation** rather than smooth stabilization. The pattern remains consistent but fails to converge, indicating a lack of adaptive damping.
+
+3. **Critical Moments**
+   - **Frames 13 and 17**: The state spikes (e.g., to ~2.1–4.6), suggesting **near-instability or loss of control** before abrupt action switches.
+   - **Frame 21 (last)**: The state again surges to ~4.6, mirroring earlier instability, showing the agent never achieves steady-state balance.
+
+4. **Outcome Pattern**
+   The policy exhibits **aggressive oscillatory control**—alternating between extreme actions to counteract overshooting but perpetually overshooting due to delayed or excessive responses. The lack of gradual modulation results in **persistent, high-amplitude oscillations** rather than stabilization.

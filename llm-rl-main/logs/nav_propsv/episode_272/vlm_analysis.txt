@@ -1,0 +1,15 @@
+The agent exhibits a **cyclic, oscillatory control pattern** with noticeable instability and abrupt action shifts. Here’s the breakdown:
+
+1. **Behavioral Trajectory**:
+The agent alternates between two primary actions (0 and 1), driving a repetitive back-and-forth motion. When it selects **action=1** (frames 1–3, 7–9, 13–17, 20–21), the state value (position/orientation) surges sharply toward higher values (e.g., ~5.0), indicating rapid acceleration or thrust in one direction. Conversely, **action=0** (frames 4–6, 10–12, 18–19) triggers a swift deceleration or reverse thrust, pulling the state back toward lower values (~1.2–1.8). This creates a sawtooth-like positional oscillation with no smooth stabilization.
+
+2. **Temporal Consistency**:
+Movement is **abrupt and erratic**, with sudden action switches every 50–150 timesteps. Corrections appear **overcompensated**—each action shift induces a rapid directional flip without gradual damping, causing persistent divergence rather than stabilization.
+
+3. **Critical Moments**:
+- **Frames 16–17 (t=750–800)**: The agent reaches peak instability with a state value of **5.21**, the highest observed, followed by an immediate reversal.
+- **Frames 7–9 (t=300–400)**: A stark transition from reward=5.0 (action=0) to reward=-0.5 (action=1) signals tipping or overshoot.
+- **Repeated cycles (e.g., t=0–600, 600–999)**: The oscillatory pattern recurs, highlighting failed convergence.
+
+4. **Outcome Pattern**:
+This policy produces **aggressive, oscillatory thrusting**—a chaotic feedback loop where the agent perpetually overcorrects, never attaining steady motion. The lack of gradual adjustments suggests poor temporal credit assignment, reinforcing a **persistent drift** rather than controlled navigation.

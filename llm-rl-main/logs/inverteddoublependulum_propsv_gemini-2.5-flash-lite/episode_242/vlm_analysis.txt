@@ -1,0 +1,1 @@
+The agent begins with the double pendulum standing almost perfectly upright, with a slight initial lean to the left. Over the next eight time steps, the system rapidly destabilizes, with both pendulum segments quickly falling

@@ -1,0 +1,1 @@
+The agent begins with the inverted double pendulum leaning slightly to its left. It applies a small action, but this does not prevent the pendulum from continuing its lean. Over the short duration of 7 timesteps

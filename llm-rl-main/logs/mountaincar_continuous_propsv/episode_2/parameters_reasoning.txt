@@ -1,0 +1,118 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The mountain car continuous environment is a 2D world where the agent (car) is in a U shaped valley, and a torque can be applied to the car (left is negative and right is positive). 
+The state is a vector of 2 elements, representing position (-1.2 to 0.6) and velocity (-0.07 to 0.07) respectively. Negative means left and positive means right for both position and velocity. The goal is to reach the flag at the far right side of the hill. 
+The policy is a linear policy with 3 parameters and works as follows: 
+action = position * params[0] + velocity * params[1] + params[2]
+The reward is -0.1 * action^2 for each step, and 100 if the cart reaches goal. The goal is to reach the flag at the far right side of the hill. 
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 3 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[2]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing BOTH visual observations AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 90.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: -1.9; params[1]: 1.9; params[2]: -3.3; f(params): -333.25
+params[0]: -3.5; params[1]: 4.5; params[2]: 1.6; f(params): -713.54
+params[0]: 2.9; params[1]: 4.2; params[2]: -0.6; f(params): -1033.10
+params[0]: 2; params[1]: -4; params[2]: 0.7; f(params): -34.91
+params[0]: -0.1; params[1]: 0; params[2]: 1.1; f(params): -125.94
+params[0]: -0.9; params[1]: 2.6; params[2]: -1.2; f(params): -42.48
+params[0]: 2.2; params[1]: 0.7; params[2]: -1.5; f(params): -1060.70
+params[0]: 2.3; params[1]: 1.4; params[2]: -2.5; f(params): -1999.22
+params[0]: -5.3; params[1]: -3.5; params[2]: 0.6; f(params): -508.09
+params[0]: 0.9; params[1]: -1.2; params[2]: 4.7; f(params): -1969.52
+params[0]: -4.6; params[1]: -0.2; params[2]: -0.9; f(params): -60.52
+params[0]: -0.9; params[1]: -7.3; params[2]: -0.9; f(params): -13.15
+params[0]: 0.2; params[1]: 0.3; params[2]: 2.4; f(params): -547.54
+params[0]: -3.7; params[1]: -1.5; params[2]: -2.1; f(params): -0.90
+params[0]: 5.5; params[1]: -1.5; params[2]: 0; f(params): -1793.11
+params[0]: 1.6; params[1]: 2.6; params[2]: 0.9; f(params): -6.65
+params[0]: -2.4; params[1]: 0.4; params[2]: 1.1; f(params): -329.74
+params[0]: 5.3; params[1]: 2.1; params[2]: 4.3; f(params): -805.26
+params[0]: -2.6; params[1]: -1.9; params[2]: 2.9; f(params): -1256.02
+params[0]: 5.4; params[1]: 2.7; params[2]: 4.8; f(params): -1023.08
+params[0]: -3; params[1]: -2; params[2]: 0.5; f(params): -210.02
+params[0]: -3.7; params[1]: -1.5; params[2]: -1.1; f(params): -25.62
+
+
+
+## Visual Feedback — Current Policy (iter 2) with params[0]: -3.7, params[1]: -1.5, params[2]: -1.1:
+The agent’s behavior over the given frame sequence exhibits a pronounced pattern of **highly repetitive, oscillatory motion** with clear **posture shifts** and **periodic directional changes** that stabilize into a **persistent drift** rather than controlled, balanced movement.
+
+Analysis of the positional and postural evolution reveals:
+
+1. **Acceleration and Direction Changes**: The agent starts with moderate forward acceleration in the initial frames, showing a slight upward tilt. However, as time progresses, it rapidly transitions into a **strong oscillatory loop**—rocking back and forth with increasing amplitude. The agent’s base shifts from side to side, and its orientation alternates between near-vertical and steep downward tilts, resulting in **abrupt changes in posture** and **erratic motion**.
+
+2. **Posture Shifts**: The agent’s body tilts dramatically downward in certain frames, exposing the undercarriage, and then sharply snaps back into a more upright stance. These posture shifts are **not smooth**—they appear **delayed and overcorrected**, indicative of an unstable control policy or delayed feedback. The oscillations grow in magnitude, reaching a peak where the agent nearly flips, then dampens slightly before repeating.
+
+3. **Motion Characteristics**: The movement is **not smooth** nor **controlled**. Instead, it resembles a **pendulum-like swing** with pronounced **overshoot and undershoot**—a clear sign of **instability in the control loop**. This pattern suggests lack of damping or over-gain in the agent’s motor response, leading to **oscillatory divergence**.
+
+4. **Stabilization or Divergence**: Rather than stabilizing, the agent’s behavior **diverges into a persistent, rhythmic drift**. It does not come to a balanced standstill or achieve forward locomotion. Instead, it settles into a **self-sustaining oscillation**, locked into a **mechanical cycle** with no convergence toward a stable gait or posture.
+
+5. **Overall Behavioral Style**: This is **not cautious stabilization** nor **aggressive thrusting**. It is best described as **oscillatory control failure with persistent drift**—a classic manifestation of **under-damped or unstable feedback systems** in robotic or simulated locomotion tasks. The agent appears locked in a **limit cycle**, unable to escape from a feedback-driven oscillation loop.
+
+
+## Visual Feedback — Best Known Policy (iter 1, reward=-204.17 with params[0]: -3, params[1]: -2, params[2]: 0.5):
+TheThe **agent consistently displays an aggressive thrusting behavior** driven by high-magnitude positive and negative actions. Here’s a detailed breakdown of its motion, posture, and observed patterns:
+
+### **Position and Orientation Over Time**
+1. **Acceleration and Direction Changes**
+   - The agent alternates rapidly between extreme forward (`+1.7`) and backward (`-3`) thrusts, generating abrupt, oscillatory motion.
+   - This back-and-forth pattern is visually evident in the frames, where the car’s position swings erratically around a central point without making steady progress toward the goal.
+
+2. **Posture Shifts**
+   - The car’s orientation remains largely horizontal due to the nature of the 1D environment, but its **acceleration profile** leads to sharp changes in velocity.
+   - The **repeated high-magnitude actions** cause the car to "rock" violently, resembling a metronome-like oscillation.
+
+3. **Motion Smoothness and Instability**
+   - The movement is **not smooth** but rather **abrupt and erratic**, with frequent overcorrections.
+   - The **oscillatory control** lacks finesse, resulting in **persistent drift** without stabilization. The car struggles to maintain a steady velocity or position, instead overshooting and reversing direction.
+
+### **Repeated Patterns**
+- **Binary Thrusting Cycle**
+  The agent’s policy alternates between two extreme states:
+  - **Full forward thrust (`params[0]: -3`)**
+  - **Full backward thrust (`params[1]: -2`)**
+  This creates a **pendulum-like motion** with no dampening, resembling a poorly tuned PID controller with an overly aggressive $P$ term.
+
+- **Loss of Control**
+  - The car’s velocity swings wildly, accumulating **high negative rewards** due to excessive thrust and inefficient energy use.
+  - The **lack of intermediate thrust values** suggests the agent has not learned a nuanced control strategy, relying instead on a simplistic all-or-nothing approach.
+
+### **Notable Instability**
+- The **oscillatory frequency** increases with time, as the agent repeatedly fails to dampen its motion.
+- The **failure to stabilize** leads to termination after `998` steps, indicating the agent never achieves its goal of reaching the flag.
+
+### **Overall Behavioral Style**
+The agent’s behavior can be characterized as **aggressive thrusting** with **oscillatory control**, resulting in **persistent drift** and **chaotic motion**. This style reflects a suboptimal policy that prioritizes immediate, extreme actions over smooth, goal-directed progress. The agent’s strategy is akin to a **bang-bang controller**, which is typically inefficient for tasks requiring precision and stability.
+
+
+Now you are at iteration 2 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: -2.7, params[1]: -0.5, params[2]: 0.9
+The recent rollout with (-3.7, -1.5, -1.1) showed a classic under‑damped limit‑cycle: the car kept swinging back and forth without any forward progress, indicating that the gains are too large in the negative direction and the constant term is pulling the action toward the opposite side. Numerically, the closest-to‑zero reward we have so far is –0.90 at (-3.7, -1.5, -2.1), suggesting that moving the coefficients toward smaller magnitudes and adding a modest positive bias can damp the oscillations and give the car a gentle forward push. Therefore I reduced the magnitude of both weight terms by about +1.0 (from –3.7→–2.7 and –1.5→–0.5) and flipped the bias to a small positive value (+0.9) to encourage forward thrust while retaining enough damping to avoid the violent pendulum‑like swings observed in the visual feedback. This combination should break the persistent drift, produce smoother actions, and increase the chance of reaching the flag, moving the reward toward the desired positive optimum.

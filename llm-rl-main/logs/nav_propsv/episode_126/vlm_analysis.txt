@@ -1,0 +1,16 @@
+The agent exhibits an **oscillatory and unstable navigation pattern**, with visible struggle to maintain smooth or consistent movement across the sequence of frames.
+
+### **1. Behavioral Trajectory**
+The agent alternates between two actions (`0` and `1`), causing it to repeatedly accelerate and decelerate. When taking action `1`, the agent’s state (position or velocity) spikes sharply (e.g., frames 6, 10–12, 17), indicating abrupt corrections. Conversely, action `0` temporarily stabilizes the state near `~1.0` (e.g., frames 2–5, 7–9), but the agent soon overcorrects, leading to large deviations. This back-and-forth creates a "zigzag" motion with no clear progression toward a goal.
+
+### **2. Temporal Consistency**
+The movement is **erratic and overcorrected**, lacking smoothness. Corrections are sudden (e.g., spikes in state at frames 6, 10–12) rather than gradual, and the behavior fails to stabilize over time. The agent’s state fluctuates between near-target values and extreme deviations, suggesting poor temporal adaptation.
+
+### **3. Critical Moments**
+Instability is most evident at:
+- **Frames 6, 10–12, 17**: State spikes (e.g., `2.93`, `8.48`, `5.49`) due to action `1`, indicating overcorrection.
+- **Frames 11–12**: The agent drifts into a high-error state (`8.48` → `5.01`), struggling to recover.
+- **Final frames (20–21)**: Repeated oscillations persist until termination, with no convergence.
+
+### **4. Outcome Pattern**
+The policy produces **aggressive, oscillatory control** with persistent drift. The agent responds to deviations with extreme actions, leading to cycles of overshooting and partial recovery, rather than steady stabilization or goal-directed motion. The behavior resembles a feedback loop with insufficient damping, preventing convergence.

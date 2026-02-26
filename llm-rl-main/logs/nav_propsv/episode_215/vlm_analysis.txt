@@ -1,0 +1,13 @@
+The agent demonstrates a **persistent oscillatory behavior** with abrupt, erratic corrections throughout the trajectory.
+
+1. **Behavioral Trajectory**:
+The agent alternates between two primary actions (0 and 1), causing its state (position) to fluctuate sharply between low (~1.0–1.5) and high (~3.5–4.8) values. Each time the agent switches actions, its motion reverses direction with visible acceleration, creating a repetitive back-and-forth pattern. The transition between states is rapid, with little smooth deceleration.
+
+2. **Temporal Consistency**:
+The movement is **abrupt and overcorrected**, lacking smoothness. Direction changes occur suddenly at periodic intervals (every ~50 frames), showing no gradual stabilization. Instead of converging, the oscillations **diverge slightly** over time, with state magnitudes gradually increasing.
+
+3. **Critical Moments**:
+Instability is most evident around frames **4–5, 9–11, and 14–17**, where the agent’s state spikes toward extreme values (~4.5–4.8), suggesting near-loss of control. These moments coincide with repeated high-action inputs (action=1), indicating overshooting without effective damping.
+
+4. **Outcome Pattern**:
+The policy produces an **aggressive, oscillatory control style**, characterized by alternating thrusts that fail to stabilize the agent. Instead of cautious adjustments, the agent persistently drifts between extremes, revealing a lack of balanced feedback correction.

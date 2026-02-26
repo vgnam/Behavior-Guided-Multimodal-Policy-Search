@@ -1,0 +1,13 @@
+The agent exhibits an **oscillatory and unstable navigation behavior** with visible directional corrections and abrupt action shifts:
+
+1. **Behavioral Trajectory**
+The agent starts with small adjustments but quickly develops a pattern of alternating between two primary actions (action=0 and action=1). This creates a back-and-forth rocking motion in its position and orientation, with noticeable acceleration/deceleration cycles. The state values fluctuate between low (e.g., ~1.0) and high (e.g., ~4.4–4.9) values, reflecting repeated overshooting and overcorrecting. No smooth forward progression is observed; instead, the agent appears trapped in a repetitive loop.
+
+2. **Temporal Consistency**
+Movement is **abrupt and erratic**, with sudden switches between opposing actions every 50–150 time steps. Corrections are **sudden and overcompensated**, failing to stabilize. The behavior does not converge but instead **diverges into persistent oscillation**, indicating a lack of temporal damping or feedback stabilization.
+
+3. **Critical Moments**
+Frames 4 (t=150), 13 (t=600), and 17 (t=800) show peaks in state values (~4.4–4.9), where the agent drifts significantly off-center, triggering corrective but excessive responses. These moments highlight **instability, oscillation, and failure to maintain a steady trajectory**.
+
+4. **Outcome Pattern**
+The overall behavioral style is **oscillatory control with persistent drift and failure**. The agent exhibits aggressive thrusting in alternating directions, unable to achieve smooth or controlled motion, producing a **chaotic and cyclic instability** throughout the episode.

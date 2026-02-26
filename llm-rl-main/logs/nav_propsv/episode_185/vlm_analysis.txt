@@ -1,0 +1,14 @@
+The agent exhibits a **cyclic, oscillatory behavioral pattern** with abrupt switching between two distinct actions. Here’s the breakdown:
+
+1. **Behavioral Trajectory**:
+The agent repeatedly alternates between **Action 1** (first 5 frames) and **Action 0** (next 3 frames), creating a looped motion. During **Action 1**, the state value (position/orientation) gradually increases (e.g., from 1.79 → 4.56), suggesting forward acceleration or upward thrust. Upon switching to **Action 0**, the state rapidly drops (e.g., 4.56 → 1.11), indicating deceleration or downward motion, This alternation causes a "sawtooth" positional oscillation around a central value (≈1.0–2.6).
+
+2. **Temporal Consistency**:
+The motion is **abrupt and jerky**, with sudden state changes at action boundaries (e.g., t=250, 650, 900). Corrections are **overreactive**, leading to erratic jumps rather than smooth stabilization. The pattern stabilizes into a **predictable cycle** but remains unstable due to persistent overshooting.
+
+3. **Critical Moments**:
+- **Frames 5–6 (t=200–300)**: Abrupt switch from Action 1 to 0 causes a sharp drop in state (1.12 → 1.46), marking the start of oscillation.
+- **Frames 9–10 (t=400–450)**: State spikes under Action 1 (2.64 → 4.48), then collapses again at t=500, showing repeated instability.
+
+4. **Outcome Pattern**:
+The policy produces **aggressive, oscillatory control**—alternating between thrusting and braking without converging. This resembles a **bang-bang control** strategy, where the agent toggles between extreme actions to regulate motion, but fails to dampen oscillations, leading to persistent instability.

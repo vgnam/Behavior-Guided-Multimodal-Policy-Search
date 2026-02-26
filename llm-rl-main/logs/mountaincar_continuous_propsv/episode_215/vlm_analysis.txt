@@ -1,0 +1,23 @@
+The agent’s behavior in the MountainCarContinuous environment exhibits a visually observable pattern of **aggressive, oscillatory thrusting** with clear **posture shifts and repeated acceleration attempts** to overcome the steep incline.
+
+### Position and Motion Evolution:
+1. **Initial Back-and-Forth Acceleration (Frames 1–7):**
+   The agent begins by repeatedly driving backward and forward in short, forceful bursts (actions like `[0.28]`, `[0.3]`, `[0.41]`). This creates a rapid back-and-forth rocking motion, generating momentum via oscillatory thrusts. The car’s position barely changes, but the repeated high-magnitude actions (e.g., `[0.61]`, `[-0.02]`) suggest an attempt to build kinetic energy by exploiting the car’s inertia.
+
+2. **Mid-Episode Directional Shift (Frames 8–10):**
+   Around **t=350–450**, the agent abruptly switches to **persistent forward thrusting** (actions like `[0.8]` and `[0.86]`). The car’s orientation shifts upward as it climbs the left slope, accelerating toward the right side of the valley. The motion becomes smoother but still erratic, with the agent overcorrecting to avoid rolling backward.
+
+3. **Final Stabilization and Escape (Frame 11):**
+   By **t=455**, the agent achieves a **controlled, high-velocity escape** (reward `99.9254` for reaching the goal). The final action (`[0.86]`) sustains maximum forward thrust, stabilizing the car’s posture as it crests the hill. The motion here is smooth and linear, devoid of prior oscillations.
+
+### Smoothness and Instability:
+- **Early Motion:** Highly **abrupt and delayed**, with rapid reversals of direction that fail to translate into consistent progress. The agent appears to "pump" energy into the system via oscillations,- **Mid Motion:** **Overcorrected and erratic**, with sudden shifts in acceleration that risk losing momentum. The car drifts sideways during climbs, indicating suboptimal posture control.
+- **Late Motion:** **Stabilized and smooth**, once the agent locks onto a successful trajectory (after t=400). The final ascent is fluid, showing mastery of the momentum-building strategy.
+
+### Instability and Drift:
+- The agent’s early oscillations create **momentum drift**, where energy dissipates laterally rather than being directed toward the goal.
+- **Oscillations reappear** whenever progress stalls (e.g., frames 4–6), suggesting a reactive, rather than predictive, control policy.
+- Loss of control is evident when the car rolls backward slightly (e.g., t=9), requiring renewed thrusting to recover.
+
+### Overall Behavioral Style:
+This is a **high-risk, momentum-driven strategy** combining **oscillatory control** to build speed and **aggressive thrusting** to escape the valley. The agent’s movements are initially chaotic but gradually refine into a **goal-directed climb**, with persistent forward acceleration overcoming the steep incline. The behavior mirrors a human-like approach of "rocking" to gain momentum before committing to the ascent.

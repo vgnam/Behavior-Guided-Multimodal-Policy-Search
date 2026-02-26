@@ -1,0 +1,117 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The mountain car continuous environment is a 2D world where the agent (car) is in a U shaped valley, and a torque can be applied to the car (left is negative and right is positive). 
+The state is a vector of 2 elements, representing position (-1.2 to 0.6) and velocity (-0.07 to 0.07) respectively. Negative means left and positive means right for both position and velocity. The goal is to reach the flag at the far right side of the hill. 
+The policy is a linear policy with 3 parameters and works as follows: 
+action = position * params[0] + velocity * params[1] + params[2]
+The reward is -0.1 * action^2 for each step, and 100 if the cart reaches goal. The goal is to reach the flag at the far right side of the hill. 
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 3 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[2]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing BOTH visual observations AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 90.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: -1.9; params[1]: 1.9; params[2]: -3.3; f(params): -333.25
+params[0]: -3.5; params[1]: 4.5; params[2]: 1.6; f(params): -713.54
+params[0]: 2.9; params[1]: 4.2; params[2]: -0.6; f(params): -1033.10
+params[0]: 2; params[1]: -4; params[2]: 0.7; f(params): -34.91
+params[0]: -0.1; params[1]: 0; params[2]: 1.1; f(params): -125.94
+params[0]: -0.9; params[1]: 2.6; params[2]: -1.2; f(params): -42.48
+params[0]: 2.2; params[1]: 0.7; params[2]: -1.5; f(params): -1060.70
+params[0]: 2.3; params[1]: 1.4; params[2]: -2.5; f(params): -1999.22
+params[0]: -5.3; params[1]: -3.5; params[2]: 0.6; f(params): -508.09
+params[0]: 0.9; params[1]: -1.2; params[2]: 4.7; f(params): -1969.52
+params[0]: -4.6; params[1]: -0.2; params[2]: -0.9; f(params): -60.52
+params[0]: -0.9; params[1]: -7.3; params[2]: -0.9; f(params): -13.15
+params[0]: 0.2; params[1]: 0.3; params[2]: 2.4; f(params): -547.54
+params[0]: -3.7; params[1]: -1.5; params[2]: -2.1; f(params): -0.90
+params[0]: 5.5; params[1]: -1.5; params[2]: 0; f(params): -1793.11
+params[0]: 1.6; params[1]: 2.6; params[2]: 0.9; f(params): -6.65
+params[0]: -2.4; params[1]: 0.4; params[2]: 1.1; f(params): -329.74
+params[0]: 5.3; params[1]: 2.1; params[2]: 4.3; f(params): -805.26
+params[0]: -2.6; params[1]: -1.9; params[2]: 2.9; f(params): -1256.02
+params[0]: 5.4; params[1]: 2.7; params[2]: 4.8; f(params): -1023.08
+params[0]: -3; params[1]: -2; params[2]: 0.5; f(params): -210.02
+params[0]: -3.7; params[1]: -1.5; params[2]: -1.1; f(params): -25.62
+params[0]: -2.7; params[1]: -0.5; params[2]: 0.9; f(params): -292.40
+params[0]: 0.5; params[1]: 0.5; params[2]: 1; f(params): -70.73
+params[0]: -4; params[1]: -4; params[2]: 6; f(params): -5119.08
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.34
+params[0]: -2.7; params[1]: -0.5; params[2]: 0; f(params): -91.88
+params[0]: -4; params[1]: -2; params[2]: 2; f(params): -995.13
+params[0]: 3.5; params[1]: -1; params[2]: -2; f(params): -2338.21
+params[0]: 2; params[1]: 2; params[2]: 1; f(params): -8.32
+params[0]: -4.5; params[1]: -4.5; params[2]: -1; f(params): -53.66
+params[0]: 5; params[1]: 0; params[2]: 4; f(params): -770.03
+params[0]: 3; params[1]: 3; params[2]: 2; f(params): -105.95
+params[0]: -2; params[1]: -2; params[2]: 2; f(params): -655.90
+params[0]: -3; params[1]: -2; params[2]: 3; f(params): -1486.95
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.36
+params[0]: -5; params[1]: 0; params[2]: 0; f(params): -293.52
+params[0]: 3; params[1]: 2; params[2]: 1; f(params): -196.19
+params[0]: 2; params[1]: 2; params[2]: 0; f(params): -272.14
+params[0]: 1.5; params[1]: 2.5; params[2]: 1; f(params): 7.19
+params[0]: 2; params[1]: 3; params[2]: 2; f(params): -224.76
+
+
+
+## Visual Feedback — Current Policy (iter 21) with params[0]: 2, params[1]: 3, params[2]: 2:
+TheThe agent exhibits a pattern of **periodic thrusting with abrupt direction changes**, alternating between strong positive and negative actions**. Here’s a breakdown of its visually observable behavior:
+
+1. **Position and Motion**:
+   - The cart starts near the center of the track (position ≈ -0.6) and initially accelerates to the right (positive actions).
+   - Over time, the agent alternates between rapid rightward and leftward thrusts, often selecting extreme actions (e.g., +2.9 or +2.5 for rightward, -2.1 or -2.2 for leftward). This creates a jerky, oscillatory motion.
+   - The pole’s angle (not directly visible but inferred from the actions) seems to influence the direction changes, with the agent abruptly reversing thrust to correct deviations.
+
+2. **Posture and Direction Changes**:
+   - The agent’s posture (pole angle) shifts frequently, as indicated by the alternating actions. These abrupt reversals suggest the agent is overcorrecting, likely due to a reactive control strategy that lacks smoothness.
+   - The motion appears **erratic and delayed**, with the agent waiting until the pole is significantly tilted before applying extreme actions to counteract it.
+
+3. **Instability**:
+   - The agent struggles to stabilize the pole, as evidenced by the frequent and large action swings. The pole’s angle likely oscillates wildly, causing the agent to switch directions rapidly.
+   - Despite these efforts, the agent’s control is **unstable**, and the pole eventually falls (indicated by the "Terminated early: Yes" label), suggesting the strategy is not robust.
+
+4. **Behavioral Style**:
+   - The agent’s behavior resembles **aggressive thrusting with oscillatory control**. It relies on large, abrupt actions to compensate for the pole’s instability, rather than a smooth, predictive strategy. This results in a chaotic, reactive motion pattern.
+
+### Key Observations:
+- **Lack of Smoothness**: The agent does not gradually adjust its actions; instead, it relies on extreme values, causing abrupt changes in direction.
+- **Overcorrection**: The large action swings suggest the agent is overcompensating for the pole’s tilt, leading to oscillations.
+- **Persistent Drift**: The erratic motion indicates the agent is unable to maintain a stable equilibrium, often drifting toward failure.
+
+This behavior highlights a control policy that prioritizes immediate, extreme corrections over finesse, likely due to limitations in its training or reward structure.
+
+
+## Visual Feedback — Best Known Policy (iter 10, reward=-0.93 with params[0]: 2, params[1]: 2, params[2]: 1):
+The agent displays careful stabilization behavior, characterized by repeated acceleration and deceleration, oscillating between a full forward thrust and smaller corrective actions. The car consistently moves forward, building up speed, but then it seems to overcorrect or slightly decelerate before strongly accelerating again. This creates a wave-like progression as it maintains an overall forward momentum while periodically reducing speed to stabilize its position. The behavior appears smooth with intermittent abrupt adjustments to prevent overshooting, avoiding erratic or chaotic motion. The agent effectively employs oscillatory control to manage its acceleration and maintain a balanced pace, ensuring it does not lose control or drift excessively from its trajectory. This strategy highlights the agent's ability to stabilize its motion dynamically.
+
+
+Now you are at iteration 21 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 1.0; params[1]: 1.0; params[2]: 3.0  
+I reduced the magnitude of the position and velocity gains (from 2–3 down to 1) because the visual feedback for the current (2, 3, 2) policy shows large, abrupt thrusts and violent oscillations—clear signs that the coefficients are too aggressive, causing over‑correction. At the same time I raised the bias term to 3.0 to give the car a steady forward push from the start (the best known policy (2, 2, 1) starts essentially at zero thrust, which limits progress). This combination should produce smoother, more moderate actions, limiting the –0.1·action² penalty while still driving the car toward the goal, addressing both the instability observed and the numerical trend toward higher (less negative) rewards.

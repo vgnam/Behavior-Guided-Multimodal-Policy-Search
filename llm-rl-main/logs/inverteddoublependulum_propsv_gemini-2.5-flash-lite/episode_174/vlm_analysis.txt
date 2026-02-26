@@ -1,0 +1,1 @@
+The agent begins with the inverted pendulum slightly tilted to the left. Over a very short duration of 7 frames, the pendulum rapidly accelerates its lean to the left, quickly losing its upright posture.

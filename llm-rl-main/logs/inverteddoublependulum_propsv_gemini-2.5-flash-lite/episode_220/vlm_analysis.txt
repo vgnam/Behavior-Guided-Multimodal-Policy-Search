@@ -1,0 +1,1 @@
+The agent begins with the inverted double pendulum nearly upright, exhibiting only a very slight lean to the left. Over the subsequent 8 timesteps, the pendulum rapidly loses its balance, progressively tilting

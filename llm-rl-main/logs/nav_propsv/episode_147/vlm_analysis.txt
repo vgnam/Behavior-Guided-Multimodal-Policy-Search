@@ -1,0 +1,7 @@
+The agent exhibits an oscillatory and unstable navigation pattern with abrupt corrections, leading to eventual failure. **Behavioral Trajectory:** Initially, the agent starts with small adjustments (e.g., Frame 1: action=1), but quickly shifts to sustained forward thrusts (action=0) in Frames 2–5, accelerating toward the target. However, it overshoots (e.g., Frame 9: state=4.19) and attempts corrective backward thrusts (action=1 in Frames 6, 9, 16), creating a repetitive cycle of overcorrection. Motion is erratic, with visible deceleration/acceleration spikes and irregular posture shifts, suggesting poor damping of velocity.
+
+**Temporal Consistency:** Movement is abrupt and delayed, with sudden action reversals (e.g., Frame 5 to 6) disrupting smooth progression. Corrections are reactive and extreme rather than gradual, causing divergence over time. The agent fails to stabilize, with oscillations amplifying until failure at Frame 18.
+
+**Critical Moments:** Instability becomes evident by Frame 9 (overshoot), followed by repeated oscillations (Frames 10–17) with escalating state deviations. Failure occurs at Frame 18 due to excessive drift or collision, marked by a sharp negative reward (-200).
+
+**Outcome Pattern:** The policy produces a chaotic, oscillatory control style, characterized by aggressive thrusting and persistent overcorrection, indicative of poor velocity regulation and inadequate feedback damping. The agent’s trajectory lacks predictability or controlled convergence.

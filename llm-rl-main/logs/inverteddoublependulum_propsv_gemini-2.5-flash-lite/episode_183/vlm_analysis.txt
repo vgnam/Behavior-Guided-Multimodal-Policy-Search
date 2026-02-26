@@ -1,0 +1,1 @@
+The agent begins with the double pendulum almost perfectly upright and centered on the track, applying a small positive action to the cart. Over the subsequent nine steps, the pendulum gradually loses its balance,

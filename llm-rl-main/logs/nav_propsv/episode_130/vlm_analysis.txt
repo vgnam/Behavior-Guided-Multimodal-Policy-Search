@@ -1,0 +1,5 @@
+The agent exhibits an erratic and unstable behavioral trajectory. Initially (Frame 1), it moves forward with action `1`, but its state fluctuates unpredictably (e.g., from **3.02** to **5.27**, then dropping to **1.77** by Frame 4), indicating poor control over speed or direction. The movement appears abrupt and oscillatory, with no smooth acceleration or deceleration—suggesting overcorrection or delayed responses to environmental feedback.
+
+A critical moment of failure occurs at **Frame 5 (t=159)**, where the agent abruptly switches to action `0` and collides (reward: **-200**), likely due to excessive drift or tipping. The state (**3.25**) suggests a sudden positional shift, reinforcing instability. Prior frames show repeated attempts to stabilize but with no gradual correction, leading to divergence.
+
+Overall, the policy produces a **chaotic, thrust-driven motion** with persistent oscillation, culminating in an uncontrolled termination. The agent fails to achieve temporal consistency, alternating between aggressive forward thrusts and sudden halts without stabilizing.

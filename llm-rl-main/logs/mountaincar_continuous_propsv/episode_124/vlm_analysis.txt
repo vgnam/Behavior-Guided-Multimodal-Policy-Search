@@ -1,0 +1,27 @@
+The agent’s behavior in the MountainCarContinuous environment follows a clear, aggressive thrusting strategy with noticeable acceleration and directional consistency—though it occasionally exhibits instability in the form of abrupt overcorrections.
+
+---
+
+### **Observed Behavior**
+
+The agent demonstrates a **highly energetic, forward-propelling motion**, immediately applying strong positive actions (e.g., `action=[0.75]` in the last frame) to accelerate the car toward the goal. This is visually evident in the sequence of frames, where the car rapidly gains momentum and climbs the right hill after a short period of buildup. The car’s **posture remains consistently angled upward** during ascent, reflecting deliberate, sustained thrust rather than passive drifting.
+
+The **acceleration is smooth but aggressive**, with actions consistently in the range of `0.12` to `0.75`, indicating full utilization of the continuous action space for forward propulsion. This leads to rapid speed increases, as seen in the transition between frames where the car quickly shifts from moderate to high velocity (e.g., reward increasing from `-0.0014` to `99.944` in the final frame).
+
+---
+
+### **Direction Changes and Instability**
+
+Despite the overall forward momentum, the agent exhibits **minor directional instability** during the early phase. For instance, it briefly applies a small negative action (`action=[-0.02]` in Frame 7), likely as an overcorrection or exploratory adjustment. However, these **abrupt direction changes are short-lived** and do not significantly disrupt the dominant forward thrust. After these initial adjustments, the agent **stabilizes into a unidirectional pattern**, focusing solely on accelerating forward.
+
+---
+
+### **Control Characteristics**
+
+The movement is **not erratic or delayed**; rather, it is **precise and purposeful**, with actions tightly aligned to the goal of maximizing speed toward the target. The **repeated forward thrusts** form a **consistent, oscillatory-like control pattern** within the positive action range, suggesting the agent has learned a robust policy for rapid acceleration. There is **no persistent drift or chaotic motion**—instead, the behavior is **goal-directed and controlled**, culminating in a successful early termination on reaching the flag.
+
+---
+
+### **Overall Behavioral Style**
+
+The agent employs an **aggressive thrusting strategy**, characterized by **maximal forward actions**, **rapid acceleration**, **minimal but corrective directional shifts**, and **purposeful, high-speed movement** toward the goal. While minor overcorrections occur early on, the dominant style is **controlled, energetic propulsion** leading to efficient task completion. This aligns with a **high-reward, performance-optimized policy** targeting fast, decisive goal attainment in the MountainCarContinuous environment.

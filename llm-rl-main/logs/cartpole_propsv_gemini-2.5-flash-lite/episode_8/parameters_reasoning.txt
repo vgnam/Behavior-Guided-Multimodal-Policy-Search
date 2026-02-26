@@ -1,0 +1,88 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The cartpole environment is a 2D world where a pole is attached by an un-actuated joint to a cart, which moves along a frictionless track. The pendulum is placed upright on the cart and the goal is to balance the pole by applying forces in the left and right direction on the cart.
+The state is a vector of 4 elements, representing the cart position (-4.8 to 4.8), cart velocity (-inf to inf), pole angle (-0.418 to 0.418 rad), and ple angular velocity (-inf to inf) respectively. The goal is to keep the pole upright and the cart within the bounding position of [-2.4, 2.4].
+The action space consists of 2 actions (0: push left, 1: push right).
+The policy is a linear policy with 18 parameters and works as follows: 
+action = argmax(state @ W + B), where
+state = [cart_position, cart_velocity, pole_angle, pole_angular_velocity]
+W = [[params[0], params[1]],
+    [params[2], params[3]],
+    [params[4], params[5]],
+    [params[6], params[7]]]
+B = [params[8], params[9]]
+The reward is +1 for every time step the pole is upright and the cart is within the bounding position. The episode ends when the pole falls over or the cart goes out of bounds.
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 10 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[9]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing BOTH visual observations AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 500.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: 3; params[1]: 1.8; params[2]: 2.7; params[3]: 1.4; params[4]: 5; params[5]: 1.9; params[6]: -1; params[7]: -1; params[8]: 0.9; params[9]: 1.3; f(params): 12.00
+params[0]: -1.2; params[1]: -6.6; params[2]: 1.2; params[3]: -3.1; params[4]: 6.3; params[5]: 1; params[6]: 3.4; params[7]: -6.2; params[8]: -2.1; params[9]: -1.4; f(params): 9.00
+params[0]: -3.5; params[1]: 0.3; params[2]: 1.5; params[3]: 1.1; params[4]: -0.3; params[5]: -1; params[6]: 4.3; params[7]: 3; params[8]: 0.5; params[9]: -2.2; f(params): 11.00
+params[0]: -3.6; params[1]: -0.9; params[2]: 1; params[3]: -2.9; params[4]: -6.7; params[5]: 0.2; params[6]: -3.4; params[7]: 3.4; params[8]: 3.9; params[9]: -0.9; f(params): 26.00
+params[0]: 4.4; params[1]: -9.5; params[2]: 2.7; params[3]: -6.2; params[4]: -4; params[5]: 3.7; params[6]: -4.3; params[7]: -4.4; params[8]: -0.6; params[9]: -4.7; f(params): 16.00
+params[0]: 3; params[1]: 0.6; params[2]: -6.4; params[3]: 1.2; params[4]: -2.3; params[5]: 4.2; params[6]: -3.5; params[7]: 1.1; params[8]: 2.2; params[9]: 2.6; f(params): 10.00
+params[0]: -1.1; params[1]: -4.7; params[2]: -4.4; params[3]: 0.4; params[4]: -3.4; params[5]: 5.9; params[6]: 7.1; params[7]: -7.2; params[8]: -0.6; params[9]: -2.9; f(params): 8.00
+params[0]: -1.2; params[1]: -3.9; params[2]: 1.2; params[3]: 1.8; params[4]: -2.9; params[5]: -1.4; params[6]: 2; params[7]: 0.4; params[8]: 3; params[9]: -5; f(params): 9.00
+params[0]: 1.1; params[1]: -7.5; params[2]: 4.5; params[3]: 0.6; params[4]: -2; params[5]: 0.3; params[6]: -2; params[7]: 1.8; params[8]: -2.1; params[9]: 7; f(params): 13.00
+params[0]: 0; params[1]: -2.6; params[2]: -0.3; params[3]: -2.7; params[4]: 4.7; params[5]: -1.6; params[6]: 1.6; params[7]: 0.3; params[8]: -4.2; params[9]: -2.4; f(params): 10.00
+params[0]: -2.3; params[1]: -3.5; params[2]: 0.2; params[3]: 0.4; params[4]: 0.2; params[5]: 2.6; params[6]: 1.7; params[7]: 0.9; params[8]: 3.5; params[9]: 2.1; f(params): 9.00
+params[0]: -0.6; params[1]: 1.2; params[2]: -0.9; params[3]: 1.6; params[4]: 2.2; params[5]: 0.9; params[6]: -2.8; params[7]: 1.8; params[8]: 1.4; params[9]: 5.7; f(params): 10.00
+params[0]: -1.8; params[1]: 1.9; params[2]: 4.4; params[3]: 0.2; params[4]: 4.5; params[5]: -0; params[6]: 2.5; params[7]: -1.5; params[8]: 7.1; params[9]: 1.7; f(params): 9.00
+params[0]: -0.4; params[1]: -1.2; params[2]: 6.5; params[3]: -4; params[4]: 0.9; params[5]: 0.5; params[6]: -1.1; params[7]: -1.7; params[8]: 0.1; params[9]: 2; f(params): 21.00
+params[0]: -4; params[1]: 2.2; params[2]: -1; params[3]: -2.7; params[4]: -5.3; params[5]: -3.1; params[6]: -3.5; params[7]: -1.7; params[8]: -0.1; params[9]: 0.9; f(params): 24.00
+params[0]: 3.2; params[1]: 1.1; params[2]: 3; params[3]: 3.3; params[4]: -1.9; params[5]: 2; params[6]: -0.2; params[7]: -2.9; params[8]: 1.2; params[9]: -0.8; f(params): 10.00
+params[0]: -1.7; params[1]: 1.3; params[2]: 1.3; params[3]: -0.6; params[4]: 6.1; params[5]: 3.3; params[6]: -0.4; params[7]: 4.4; params[8]: 3.8; params[9]: -0.3; f(params): 13.00
+params[0]: -0; params[1]: -5.6; params[2]: -2; params[3]: 0.1; params[4]: 0.1; params[5]: 1.6; params[6]: 2; params[7]: 3.1; params[8]: -0.9; params[9]: 7.4; f(params): 9.00
+params[0]: 3.1; params[1]: 0.3; params[2]: -0.3; params[3]: 3.9; params[4]: 4.8; params[5]: -3.3; params[6]: 0.5; params[7]: -0.3; params[8]: -1.6; params[9]: -1.6; f(params): 9.00
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 38.00
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -6.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 94.65
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -5.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 81.65
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 71.40
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 90.80
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 75.25
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 74.15
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 83.65
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4; f(params): 56.25
+
+
+
+## Visual Feedback — Current Policy (iter 8) with params[0]: 0.7, params[1]: -4.8, params[2]: -2.3, params[3]: -7.1, params[4]: 2.8, params[5]: 1.6, params[6]: 2.2, params[7]: 7.2, params[8]: 3.1, params[9]: 3.4:
+The cart begins centered and the pole upright. In Frame 3, the pole starts to lean to the left, and the cart moves slightly to the right to compensate. By Frame 4, the pole has tilted further to the left, and the cart has moved more significantly to the right, indicating an attempt to rebalance. This movement appears somewhat abrupt and shows signs of instability, with the cart overcorrecting in an attempt to stabilize the pole. The overall behavioral style is one of attempted stabilization that ultimately fails, leading to a loss of control and termination.
+
+
+## Visual Feedback — Best Known Policy (iter 5, reward=184.00 with params[0]: 0.7, params[1]: -4.8, params[2]: -2.3, params[3]: -7.1, params[4]: 2.8, params[5]: 1.6, params[6]: 2.2, params[7]: 7.2, params[8]: 3.1, params[9]: 3.4):
+The agent initially maintains a stable, upright posture, with minor oscillations around the center. The cart moves slightly left and right, with the pole also exhibiting small, controlled wobbles. However, as time progresses, the pole begins to lean more noticeably to the left, and the cart's movements become more pronounced in response. The agent attempts to correct the tilt, but the movements become less precise, showing signs of overcorrection and increased instability. Ultimately, the pole's tilt to the left exceeds its stable range, leading to a loss of control and the episode's termination. The overall behavioral style appears to be an attempt at stabilization that eventually breaks down into oscillatory instability.
+
+
+Now you are at iteration 8 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 0.7; params[1]: -4.8; params[2]: -2.3; params[3]: -7.1; params[4]: 2.8; params[5]: 1.6; params[6]: 2.2; params[7]: 7.2; params[8]: 3.1; params[9]: 3.4
+The recent policy exhibits instability, with the cart overcorrecting and leading to failure. The best known policy (iteration 5) also shows signs of instability and breakdown towards the end of its episode, although it achieved a higher reward. Given the existing parameters around the best policy, I will slightly adjust params[3] to try and mitigate the overcorrection observed in the current policy's visual feedback and the similar trend in the best policy. I'm exploring a small negative adjustment to params[3] which had a significant negative value in the previous high-reward iterations, to see if it can introduce more stability. The other parameters are kept the same as they were part of the best performing policy.

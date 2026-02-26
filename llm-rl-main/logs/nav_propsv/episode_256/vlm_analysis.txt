@@ -1,0 +1,11 @@
+The agent exhibits a **persistent, oscillatory control pattern** with abrupt and erratic adjustments. Here’s the breakdown:
+
+1. **Behavioral Trajectory**: The agent alternates between two actions (0 and 1) in rapid, repetitive cycles, causing its state (position/orientation) to swing sharply between extremes. When action `1` is taken (e.g., Frames 1, 4, 7), the agent decelerates or reverses direction (reward = -0.5), followed by action `0` (e.g., Frames 2–3, 5–6), which accelerates it forward (reward = 5.0). This creates a back-and-forth "sawtooth" motion, with the agent overshooting its target and overcorrecting repeatedly.
+
+2. **Temporal Consistency**: The movement is **abrupt and unstable**, with sudden shifts in direction every ~50 timesteps. Corrections are **sudden and overcompensated**, failing to stabilize; instead, the oscillations grow in amplitude over time (e.g., state values escalate from 2.71 in Frame 1 to 3.61 in Frame 20). The lack of gradual adjustment suggests poor damping in the control policy.
+
+3. **Critical Moments**:
+   - **Frame 11–15**: State values spike (2.31 → 2.08), signaling the onset of **severe oscillation**.
+   - **Frame 19–20**: The agent’s state jumps to 3.61 (Frame 20), triggering a catastrophic failure (reward = -200), likely due to tipping or collision from uncontrolled momentum. The oscillation’s amplitude becomes unsustainable.
+
+4. **Outcome Pattern**: The policy produces **aggressive, underdamped thrusting**, where the agent’s repeated overcorrections lead to growing instability, culminating in a terminal failure. The style is chaotic rather than controlled, with no evident stabilization phase.

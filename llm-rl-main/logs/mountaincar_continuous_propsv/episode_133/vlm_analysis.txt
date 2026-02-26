@@ -1,0 +1,21 @@
+The agent in this MountainCarContinuous environment exhibits a distinct and somewhat erratic behavioral pattern characterized by **aggressive thrusting, abrupt direction shifts, and overcorrected oscillations**, often with delayed stabilization attempts. Here’s a detailed breakdown of its visually observable behavior over the frames:
+
+1. **Position and Motion Evolution**:
+   - Initially, the agent starts near the left side of the valley (around -0.5 position) with minimal velocity. It applies small positive actions, attempting to gain momentum.
+   - As time progresses, the agent aggressively accelerates toward the right, often overshooting the target position (e.g., at t=350, the agent is at -0.8269, indicating an abrupt overcorrection to the left).
+   - The agent repeatedly changes direction with high-magnitude actions (e.g., at t=400, it applies a large positive action of 0.15, then at t=500, a smaller action of 0.04), causing rapid swings back and forth across the valley.
+
+2. **Acceleration and Posture Shifts**:
+   - The agent's actions frequently switch between extreme positive and negative values (e.g., from 0.22 at t=300 to -0.14 at t=350), indicating abrupt thrusts in both directions without smooth transitions.
+   - This behavior leads to a "rocking" motion, where the car gains speed in one direction only to abruptly reverse thrust, causing it to stall or lose momentum.
+
+3. **Instability and Oscillations**:
+   - The agent struggles with stabilization, frequently overcorrecting its position. For example, after reaching near the goal (e.g., at t=578, position 0.425), it fails to maintain steady progress and ultimately succeeds due to a large final thrust (0.67 action).
+   - Oscillatory motion dominates the agent's behavior, with persistent swings in velocity and position that fail to converge smoothly toward the goal.
+
+4. **Control and Smoothness**:
+   - The movement is **not smooth**—it appears **jittery and delayed**, with actions often reacting too late to changes in the car's momentum.
+   - The agent occasionally loses control, with its oscillations leading to near-stalling at the bottom of the valley before applying another strong thrust.
+
+### Overall Behavioral Style:
+The agent's behavior can be described as **chaotic and overcompensating**, with **aggressive thrusting** and **erratic oscillations** that only stabilize briefly before diverging again. It lacks finesse, frequently overcorrecting and failing to exploit momentum effectively, resulting in a highly unstable and inefficient approach to reaching the goal. The eventual success appears more due to brute-force thrusts than controlled, strategic motion.

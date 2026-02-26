@@ -1,0 +1,106 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The cartpole environment is a 2D world where a pole is attached by an un-actuated joint to a cart, which moves along a frictionless track. The pendulum is placed upright on the cart and the goal is to balance the pole by applying forces in the left and right direction on the cart.
+The state is a vector of 4 elements, representing the cart position (-4.8 to 4.8), cart velocity (-inf to inf), pole angle (-0.418 to 0.418 rad), and ple angular velocity (-inf to inf) respectively. The goal is to keep the pole upright and the cart within the bounding position of [-2.4, 2.4].
+The action space consists of 2 actions (0: push left, 1: push right).
+The policy is a linear policy with 18 parameters and works as follows: 
+action = argmax(state @ W + B), where
+state = [cart_position, cart_velocity, pole_angle, pole_angular_velocity]
+W = [[params[0], params[1]],
+    [params[2], params[3]],
+    [params[4], params[5]],
+    [params[6], params[7]]]
+B = [params[8], params[9]]
+The reward is +1 for every time step the pole is upright and the cart is within the bounding position. The episode ends when the pole falls over or the cart goes out of bounds.
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 10 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[9]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing BOTH visual observations AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 500.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: 4.7; params[1]: -1.3; params[2]: 2; params[3]: 2.3; params[4]: 5.3; params[5]: -3; params[6]: -3.7; params[7]: 1.4; params[8]: -7.4; params[9]: 5.9; f(params): 9.00
+params[0]: 1.9; params[1]: -1.6; params[2]: -2.8; params[3]: 3.1; params[4]: 0.6; params[5]: -0.1; params[6]: 0.3; params[7]: 1.5; params[8]: 1.6; params[9]: 0.4; f(params): 11.00
+params[0]: -4.8; params[1]: 1.8; params[2]: -0.2; params[3]: 0.3; params[4]: -7.2; params[5]: 5.3; params[6]: -4.1; params[7]: 1.4; params[8]: 0.3; params[9]: -3.5; f(params): 18.00
+params[0]: -3.6; params[1]: 2.5; params[2]: 0.4; params[3]: -1.4; params[4]: 7.4; params[5]: -0; params[6]: 2.9; params[7]: -2.1; params[8]: -2; params[9]: 0.5; f(params): 9.00
+params[0]: -2.2; params[1]: 0.6; params[2]: 4; params[3]: 5.4; params[4]: -0.8; params[5]: 0.2; params[6]: 2.1; params[7]: -2.3; params[8]: -1.4; params[9]: 4.5; f(params): 10.00
+params[0]: 4.3; params[1]: -5.8; params[2]: -0.2; params[3]: 5; params[4]: -2; params[5]: -5; params[6]: 2.3; params[7]: 5.4; params[8]: -3; params[9]: 3.8; f(params): 10.00
+params[0]: -1.8; params[1]: -0.2; params[2]: 0.7; params[3]: -2.4; params[4]: 3.6; params[5]: -0.6; params[6]: -4.3; params[7]: 1.1; params[8]: 1.4; params[9]: -0.4; f(params): 28.00
+params[0]: 8.7; params[1]: 6.2; params[2]: -2.4; params[3]: -3.5; params[4]: 4.5; params[5]: 0.5; params[6]: 0.2; params[7]: -7.3; params[8]: -3.5; params[9]: -0.9; f(params): 9.00
+params[0]: 3.2; params[1]: -2.4; params[2]: -0.2; params[3]: 3.8; params[4]: -8.3; params[5]: 0.3; params[6]: 0.3; params[7]: 5.2; params[8]: 7; params[9]: -5.9; f(params): 10.00
+params[0]: 2; params[1]: 3.9; params[2]: -2.7; params[3]: -1; params[4]: -0.6; params[5]: -4.9; params[6]: -5.6; params[7]: 0.9; params[8]: 0; params[9]: -3.9; f(params): 13.00
+params[0]: 0.6; params[1]: 3.1; params[2]: -2.3; params[3]: 1; params[4]: 2.2; params[5]: -1.9; params[6]: -1.9; params[7]: 3.1; params[8]: -1.2; params[9]: -3.9; f(params): 11.00
+params[0]: -2.9; params[1]: 1.1; params[2]: 1.6; params[3]: 1.9; params[4]: 0.8; params[5]: -1.4; params[6]: 0.1; params[7]: 4.7; params[8]: 2.2; params[9]: 7.8; f(params): 12.00
+params[0]: -0.8; params[1]: -2.5; params[2]: -4.7; params[3]: -0.4; params[4]: -1.4; params[5]: 2.7; params[6]: -0.9; params[7]: -1; params[8]: -3.8; params[9]: -1.3; f(params): 10.00
+params[0]: -0.9; params[1]: 2.3; params[2]: -4.1; params[3]: -1.3; params[4]: 4.2; params[5]: 0.1; params[6]: 0.2; params[7]: 0.5; params[8]: -6.1; params[9]: 4.9; f(params): 9.00
+params[0]: -1.2; params[1]: 1.4; params[2]: -6.2; params[3]: 0.3; params[4]: -0.5; params[5]: -0.6; params[6]: -2; params[7]: -3.2; params[8]: -3.5; params[9]: 1.8; f(params): 10.00
+params[0]: 4.6; params[1]: -2.2; params[2]: -0; params[3]: 2.4; params[4]: 1.5; params[5]: -0.8; params[6]: 1.4; params[7]: 3.8; params[8]: 2.8; params[9]: 2.3; f(params): 42.00
+params[0]: 2; params[1]: -4.8; params[2]: 6.2; params[3]: 1.5; params[4]: 3.7; params[5]: 0.6; params[6]: 2.4; params[7]: 0.2; params[8]: -7.9; params[9]: 2.9; f(params): 10.00
+params[0]: -3; params[1]: 4.3; params[2]: 3.3; params[3]: 3.5; params[4]: 4.9; params[5]: 0; params[6]: -0.8; params[7]: 1; params[8]: -1.5; params[9]: 0.9; f(params): 10.00
+params[0]: -1.9; params[1]: -4.2; params[2]: 0.8; params[3]: -5; params[4]: 0.2; params[5]: -0.1; params[6]: 0; params[7]: 4.1; params[8]: -0.5; params[9]: -0.4; f(params): 47.00
+params[0]: 4.2; params[1]: 2.1; params[2]: -5.2; params[3]: -0.3; params[4]: -3.7; params[5]: 8; params[6]: -0.6; params[7]: -0.4; params[8]: 1.9; params[9]: 0.8; f(params): 10.00
+params[0]: -2.2; params[1]: 3.8; params[2]: 4.4; params[3]: 1.2; params[4]: -1.1; params[5]: 1.8; params[6]: 1.9; params[7]: -1.5; params[8]: -1.5; params[9]: 4.3; f(params): 9.40
+params[0]: -3.2; params[1]: 2.8; params[2]: 4.4; params[3]: 1.2; params[4]: -0.1; params[5]: 1.8; params[6]: 2.9; params[7]: -0.5; params[8]: -2.5; params[9]: 3.3; f(params): 9.45
+params[0]: -2; params[1]: 3; params[2]: 4; params[3]: 1; params[4]: -1; params[5]: 2; params[6]: 2; params[7]: -1; params[8]: -1; params[9]: 4; f(params): 9.50
+params[0]: -1; params[1]: 2; params[2]: 3; params[3]: 0; params[4]: -2; params[5]: 1; params[6]: 1; params[7]: -2; params[8]: -2; params[9]: 3; f(params): 9.45
+params[0]: -0.1; params[1]: 2.5; params[2]: 3.5; params[3]: 0.5; params[4]: -1.5; params[5]: 1.5; params[6]: 1.5; params[7]: -1.5; params[8]: -1.5; params[9]: 3.5; f(params): 9.05
+
+
+
+## Visual Feedback — Current Policy (iter 5) with params[0]: -0.1, params[1]: 2.5, params[2]: 3.5, params[3]: 0.5, params[4]: -1.5, params[5]: 1.5, params[6]: 1.5, params[7]: -1.5, params[8]: -1.5, params[9]: 3.5:
+The agent's behavior in the **CartPole** environment over this brief episode reveals a clear pattern of **abrupt, overcorrecting, and ultimately unstable control**:
+
+1. **Initial Position and Action (Frame 1)**:
+   The cart begins nearly centered (position ≈ –0.01), with the pole slightly tilted. The agent immediately applies a **strong rightward force (action=1)**, attempting to correct or accelerate the cart. This choice suggests an aggressive initial thrust to counter perceived imbalance.
+
+2. **Motion Evolution and Instability (Between Frames)**:
+   Over just **7 timesteps**, the cart’s position drifts rapidly rightward, reaching **x ≈ 0.065**—a **fast, linear acceleration** without visible deceleration. The pole, though not directly shown in the state values, likely **diverges sharply** from vertical, given the early termination. The motion appears **jerky and unmodulated**, lacking smooth corrective adjustments; the agent either applies maximum force or none, with no intermediate control.
+
+3. **Loss of Control and Termination**:
+   The episode ends in **failure (type=last,fail)**, indicating the pole has tilted beyond recovery or the cart has moved out of bounds. The **rapid position change** (from –0.01 to 0.065 in 7 steps) and **single-action persistence** (only rightward thrust) suggest **overcorrection without feedback sensitivity**. There’s **no visible oscillation**—just a **one-way, accelerating drift**—but this reflects **inability to stabilize**, not deliberate control.
+
+Overall, the agent’s behavior is **aggressively reactive but poorly modulated**: it applies **maximal, sustained force** in one direction without adjusting to counteract the resulting momentum or pole tilt. The style is **persistent unidirectional thrusting with terminal divergence**, lacking fine-grained stabilization or recovery.
+
+
+## Visual Feedback — Best Known Policy (iter 1, reward=10.00 with params[0]: -2.2, params[1]: 3.8, params[2]: 4.4, params[3]: 1.2, params[4]: -1.1, params[5]: 1.8, params[6]: 1.9, params[7]: -1.5, params[8]: -1.5, params[9]: 4.3):
+The agent controlling the cart-pole system exhibits **aggressive, overcorrecting, and ultimately destabilizing behavior** in this short episode. Initially, the pole starts nearly upright but begins leaning to one side (left, based on the positive position value in Frame 2). The agent consistently applies a **maximal action (action=1, likely full rightward force)** in both frames, suggesting a policy that overcommits to a single direction without modulation. This causes the cart to accelerate rapidly rightward, but the pole’s angle diverges uncontrollably—likely overshooting vertical and tipping further due to the lack of corrective adjustments. The motion appears **abrupt and erratic**, with no smooth stabilization or damping; the pole’s posture shifts from a minor deviation to a critical failure within just 9 timesteps, indicating **severe oscillation or loss of control** rather than gradual drift. The overall behavioral style is one of **reckless thrusting**, where the agent’s rigid, high-magnitude actions exacerbate instability instead of mitigating it.
+
+
+Now you are at iteration 5 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: -2.9, params[1]: 1.9, params[2]: 4.9, params[3]: 1.9, params[4]: -0.5, params[5]: 1.5, params[6]: 0.5, params[7]: -1.5, params[8]: -1.5, params[9]: 3.5
+This selection is motivated by the recent visual feedback describing the agent's "abrupt, overcorrecting, and ultimately unstable control" with its previous parameters (iter 5). The agent was shown to be applying a "strong rightward force" and exhibiting "rapid position change" without modulation. To counter this, I've slightly adjusted parameters that seem to be influencing aggressive, potentially unidirectional actions.
+
+Specifically:
+- **params[0]**: Changed from -0.1 to -2.9. This parameter is multiplied by `cart_position`. A more negative value might make the agent less sensitive to being slightly off-center and potentially reduce aggressive immediate reactions to small position deviations.
+- **params[2]**: Changed from 3.5 to 4.9. This parameter is multiplied by `pole_angle`. Given the instability, increasing this value could make the agent more sensitive to the pole's angle, encouraging quicker corrections.
+- **params[3]**: Kept at 0.5. This is multiplied by `pole_angular_velocity`. This value seems to contribute to instability.
+- **params[6]**: Changed from 1.5 to 0.5. This parameter is multiplied by `pole_angular_velocity`. Reducing this value might dampen the reaction to rapid changes in pole velocity, promoting smoother control.
+- **params[8]**: Kept at -1.5. This is the bias for action 0.
+- **params[9]**: Kept at 3.5. This is the bias for action 1.
+
+The numerical trend shows a peak reward of 47.00 (iter 19) with parameters like `params[0]: -1.9, params[1]: -4.2, params[2]: 0.8, params[3]: -5, params[4]: 0.2, params[5]: -0.1, params[6]: 0, params[7]: 4.1, params[8]: -0.5, params[9]: -0.4`. This suggests that having a moderate negative value for `params[0]`, and lower absolute values for most other parameters, particularly for angular velocity (`params[6]`, `params[7]`), and a negative bias for action 1 (`params[9]`) might be beneficial. My current adjustments are exploring this direction by reducing `params[6]` and making `params[0]` more negative, while trying to maintain sensitivity to angle (`params[2]`). I am also slightly increasing `params[1]` to potentially influence cart velocity response. The goal is to reduce the overcorrection observed in the visual feedback.

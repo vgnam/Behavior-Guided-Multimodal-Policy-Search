@@ -1,0 +1,1 @@
+The inverted double pendulum begins slightly tilted to the left. Over the short observed interval, the pendulum rapidly swings from its initial position across the vertical axis. By the final frame, it has significantly overshot the

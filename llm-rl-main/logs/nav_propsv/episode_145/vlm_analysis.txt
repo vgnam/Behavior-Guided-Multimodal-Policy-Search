@@ -1,0 +1,15 @@
+The agent demonstrates a **bistable oscillatory behavior** with abrupt transitions between two distinct movement patterns:
+
+1. **Behavioral Trajectory**
+   - **Frames 1–10 (t=0–450):** The agent maintains a **hovering-like state** with small oscillations around a fixed position. The state values (~1.2–1.5) and consistent action `0` suggest steady, subtle corrections to counteract drift, likely using minimal thrust.
+   - **Frames 11–21 (t=500–999):** The agent abruptly **switches to a thrusting mode** (action `1`), pushing its position upward (state peaks at 5.2), followed by a rapid descent. This creates a sawtooth pattern in the state values, reflecting cycles of acceleration and deceleration.
+
+2. **Temporal Consistency**
+   - The movement is **smooth within each phase** (hovering or thrusting) but **abruptly shifts** between them. Corrections are **sudden and overcompensated**, leading to divergent oscillations rather than stabilization.
+
+3. **Critical Moments**
+   - **Frame 11 (t=500):** The first abrupt switch to action `1` marks the onset of instability, with the state jumping from 1.5 to 1.7.
+   - **Frames 18–19 (t=850–900):** The state peaks at 4.57–5.2, indicating maximal thrust before a sharp drop, highlighting the agent’s inability to regulate its momentum.
+
+4. **Outcome Pattern**
+   - The policy produces an **aggressive, oscillatory control style**, alternating between passive hovering and excessive thrust. The lack of gradual corrections results in **persistent divergence**, preventing stabilization or controlled navigation. The reward structure (punishing drift but rewarding periodic thrust) likely reinforces this bistable pattern.

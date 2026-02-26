@@ -1,0 +1,15 @@
+The agent exhibits erratic and oscillatory behavior with inconsistent motion patterns across the sequence of frames. Here’s a breakdown of its observed behavior:
+
+1. **Behavioral Trajectory**
+   - The agent’s position fluctuates rapidly between near-target (lower state values) and overshooting (higher state values, e.g., 4.9–5.2), indicating instability. Actions alternate between `0` (likely a stabilizing or decelerating command) and `1` (accelerating or thrusting), but the correlation between actions and state changes is inconsistent. For example, the agent often overshoots despite taking action `0`, suggesting delayed or ineffective corrections.
+
+2. **Temporal Consistency**
+   - Movement appears abrupt and overcorrected, with sudden shifts in direction rather than smooth transitions. Corrections (e.g., switching from action `1` to `0`) are often too late or insufficient to counteract oscillations, leading to persistent divergence over time. The agent struggles to stabilize, with state values repeatedly spiking or dipping unpredictably.
+
+3. **Critical Moments**
+   - Instability is evident in **Frames 4–6** (state jumps from 2.1 to 4.9) and **Frames 15–17** (state spikes to 5.2), where overshooting occurs despite corrective actions. Drifting is visible in **Frames 8–12**, where the agent fails to recover from high-state values, and oscillation peaks in **Frames 19–21**, with repeated near-identical state-action pairs suggesting a failure to adapt.
+
+4. **Outcome Pattern**
+   - The policy produces a **chaotic, oscillatory control style**, characterized by aggressive thrusting followed by abrupt but ineffective stabilization attempts. The agent lacks gradual adjustments, instead relying on binary actions that exacerbate instability, resulting in a persistent cycle of overshooting and overcorrecting without convergence.
+
+Overall, the behavior is visually disjointed, with no sustained progress toward a stable target state.

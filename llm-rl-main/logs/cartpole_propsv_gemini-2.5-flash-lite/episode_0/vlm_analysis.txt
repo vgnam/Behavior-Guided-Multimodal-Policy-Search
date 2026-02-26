@@ -1,0 +1,11 @@
+The agent’s behavior in the **CartPole** environment exhibits clear signs of **instability and loss of control**, rapidly leading to failure. Here’s a detailed breakdown of its visually observable motion:
+
+1. **Initial Position and Posture**: At the start (Frame 1), the pole is nearly upright but slightly tilted to the left (state = [-0.02]), and the cart applies an immediate leftward action (action = 0). This suggests the agent is attempting to correct a minor lean, but the response is overly aggressive or poorly timed.
+
+2. **Acceleration and Divergence**: Over the brief episode (only 8 timesteps), the pole’s angle worsens abruptly. By Frame 2, the pole has accelerated to a steep leftward tilt (state = -0.131), indicating the agent failed to counteract the falling momentum. The cart likely moves sharply leftward without sufficient compensatory force, causing the pole to swing past vertical and enter an unrecoverable lean.
+
+3. **Erratic and Overcorrected Motion**: The agent’s behavior lacks smoothness; its action (persistently leftward) does not adapt to the pole’s growing instability. Instead of stabilizing through balanced corrections, the agent appears to *amplify* the tilt by continuing to push in the same direction, leading to a rapid, uncontrolled swing.
+
+4. **Loss of Control and Termination**: The pole’s motion is **highly oscillatory and divergent**—it does not settle or reverse direction, instead accelerating toward the horizontal. The episode terminates early due to the pole exceeding the allowable angle (a "fail" state), confirming that the agent’s actions were insufficient or counterproductive for stabilization.
+
+**Overall Behavioral Style**: The agent demonstrates **aggressive, non-adaptive thrusting with severe overcorrection**, resulting in **chaotic, unrecoverable oscillations** and a complete loss of balance. Its policy lacks the nuanced responses required to dampen the pole’s motion, instead driving the system toward catastrophic divergence.

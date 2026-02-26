@@ -1,0 +1,162 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The mountain car continuous environment is a 2D world where the agent (car) is in a U shaped valley, and a torque can be applied to the car (left is negative and right is positive). 
+The state is a vector of 2 elements, representing position (-1.2 to 0.6) and velocity (-0.07 to 0.07) respectively. Negative means left and positive means right for both position and velocity. The goal is to reach the flag at the far right side of the hill. 
+The policy is a linear policy with 3 parameters and works as follows: 
+action = position * params[0] + velocity * params[1] + params[2]
+The reward is -0.1 * action^2 for each step, and 100 if the cart reaches goal. The goal is to reach the flag at the far right side of the hill. 
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+
+# Regarding the parameters **params**:
+**params** is an array of 3 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. Visual analysis is not available for this iteration - focus on numerical patterns.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[2]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around 90.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: -1.9; params[1]: 1.9; params[2]: -3.3; f(params): -333.25
+params[0]: -3.5; params[1]: 4.5; params[2]: 1.6; f(params): -713.54
+params[0]: 2.9; params[1]: 4.2; params[2]: -0.6; f(params): -1033.10
+params[0]: 2; params[1]: -4; params[2]: 0.7; f(params): -34.91
+params[0]: -0.1; params[1]: 0; params[2]: 1.1; f(params): -125.94
+params[0]: -0.9; params[1]: 2.6; params[2]: -1.2; f(params): -42.48
+params[0]: 2.2; params[1]: 0.7; params[2]: -1.5; f(params): -1060.70
+params[0]: 2.3; params[1]: 1.4; params[2]: -2.5; f(params): -1999.22
+params[0]: -5.3; params[1]: -3.5; params[2]: 0.6; f(params): -508.09
+params[0]: 0.9; params[1]: -1.2; params[2]: 4.7; f(params): -1969.52
+params[0]: -4.6; params[1]: -0.2; params[2]: -0.9; f(params): -60.52
+params[0]: -0.9; params[1]: -7.3; params[2]: -0.9; f(params): -13.15
+params[0]: 0.2; params[1]: 0.3; params[2]: 2.4; f(params): -547.54
+params[0]: -3.7; params[1]: -1.5; params[2]: -2.1; f(params): -0.90
+params[0]: 5.5; params[1]: -1.5; params[2]: 0; f(params): -1793.11
+params[0]: 1.6; params[1]: 2.6; params[2]: 0.9; f(params): -6.65
+params[0]: -2.4; params[1]: 0.4; params[2]: 1.1; f(params): -329.74
+params[0]: 5.3; params[1]: 2.1; params[2]: 4.3; f(params): -805.26
+params[0]: -2.6; params[1]: -1.9; params[2]: 2.9; f(params): -1256.02
+params[0]: 5.4; params[1]: 2.7; params[2]: 4.8; f(params): -1023.08
+params[0]: -3; params[1]: -2; params[2]: 0.5; f(params): -210.02
+params[0]: -3.7; params[1]: -1.5; params[2]: -1.1; f(params): -25.62
+params[0]: -2.7; params[1]: -0.5; params[2]: 0.9; f(params): -292.40
+params[0]: 0.5; params[1]: 0.5; params[2]: 1; f(params): -70.73
+params[0]: -4; params[1]: -4; params[2]: 6; f(params): -5119.08
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.34
+params[0]: -2.7; params[1]: -0.5; params[2]: 0; f(params): -91.88
+params[0]: -4; params[1]: -2; params[2]: 2; f(params): -995.13
+params[0]: 3.5; params[1]: -1; params[2]: -2; f(params): -2338.21
+params[0]: 2; params[1]: 2; params[2]: 1; f(params): -8.32
+params[0]: -4.5; params[1]: -4.5; params[2]: -1; f(params): -53.66
+params[0]: 5; params[1]: 0; params[2]: 4; f(params): -770.03
+params[0]: 3; params[1]: 3; params[2]: 2; f(params): -105.95
+params[0]: -2; params[1]: -2; params[2]: 2; f(params): -655.90
+params[0]: -3; params[1]: -2; params[2]: 3; f(params): -1486.95
+params[0]: 2; params[1]: 2; params[2]: 2; f(params): -223.36
+params[0]: -5; params[1]: 0; params[2]: 0; f(params): -293.52
+params[0]: 3; params[1]: 2; params[2]: 1; f(params): -196.19
+params[0]: 2; params[1]: 2; params[2]: 0; f(params): -272.14
+params[0]: 1.5; params[1]: 2.5; params[2]: 1; f(params): 7.19
+params[0]: 2; params[1]: 3; params[2]: 2; f(params): -224.76
+params[0]: 1; params[1]: 1; params[2]: 3; f(params): -742.02
+params[0]: 1; params[1]: 2; params[2]: 2; f(params): -301.76
+params[0]: 0.5; params[1]: 1.5; params[2]: 0.5; f(params): -7.34
+params[0]: 1.5; params[1]: 2.5; params[2]: 1.5; f(params): -77.12
+params[0]: 3; params[1]: 1; params[2]: 0; f(params): -623.68
+params[0]: 1; params[1]: 2; params[2]: 0.5; f(params): -1.06
+params[0]: 0; params[1]: 0; params[2]: 0.5; f(params): -24.97
+params[0]: 2; params[1]: 3; params[2]: 1; f(params): -32.40
+params[0]: 2; params[1]: 2.5; params[2]: 2; f(params): -224.34
+params[0]: -1; params[1]: 0.5; params[2]: 0.5; f(params): -71.15
+params[0]: 1; params[1]: 2.5; params[2]: 0.8; f(params): 19.20
+params[0]: 1; params[1]: 3; params[2]: 1.2; f(params): 16.90
+params[0]: 1; params[1]: 3.5; params[2]: 0.8; f(params): 54.51
+params[0]: 1; params[1]: 4; params[2]: 1.5; f(params): -137.53
+params[0]: 1; params[1]: 3.6; params[2]: 0.9; f(params): 40.43
+params[0]: 0.8; params[1]: 3.5; params[2]: 0.6; f(params): 62.22
+params[0]: 0.5; params[1]: 3.5; params[2]: 0.5; f(params): 51.53
+params[0]: 1; params[1]: 3.5; params[2]: 0.9; f(params): 46.09
+params[0]: 1; params[1]: 3.6; params[2]: 0.7; f(params): 36.63
+params[0]: 1; params[1]: 3.3; params[2]: 0.9; f(params): 41.47
+params[0]: 1; params[1]: 3.7; params[2]: 0.6; f(params): 44.43
+params[0]: 0.9; params[1]: 3.7; params[2]: 0.7; f(params): 49.15
+params[0]: 1; params[1]: 3.8; params[2]: 0.5; f(params): 64.46
+params[0]: 1.1; params[1]: 3.7; params[2]: 0.7; f(params): 52.19
+params[0]: 1.2; params[1]: 3.5; params[2]: 0.6; f(params): 28.73
+params[0]: 0.9; params[1]: 3.9; params[2]: 0.5; f(params): 45.96
+params[0]: 1; params[1]: 3.9; params[2]: 0.5; f(params): 45.05
+params[0]: 0.9; params[1]: 4; params[2]: 0.5; f(params): 50.91
+params[0]: 1; params[1]: 3.9; params[2]: 0.5; f(params): 54.49
+params[0]: 0.8; params[1]: 4; params[2]: 0.5; f(params): 56.02
+params[0]: 1; params[1]: 4; params[2]: 0.5; f(params): 50.10
+params[0]: 0.8; params[1]: 4; params[2]: 0.6; f(params): 57.39
+params[0]: 0.8; params[1]: 4.5; params[2]: 0.5; f(params): 75.21
+params[0]: 0.9; params[1]: 4; params[2]: 0.5; f(params): 55.79
+params[0]: 0.8; params[1]: 4.2; params[2]: 0.5; f(params): 46.29
+params[0]: 0.7; params[1]: 4; params[2]: 0.5; f(params): 74.29
+params[0]: 0.9; params[1]: 4; params[2]: 0.4; f(params): -7.67
+params[0]: 0.8; params[1]: 4; params[2]: 0.6; f(params): 67.15
+params[0]: 0.9; params[1]: 3.9; params[2]: 0.5; f(params): 70.28
+params[0]: 0.6; params[1]: 4.2; params[2]: 0.5; f(params): 73.85
+params[0]: 0.8; params[1]: 5; params[2]: 0.5; f(params): 66.14
+params[0]: 1; params[1]: 4; params[2]: 0.5; f(params): 53.88
+params[0]: 0.7; params[1]: 5.5; params[2]: 0.5; f(params): 90.25
+params[0]: 0.9; params[1]: 5; params[2]: 0.5; f(params): 80.39
+params[0]: 0.7; params[1]: 5; params[2]: 0.5; f(params): 55.59
+params[0]: 0.8; params[1]: 5; params[2]: 0.4; f(params): 61.73
+params[0]: 0.6; params[1]: 5; params[2]: 0.5; f(params): 69.25
+params[0]: 0.9; params[1]: 5; params[2]: 0.4; f(params): 78.98
+params[0]: 0.9; params[1]: 5.5; params[2]: 0.4; f(params): 70.14
+params[0]: 0.9; params[1]: 5.8; params[2]: 0.4; f(params): 70.48
+params[0]: 0.9; params[1]: 5.2; params[2]: 0.3; f(params): -14.59
+params[0]: 0.8; params[1]: 5.2; params[2]: 0.5; f(params): 70.74
+params[0]: 0.8; params[1]: 5.1; params[2]: 0.4; f(params): 80.95
+params[0]: 0.8; params[1]: 5; params[2]: 0.3; f(params): -8.95
+params[0]: 0.8; params[1]: 5; params[2]: 0.5; f(params): 66.03
+params[0]: 0.7; params[1]: 5; params[2]: 0.4; f(params): 66.82
+params[0]: 0.8; params[1]: 5.5; params[2]: 0.5; f(params): 90.25
+params[0]: 0.9; params[1]: 5; params[2]: 0.4; f(params): 74.89
+params[0]: 0.8; params[1]: 5.5; params[2]: 0.4; f(params): 76.28
+params[0]: 0.7; params[1]: 5; params[2]: 0.4; f(params): 81.91
+params[0]: 0.9; params[1]: 5.5; params[2]: 0.5; f(params): 80.28
+params[0]: 1; params[1]: 5.5; params[2]: 0.4; f(params): -16.32
+params[0]: 0.6; params[1]: 5; params[2]: 0.4; f(params): 71.75
+params[0]: 0.6; params[1]: 5.5; params[2]: 0.5; f(params): 74.27
+params[0]: 0.7; params[1]: 5.2; params[2]: 0.4; f(params): 86.78
+params[0]: 0.7; params[1]: 5; params[2]: 0.5; f(params): 85.04
+params[0]: 0.9; params[1]: 5.3; params[2]: 0.5; f(params): 75.63
+params[0]: 0.6; params[1]: 5.8; params[2]: 0.4; f(params): 86.91
+params[0]: 0.6; params[1]: 5; params[2]: 0.4; f(params): 81.88
+params[0]: 0.6; params[1]: 5.2; params[2]: 0.4; f(params): 76.82
+params[0]: 0.5; params[1]: 5; params[2]: 0.4; f(params): 71.02
+
+
+
+
+## Visual Feedback — Best Known Policy (iter 90, reward=96.92 with params[0]: 0.6, params[1]: 5, params[2]: 0.4):
+The agent exhibits a **highly aggressive, forward-thrusting behavior** with pronounced instability and overcorrection tendencies. Initially, its motion is smooth but quickly becomes abrupt as it accelerates aggressively, often pushing the car to its velocity limits (e.g., +0.77 action in the last frame). Early on, the agent applies modest positive force to build momentum, but as it progresses, the thrusts grow stronger and more frequent. The car’s position shifts rapidly from left (-0.96) to right (+0.44), showing a clear directional intent to reach the goal. However, its posture and velocity oscillate erratically—accelerating sharply, then decelerating, and repeating—indicating difficulty stabilizing speed near the goal. This overcorrection leads to a **repeated pattern of velocity spikes and abrupt halts**, suggesting the agent lacks fine-grained control, often overshooting the ideal speed. The instability culminates in a successful but uncontrolled termination (early termination due to high velocity), demonstrating a **chaotic, forceful style** that prioritizes speed over precision.
+
+
+Now you are at iteration 92 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 0.6, params[1]: 5.0, params[2]: 0.3
+The best reward so far (96.92) was achieved with (0.6, 5, 0.4). Across the dataset, increasing params[1] beyond 5 quickly degrades performance, while moving away from 0.6 in params[0] reduces reward. This suggests the optimum lies very close to (0.6, 5, *). The constant term params[2] acts as a bias on the action; a slightly smaller bias (0.3 instead of 0.4) should lessen the occasional overshoot observed in the visual feedback, potentially improving stability and increasing the total reward. Hence, I propose (0.6, 5.0, 0.3) to fine‑tune around the current optimum.

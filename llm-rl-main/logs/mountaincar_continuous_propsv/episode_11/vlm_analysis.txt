@@ -1,0 +1,18 @@
+The agent’s behavior demonstrates a **cautious stabilization strategy**, initially characterized by gradual, oscillatory motion with periods of acceleration and deceleration before settling into a steady, controlled drift**.
+
+### **Position and Orientation Over Time:**
+- **Position:** The cart starts near the center of the track (-0.4) and oscillates within a narrow negative range before converging toward a steady, slightly left-of-center position (~ -0.38). It avoids hitting the track boundaries,- indicating effective control.
+
+- **Direction:** The movement alternates between rightward and leftward oscillations before stabilizing into a consistent rightward motion. This shift suggests the agent refines its policy over time to balance position and velocity.
+
+- **Acceleration:** The applied force (action) begins high (0.82), indicating an aggressive initial thrust. Over time, the actions decrease in magnitude, becoming more subtle (0.7 to 0.67), reflecting refined control. The agent avoids extreme accelerations and decelerations, indicating learned stability.
+
+### **Smoothness, Stability, and Control:**
+- **Smoothness:** The motion is relatively smooth, with no abrupt or erratic changes in position or velocity. The agent avoids sudden jerks, which is typical of strategies that prioritize energy efficiency and stability.
+
+- **Stability:** There is noticeable oscillatory instability early on, with the cart and pole swinging back and forth. However, as training progresses, the oscillations diminish, and the agent achieves a more stable trajectory. This demonstrates that the agent transitions from an exploratory to an exploitative strategy.
+
+- **Drift:** After the initial oscillations subside, the agent exhibits a controlled drift toward a slightly negative position, maintaining a balance between the pole’s angle and the cart’s position. This drift does not result in a loss of control, suggesting the agent has learned to maintain the pole’s upright orientation even while adjusting its position.
+
+### **Behavioral Style:**
+The agent’s behavior can be described as **cautious stabilization with controlled drift**. Initially, it employs a high-thrust strategy to prevent immediate failure, followed by refined, lower-magnitude corrections to stabilize the pole and prevent excessive oscillation. This indicates the development of a balance between exploration (early high actions) and exploitation (later subtle adjustments). The agent prioritizes maintaining the pole’s upright position while allowing the cart to drift slightly, ensuring long-term stability.

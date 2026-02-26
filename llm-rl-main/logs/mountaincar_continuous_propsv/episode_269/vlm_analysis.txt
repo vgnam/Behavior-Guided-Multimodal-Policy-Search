@@ -1,0 +1,13 @@
+The agent’s behavior in the MountainCarContinuous environment exhibits a **cautious but progressively accelerating thrusting strategy** with noticeable oscillation and delayed stabilization. Here’s the breakdown:
+
+1. **Initial Posture and Motion (Frames 1–6):**
+   The agent starts near the valley’s lowest point (position ≈ -0.45 to -0.54), applying small, hesitant forward actions (e.g., 0.12–0.16). Motion is sluggish, with minimal acceleration or directional shifts, reflecting uncertainty in leveraging gravity or momentum. The agent’s posture appears "flattened" against the slope, likely testing the car’s responsiveness to tiny forces.
+
+2. **Directional Shifts and Oscillatory Control (Frames 7–12):**
+   The agent abruptly reverses thrust direction (e.g., -0.22 to 0.51), causing sharp oscillations as the car swings between forward and backward acceleration. These erratic changes—visible in the alternating positive/negative actions—indicate an attempt to build momentum through repeated, overcorrected impulses. The car’s position fluctuates wildly, suggesting instability in balancing speed and trajectory.
+
+3. **Exponential Acceleration and Smooth Stabilization (Frames 13+):**
+   In the final frames, the agent commits to a sustained, aggressive forward thrust (0.61), propelling the car up the right slope with rapid acceleration. The oscillations diminish, replaced by a controlled, upward trajectory. The car’s velocity stabilizes, avoiding overshooting, and the reward spikes (99.96), signaling successful goal attainment. The motion transitions from chaotic to fluid, reflecting refined force application.
+
+**Behavioral Style:**
+The agent’s approach mirrors a **learning curve of oscillatory trial-and-error**, transitioning from cautious experimentation to aggressive, goal-directed thrusting. Early instability stems from overcorrection, but later adjustments exhibit controlled momentum exploitation, akin to a pendulum gaining amplitude before locking onto a target rhythm. The erratic initial phase contrasts sharply with the smooth, decisive finale, highlighting a shift from reactive to strategic control.

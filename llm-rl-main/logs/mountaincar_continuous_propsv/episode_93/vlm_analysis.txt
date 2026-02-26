@@ -1,0 +1,7 @@
+The agent’s behavior exhibits a distinct **aggressive thrusting** style with noticeable **oscillatory control** and **persistent drift** during its attempt to reach the goal.
+
+The **position** evolves as follows: Initially, the agent appears **stationary or nearly stationary** (frames 1–3) with minimal acceleration, barely nudging forward or backward. Around frame 4, it begins **accelerating sharply backward**, almost stalling its progress, then **abruptly reverses direction** with a strong forward thrust (frames 5–7), causing a rapid **back-and-forth oscillation**. This thrusting pattern repeats aggressively, **alternating between full forward and near-full reverse acceleration** (frames 8–14), creating a **zigzagging trajectory** that mirrors the oscillatory control seen in poorly tuned PID systems.
+
+The **posture** remains **horizontal** throughout, but the **motion** grows increasingly **erratic**. The agent frequently **overcorrects**, applying extreme acceleration in opposite directions without stabilizing. By frame 15, despite the chaotic motion, it **terminates early at the goal** (position ~0.45) with a final high-speed thrust, suggesting it **overshot its target** due to lack of braking control.
+
+Overall, the agent’s movement is **highly unstable**, characterized by **abrupt, repeated oscillations**, **aggressive thrusting**, and **persistent drift** without smooth stabilization. It achieves the goal but only through **lucky overshooting** rather than controlled navigation.

@@ -1,0 +1,1 @@
+The agent begins with the double pendulum in a nearly perfectly upright posture, exhibiting only a slight initial tilt. Within a very short timeframe of eight steps, the pendulum rapidly loses its balance, diverging significantly as it falls to the right. Despite a large magnitude corrective action applied towards the end

@@ -1,0 +1,36 @@
+TheThe agent’s behavior demonstrates **cautious stabilization with incremental acceleration and intermittent overcorrection**. Here’s a breakdown of its motion, posture, and patterns:
+
+### **Position and Trajectory:**
+- **Initial Frames (t=0–500):** The agent starts with **small, cautious movements**, positioning itself near the bottom of the hill (left side of the images) and applying **gentle, controlled thrusts** to avoid overshooting. The car stays close to the lower terrain, oscillating slightly but avoiding steep inclines or abrupt velocity changes. This reflects a **gradual exploration** phase where the agent minimizes risk.
+- **Mid-Session (t=500–900):** The agent **accelerates incrementally**, pushing toward the steeper middle section of the hill. Its **posture shifts dynamically**—leaning forward during uphill thrusts and backward during downward glides—suggesting it is **adjusting its momentum** to balance speed against the risk of flipping or stalling. The **direction changes are deliberate**, often pausing at the hill’s apex before descending with measured control.
+- **Later Frames (t=900–998):** The agent **targets the hill’s peak**, executing **larger, more aggressive thrusts** to overcome the steepest incline. However, these accelerations are **interspersed with abrupt decelerations** (e.g., flipping backward or braking sharply), indicating **intermittent overcorrection**. Its **posture becomes erratic** as it struggles to reconcile its speed with the terrain’s instability, though it avoids catastrophic failures (e.g., flipping out of bounds).
+
+### **Acceleration and Velocity:**
+- **Smoothness:** Early movements are **smooth and gradual**, prioritizing stability over speed. By mid-session, the agent **ramps up acceleration** but retains a **measured cadence** (e.g., thrusting in bursts rather than continuous high-speed input).
+- **Abruptness:** Later frames reveal **sudden velocity shifts**—rapid acceleration followed by **jerky braking**—as the agent overcompensates for its position on the slope. This suggests a **threshold-based control strategy** where it alternates between thrusts and pauses to avoid losing traction or flipping.
+- **Drift/Oscillation:** There is **minimal drift** (side-to-side motion), but **vertical oscillation** (bouncing on the hill’s surface) becomes pronounced during high-speed thrusts, reflecting the car’s **difficulty maintaining grip** on the steep terrain.
+
+### **Posture and Orientation:**
+- **Uphill Thrusts:** Leans **forward** (tilting toward the hill’s slope) to maximize traction during acceleration.
+- **Downhill Glides:** Tilts **backward** to counteract gravity and avoid barrel-rolling.
+- **Apex Corrections:** At the hill’s peak, the agent **flattens its orientation** to pivot direction, often overshooting and requiring corrective thrusts. This reveals a **lack of fine-tuned precision** in balancing at critical points.
+
+### **Repeated Patterns:**
+1. **Incremental Exploration:** The agent **gradually expands its reach** up the hill, testing small distances before committing to larger movements.
+2. **Thrust-Pause Cycle:** A rhythmic **burst of acceleration followed by a pause** to assess stability, especially on steeper sections.
+3. **Overcorrective Reactions:** Sharp decelerations or flips after aggressive thrusts, suggesting **limited foresight** into the consequences of high-speed motion.
+4. **Peak Targeting:** Persistent attempts to reach the hilltop, with **repeated failures or near-misses** due to overcorrection, followed by renewed thrusts.
+
+### **Stability vs. Instability:**
+- **Stable Phases:** Low-mid hill sections where the agent maintains **smooth, controlled motion**.
+- **Unstable Phases:** Steep inclines or the hilltop where **overthrusting leads to flips or loss of control**, requiring recovery efforts.
+- **Divergence:** The agent **does not fully stabilize** at the hilltop; instead, it **hovers in a state of near-control**, oscillating between progress and setbacks.
+
+### **Behavioral Style:**
+The overall style is **cautious yet progressively aggressive**, characterized by:
+- **Strategic thrusting** (avoiding continuous high-speed input).
+- **Intermittent overcorrection** (erratic braking or flips after acceleration).
+- **Persistent goal-seeking** (repeated attempts to summit the hill despite instability).
+- **Delayed adaptation** (slow to refine its approach based on terrain feedback).
+
+This suggests a **policy that emphasizes short-term gains** (e.g., momentum) over long-term consistency, likely due to **limited lookahead or reward shaping** in

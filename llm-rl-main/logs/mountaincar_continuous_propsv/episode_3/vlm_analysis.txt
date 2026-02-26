@@ -1,0 +1,37 @@
+TheThe agent's behavior is characterized by a **persistent, repetitive oscillation** between two extreme positions, with no evident stabilization or correction toward the center. Here’s a detailed breakdown of the key observations across the frames:
+
+### **1. Position and Motion Dynamics**
+- **Oscillatory Drift**: The cart starts near the center (around **-0.5** to **0.0** position) in early frames, then rapidly swings to extreme right (+2.26 or higher) and left (as low as **-0.5** or further) positions in a cyclical manner. This back-and-forth motion occurs repeatedly without damping, suggesting a **lack of control feedback** to stabilize the pole.
+- **Direction Changes**: The cart changes direction abruptly, often shifting from rightward to leftward acceleration (or vice versa) between frames. For example:
+  - Frames 1–7 show movement to the right (positions increasing).
+  - Frames 8–13 reverse to the left (positions decreasing).
+  - Frames 14–19 return to the right again, and so on.
+- **Velocity and Acceleration**: The positional jumps between frames (e.g., from **-0.105** to **+1.19** in 50 timesteps) imply **high velocity** and **abrupt acceleration**, which destabilizes the pole. The agent’s actions (e.g., `params[0]: -2.7`, `params[1]: -0.5`) seem to overcorrect, pushing the cart too far in one direction without accounting for the pole’s angle or momentum.
+
+### **2. Pole Orientation**
+- **Extreme Angles**: The pole’s angle (`state` values) fluctuates wildly, often exceeding **±0.5 radians** (≈ ±30 degrees), which is close to the failure threshold (typically ±12 degrees in standard cart-pole tasks). For example:
+  - Frame 1: **0.226 radians** (right tilt).
+  - Frame 3: **-0.372 radians** (left tilt).
+  - Frame 13: **0.9 radians** (severe right tilt).
+- **No Postural Stabilization**: The pole fails to upright itself after initial deviations. Instead, it **diverges further** with each oscillation, eventually leading to termination (e.g., Frame 21, `type=last,fail`).
+
+### **3. Control Issues**
+- **Overcorrection**: The agent’s actions (e.g., `params[0]` and `params[1]` values) are **binary and extreme** (e.g., **-2.7**, **+0.9**), applying maximum force in one direction without intermediate adjustments. This causes:
+  - **Overshooting**: The cart moves too far past the center, forcing the pole into extreme angles.
+  - **Delayed Responses**: The agent seems to react to the pole’s angle **after** it has already tilted severely, rather than preemptively stabilizing it.
+- **Lack of Smoothness**: The motion is **abrupt and erratic**, with sharp changes in direction (e.g., Frame 7: `-0.1239` → Frame 8: `-0.4567`). A stable controller would exhibit **gradual, proportional responses** to small deviations.
+
+### **4. Repeated Patterns**
+- **Cyclic Trajectory**: The cart’s position and pole’s angle follow a **predictable loop** of rightward drift → extreme tilt → leftward drift → opposite tilt → repeat. This suggests the agent is trapped in a **suboptimal policy** that fails to explore or learn from failures.
+- **Termination Points**: The episode ends when the pole’s angle exceeds a threshold (e.g., **-0.17 radians** in Frame 21), but the agent **never achieves a steady state** where the pole is balanced upright.
+
+### **5. Instability Indicators**
+- **Loss of Control**: The pole’s angle and cart’s velocity grow uncontrollably over time, leading to **divergence** rather than convergence. For example:
+  - Frame 1: Pole angle **0.226**, reward **-0.51**.
+  - Frame 21: Pole angle **-0.17**, reward **-0.187** (termination).
+- **High Reward Variability**: Rewards fluctuate between **-0.5** and **-0.1**, reflecting the agent’s inability to maintain stability. A well-controlled agent would show **consistent rewards** near zero (indicating balance).
+
+---
+
+### **Overall Behavioral Style**
+The agent exhibits a **chaotic, oscillatory control** style, akin to a **frantic, overcompensating driver** who jerks the wheel left and right without adjusting for the vehicle’s momentum. Key

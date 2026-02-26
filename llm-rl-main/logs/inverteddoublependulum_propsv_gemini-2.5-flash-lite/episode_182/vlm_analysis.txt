@@ -1,0 +1,1 @@
+The agent begins with the double pendulum almost perfectly upright and centered, applying an initial small rightward force to the cart. For the majority of the short 19-step duration, the

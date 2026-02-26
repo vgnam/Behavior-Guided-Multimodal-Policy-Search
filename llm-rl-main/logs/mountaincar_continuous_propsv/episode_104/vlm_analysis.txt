@@ -1,0 +1,7 @@
+The agent exhibits a **cautious stabilization** behavioral style:
+
+Initially, the car starts with small, erratic movements (left-right oscillations with minimal acceleration), struggling to build up sufficient momentum to ascend the steep hill. As the frames progress, the agent gradually increases its acceleration, gaining more forward thrust to overcome the initial friction and slope resistance.
+
+The car's posture shifts from nearly stationary with minor directional changes to more assertive, purposeful forward thrusts. The agent avoids abrupt or excessive acceleration that could cause instability, instead opting for a measured, progressive approach. This is evidenced by the car consistently applying moderate power to prevent stalling while ensuring a steady climb toward the goal.
+
+Eventually, the car stabilizes its motion, achieving a smooth, controlled ascent, balancing speed and direction to maintain traction without overshooting or losing control. The repeated pattern of gradual acceleration and slight adjustments in direction indicates a cautious yet effective strategy to reach the top.

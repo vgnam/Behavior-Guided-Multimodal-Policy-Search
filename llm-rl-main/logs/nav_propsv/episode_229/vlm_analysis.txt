@@ -1,0 +1,13 @@
+The agent exhibits an **oscillatory control behavior** with clear patterns of instability and overcorrection. Below is the breakdown:
+
+1. **Behavioral Trajectory**:
+   The agent alternates between two actions (0 and 1) in rapid succession, causing its position (state) to swing between low (~1.2–1.8) and high (~4.5–6.6) values. Each action triggers an immediate but unsustained response: action 0 consistently yields a high positive reward (5.0), while action 1 rewards a small negative penalty (-0.5). This suggests action 0 drives the agent toward a target zone, while action 1 induces overshooting or drift. The agent struggles to stabilize, repeatedly accelerating and decelerating without settling.
+
+2. **Temporal Consistency**:
+   The movement is abrupt and erratic, with sudden direction reversals every ~50–100 timesteps. Corrections are reactive rather than gradual, failing to dampen oscillations. Over time, the behavior diverges, amplifying instability and preventing convergence.
+
+3. **Critical Moments**:
+   Oscillations become visually evident around **Frames 2–4, 9–11, and 16–18**, where the agent rapidly toggles actions, causing the state to spike or plummet. The lack of smooth transitions indicates poor temporal stability, with no frame achieving equilibrium.
+
+4. **Outcome Pattern**:
+   The overall style is **chaotic motion**—a persistent cycle of thrusting (action 0) followed by overcorrection (action 1), reflecting an inability to balance rewards and penalties. The agent’s policy enforces a binary, high-frequency response rather than nuanced control.

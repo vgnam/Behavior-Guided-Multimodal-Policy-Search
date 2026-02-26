@@ -1,0 +1,9 @@
+The agent’s behavior in this sequence reveals a **methodical but erratically accelerating thrust-and-coast motion** that grows more **oscillatory and unstable** over time.
+
+At the outset (Frames 1–4), the car displays a **cautious, low-amplitude rocking**: small, tentative backward leans (−0.02, −0.01) followed by modest forward nudges (0.14, 0.18). Its posture is **tight and deliberate**, barely shifting from the initial position (−0.4), and the accelerations feel **delayed and muted**, as though testing the terrain or calibrating control.
+
+By Frames 5–8, the oscillations **sharpen**: backward leans steepen (−0.17, −0.22) and forward thrusts grow stronger (0.22, 0.26). The car now **shuttles more aggressively**, its body **pitching violently** between extremes, yet the net drift remains minimal (−0.7 to −0.5). The motion is **jerky and uneven**, suggesting **overcorrections**—each lean triggers an outsized forward reaction rather than a smooth, damped return.
+
+Frames 9–12 mark a **tipping point**: the leans intensify (−0.31, −0.48) and thrusts peak (0.48, 0.41). The car **lurches forward with abandon**, its posture **tilting dramatically** before snapping back, creating a **visible whiplash** effect. The accelerations are **abrupt and erratic**, oscillating between near-maximal backward and forward values, destabilizing the car’s trajectory and setting the stage for **loss of control**.
+
+In Frames 13–14, the system **spirals**: the final thrust (0.98) propels the car past the goal threshold (position 0.43), but the **violent oscillation** has rendered the motion **chaotic**. The car’s body **lurches uncontrollably**, its posture **spasming** between extremes, culminating in a **premature termination**—the agent "wins" by brute force rather than finesse, leaving behind a trail of **unsteady, oscillatory instability**.

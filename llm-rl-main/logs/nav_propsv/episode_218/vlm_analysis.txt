@@ -1,0 +1,13 @@
+The agent exhibits a **persistently oscillatory and erratic navigation behavior** throughout the sequence:
+
+1. **Behavioral Trajectory**
+   The agent’s orientation (state, e.g., 1.57 radians) swings irregularly, repeatedly switching between **action 0 (forward motion)** and **action 1 (corrective turn)**. These abrupt direction changes create a **zigzagging or swaying motion**, with no sustained straight-line movement. Acceleration and deceleration are visible in the uneven spacing of frames, suggesting the agent struggles to stabilize its heading despite frequent corrections.
+
+2. **Temporal Consistency**
+   Movements appear **jerky and overcorrected**, lacking smooth transitions. The agent’s corrective actions (e.g., switching to action 1 at frames 4, 8, 12, 15) are **sudden and reactive**, indicating delayed or exaggerated responses to drift. This behavior neither stabilizes nor diverges consistently; instead, it maintains a **cyclical pattern of overshooting and counter-adjusting**.
+
+3. **Critical Moments**
+   Instability is evident at **frames 4, 8, 12, and 15**, where abrupt action switches (1 → 0 or 0 → 1) coincide with large state deviations (e.g., state = 2.04 at frame 15). These moments suggest the agent is **tipping into instability or near-collision**, requiring drastic corrections.
+
+4. **Outcome Pattern**
+   The policy produces a **chaotic, oscillatory control style**, marked by **repeated overcorrections** and **lack of directional consistency**. The agent’s motion resembles a drunken walk, with no clear progression toward a target, reflecting poor temporal coherence in its actions.

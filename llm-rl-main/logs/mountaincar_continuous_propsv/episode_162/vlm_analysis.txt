@@ -1,0 +1,35 @@
+The tasks of the **Mountain Car Continuous** environment require the agent to accelerate a car along a one-dimensional track situated between two hills, with the goal of driving it up the right hill. The car’s position ranges from approximately -1.2 (leftmost) to 0.6 (rightmost), and its velocity ranges from around -0.07 to 0.07. The agent receives a small negative reward (-0.01) at each timestep until it reaches the goal (position ≥ 0.45), at which point it receives a large reward (+100), and the episode terminates.
+
+The agent’s behavior, as observed in the frame sequence and supported by the given policy parameters (params[0]: 0.5, params[1]: 5.9, params[2]: 0.6), demonstrates a **deliberate, oscillatory thrusting strategy** with **gradual and controlled acceleration** toward the goal. Here’s a detailed breakdown of its observable evolution:
+
+---
+
+### **Motion Dynamics and Strategy:**
+1. **Initial Stage (t=0–300):**
+   - The agent begins at a position of ~-0.47 with near-zero velocity. It initially applies moderate positive thrusts (e.g., +0.36, +0.37) to build momentum toward the right.
+   - However, the car quickly decelerates due to gravity, reversing direction (negative velocity) before reaching sufficient kinetic energy. This creates an early **back-and-forth rocking motion** between ~-0.53 and ~-0.30.
+   - The thrusts remain **small to moderate (+0.29 to +0.44)**, reflecting cautious exploration rather than aggressive acceleration.
+
+2. **Oscillatory Acceleration (t=350–650):**
+   - The agent intensifies its thrusting actions, alternating between stronger positive thrusts (+0.53 to +0.59) and brief negative corrections (-0.01 to -0.03), amplifying its oscillatory pattern.
+   - This oscillation is **critical**: by swinging the car back and forth across the valley, it exploits gravity to **build kinetic energy** without exhausting its force in a single direction. The amplitude of oscillations increases gradually, spanning from ~-0.70 to ~-0.15.
+   - The thrusts become **more dynamic and responsive**, adjusting based on velocity feedback: positive thrusts when velocity is negative (moving left) to "catch" the car, and reduced thrusts when velocity is positive (moving right) to avoid over-shooting.
+
+3. **Breakthrough and Early Termination (t=700–775):**
+   - Around **t=700**, the agent’s accumulated kinetic energy (via oscillations) becomes sufficient to overcome the right hill’s potential energy. It applies a **sharp, maximal thrust (+1.02)** while positioned at ~0.15 with positive velocity.
+   - This final thrust propels the car past the goal position (~0.45) at **t=775**, achieving **early termination** with a near-perfect reward of +99.895 (only -0.105 lost to time penalties). The episode concludes with a **smooth, upward trajectory** and no visible instability or overcorrection.
+
+---
+
+### **Behavioral Characteristics:**
+- **Oscillatory Control:** The agent deliberately induces back-and-forth swings, using each oscillation’s momentum gain to progressively climb the hill. This is a hallmark of **energy-efficient, gravity-assisted acceleration**, avoiding brute-force thrusting.
+- **Responsive Adjustments:** Thrusts are **velocity-aware**, scaling up when the car moves left (to counteract gravity) and down when it moves right (to conserve energy). This suggests the policy has learned a **proportional-derivative-like control scheme**.
+- **Gradual Momentum Buildup:** The agent avoids aggressive early thrusts, which would waste energy climbing only to stall. Instead, it **patiently accumulates energy** through controlled oscillations.
+- **Stabilization Near Goal:** Once sufficient momentum is achieved, a **single, decisive thrust** ensures goal attainment without erratic motion or energy loss.
+
+---
+
+### **Temporal Evolution of Key Metrics:**
+- **Position:** Starts at ~-0.47, oscillates with increasing amplitude (reaching ~-0.70 before t=500), and **smoothly ascends** to the goal at 0.44.
+- **Velocity:** Cycles between positive and negative values, with **peak velocities rising gradually** (from ~0.02 to ~0.06) as oscillations grow. The final upward thrust produces a **high positive velocity** to clear the hill.
+- **Thrust

@@ -1,0 +1,20 @@
+The agent exhibits a **cyclic behavioral pattern** characterized by alternating phases of steady stabilization and erratic oscillation.
+
+### 1. **Behavioral Trajectory**
+- Initially (Frames 1–4), the agent maintains a stable state with constant positive rewards (5.0) by choosing **action 0**, indicating it is holding a fixed position or orientation.
+- At **Frame 5**, it abruptly switches to **action 1**, triggering a sustained downward trend in state values (e.g., increasing from 1.48 to 4.83 by Frame 11) and negative rewards (-0.5), suggesting rapid acceleration or loss of control.
+- Around **Frame 14**, the state sharply drops (to 1.43), followed by a return to **action 0** (Frames 15–21), stabilizing again with positive rewards but at lower state values (~1.0–1.25).
+- This **two-phase cycle** (stabilization → destabilization → partial recovery) repeats, showing a failure to sustain equilibrium.
+
+### 2. **Temporal Consistency**
+- Movement is **abrupt and oscillatory**, with rapid transitions between actions causing sudden state shifts (e.g., Frame 10–14’s rise/fall).
+- Corrections are **delayed and overcompensated**; the agent stabilizes only after exceeding a critical threshold (e.g., Frame 11’s peak at 4.83).
+- Behavior **does not converge**—oscillations persist without damping, indicating poor adaptability to feedback.
+
+### 3. **Critical Moments**
+- **Frame 5**: Trigger for instability (switch from action 0 → 1).
+- **Frame 10–14**: Severe oscillation with state values spiking (4.83) and crashing (1.43), likely representing energy waste or near-failure.
+- **Frame 21**: Final stabilization attempt fails to resolve underlying drift, as seen in the last state value (~1.14).
+
+### 4. **Outcome Pattern**
+The policy produces **aggressive, oscillatory control**: It alternates between passive holding (action 0) and overactive correction (action 1), leading to repetitive destabilization. The behavior suggests a lack of proportional feedback, causing the agent to lurch between extremes rather than achieve smooth stabilization. The overall style is **chaotic with transient recovery phases**.

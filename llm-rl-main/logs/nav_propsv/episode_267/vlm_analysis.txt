@@ -1,0 +1,13 @@
+The agent’s behavior across the sequence of frames reveals a **persistently oscillatory and unstable motion pattern**, characterized by the following observations:
+
+1. **Behavioral Trajectory**:
+   The agent begins with minor directional adjustments (Frames 1–4, action=1), maintaining a relatively stable but slow progression. Around **Frame 5**, a sharp shift occurs as it switches to action=0, accelerating forward (state increases from ~1.1 to ~1.6) and briefly stabilizing. However, by **Frame 12**, it reverts to action=1, initiating erratic oscillations: the state fluctuates wildly (e.g., jumping from 1.8 to 4.7 between Frames 13–21), suggesting overcorrection or loss of equilibrium.
+
+2. **Temporal Consistency**:
+   Movement is **abrupt and delayed**—actions trigger sudden state changes (e.g., Frames 12–14), rather than smooth transitions. Corrections are **sudden and overcompensated** (e.g., Frames 16–17), leading to divergence rather than stabilization. The agent fails to dampen oscillations, indicating poor feedback control.
+
+3. **Critical Moments**:
+   Instability is evident at **Frame 12** (switch to action=1), where oscillations begin, and **Frames 16–17**, where the state spikes dramatically (2.79 → 4.71), signaling tipping or uncontrolled motion. No collisions or failures are visible, but the agent’s trajectory becomes increasingly erratic, peaking at **Frame 21** (state=5.35).
+
+4. **Outcome Pattern**:
+   The policy produces **chaotic, oscillatory control**, alternating between over-thrusting (action=0) and abrupt braking/reversal (action=1). The agent never stabilizes, exhibiting a **persistent drift with amplified oscillations**, likely due to misaligned reward incentives (e.g., high rewards for action=0) and inadequate damping of state deviations.

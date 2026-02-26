@@ -1,0 +1,13 @@
+The agent exhibits an **oscillatory behavioral pattern** with consistent, repetitive switching between two primary actions (0 and 1) across the frames. Here’s a breakdown:
+
+1. **Behavioral Trajectory**
+The agent alternates between forward thrust (action 0) and backward/reverse thrust (action 1), producing a back-and-forth motion. Its state values fluctuate between higher (e.g., 5.22 at frame 12) and lower magnitudes (e.g., 0.51 at frame 9), indicating rapid acceleration/deceleration cycles without smooth stabilization. The motion appears constrained along a single axis, with no clear progression toward a target.
+
+2. **Temporal Consistency**
+The movement is **abrupt and erratic**, with sudden switches between opposing actions every 50 timesteps. Corrections are reactive rather than gradual, leading to persistent overshooting. The behavior does not stabilize; instead, oscillations intensify over time (e.g., state values spike to 5.22), suggesting poor damping of momentum.
+
+3. **Critical Moments**
+Instability is evident at **frames 12 (t=550)** and **21 (t=999)**, where state values peak (5.22 and 2.08), indicating near-loss of control. Earlier frames (e.g., 7–8, 17–18) show smaller oscillations, but the amplitude grows, hinting at divergence.
+
+4. **Outcome Pattern**
+The policy generates **aggressive, oscillatory thrusting**—overcorrecting in both directions without achieving steady-state. The lack of gradual adjustments or intermediate actions suggests a binary control strategy failing to adapt to momentum, resulting in chaotic, unproductive motion.

@@ -1,0 +1,15 @@
+The agent exhibits a **two-phase behavioral trajectory** in this navigation task.
+
+**1. Behavioral Trajectory**
+Initially (Frames 1–6), the agent remains nearly stationary, maintaining a stable state (~1.3–1.4) with consistent positive rewards (+5.0) by repeatedly selecting **action 0**. Around **Frame 7**, it abruptly shifts to **action 1**, triggering rapid acceleration (state values surge from ~1.6 to ~4.5). This thrust persists despite negative rewards (–0.5), causing the agent to overshoot its target. Post-overshoot (Frames 14–21), it continues applying action 1, oscillating within a lower state range (~1.1–1.5) without correcting back.
+
+**2. Temporal Consistency**
+The movement is **abrupt and non-adaptive**: the agent stabilizes initially but overcorrects upon switching actions, suggesting delayed or insufficient feedback sensitivity. No gradual deceleration or reversal occurs after overshooting; the agent remains locked into repetitive action-1 cycles, indicating poor temporal responsiveness.
+
+**3. Critical Moments**
+- **Frame 7**: Sudden switch to action 1 initiates uncontrolled acceleration.
+- **Frames 9–11**: Peak state values (~3.1–4.6) mark maximum overshoot.
+- **Frames 14–21**: Persistent oscillation without stabilization reveals a failure to recover.
+
+**4. Outcome Pattern**
+The policy produces an **aggressive, binary thrusting style**: cautious holding (action 0) abruptly transitions to full thrust (action 1), leading to persistent drift and oscillation. The behavior lacks modulation, stabilizes poorly, and ultimately diverges from the target.

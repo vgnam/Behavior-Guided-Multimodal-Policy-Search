@@ -1,0 +1,13 @@
+The agent’s behavior in this frame sequence reveals an **oscillatory and unstable control pattern** with **erratic direction changes** and **overcorrection**, ultimately leading to loss of control.
+
+1. **Initial Overshoot and Drift (Frames 1–2):**
+   The agent begins in a tilted or off-center posture (state ≈1.96) and immediately applies a strong action (action=2), likely a thrust or torque in one direction. This causes it to overshoot, increasing its deviation (state ≈2.75). The movement appears abrupt, suggesting an overcorrection rather than smooth stabilization.
+
+2. **Partial Recovery and Reversal (Frames 3–4):**
+   By Frame 3, the agent abruptly switches direction (action=0), possibly attempting to counteract its drift. This results in a temporary improvement (state ≈0.79, reward=+5.0), but the correction is too aggressive, causing it to swing past the target. In Frame 4, it reverses again (action=1), but the state rebounds to ≈1.81, indicating **oscillatory motion** around the desired position.
+
+3. **Repeated Overcorrection and Instability (Frames 5–6):**
+   The agent alternates actions (action=0 → action=0) in Frames 5–6, but the adjustments are **delayed and exaggerated**, failing to dampen the oscillations. The state drifts further (0.41 in Frame 6), and the large negative reward (-200.0) suggests a catastrophic failure—likely a collision or loss of balance. The motion here is **erratic**, with no signs of stabilization, and the agent appears to **diverge** rather than converge to the target.
+
+4. **Overall Behavioral Style:**
+   The agent exhibits **aggressive, oscillatory control** with **poor damping**, repeatedly overcorrecting without achieving stability. Its movements are **abrupt and uncoordinated**, resembling a system with **excessive gain or insufficient feedback regulation**. The lack of smooth transitions between actions and the growing amplitude of oscillations indicate **persistent instability**, culminating in loss of control. This behavior aligns with a **chaotic or thrashing motion** rather than a controlled or cautious approach.

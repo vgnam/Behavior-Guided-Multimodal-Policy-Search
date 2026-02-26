@@ -1,0 +1,9 @@
+The agent’s visually observable behavior in this navigation task unfolds as a clear sequence of **erratic, oscillatory, and ultimately divergent motion**, reflecting poor control stability and an inability to maintain a desired trajectory.
+
+Initially, the agent begins at a moderate positive position (state ≈ 1.62) and receives a positive reward for its starting action (action 0), suggesting either an initial calibration or a favorable initial thrust. However, by **Frame 2 (t=50)**, it has already drifted significantly in the opposite direction (state ≈ 2.63), executing action 1, which indicates an abrupt and overcorrective response—likely applying excessive force in the reverse direction to counteract perceived overshoot.
+
+By **Frame 3 (t=100)**, the agent has swung back dramatically (state ≈ 0.68), having executed action 2, showing a **high-frequency oscillation** with large amplitude. The movement is neither smooth nor gradual but exhibits **jerky, overcompensating acceleration**, indicative of a controller caught in a feedback loop of alternating thrusts without damping.
+
+The final **Frame 4 (t=104)** reveals catastrophic failure: the agent’s state collapses to ≈ 0.48, executing action 0 once again just before termination. This suggests a **loss of control**, likely resulting from unbounded divergence due to accumulating overshoot and delayed or exaggerated responses. The sharp negative reward (−200) confirms a collision or out-of-bounds event, marking the endpoint of an unstable trajectory.
+
+Throughout, the agent’s motion is **abrupt, oscillatory, and unsustainable**, characterized by rapid alternation between opposing actions, no evident stabilization, and a progressive amplification of positional error. The overall behavioral style is best described as **chaotic oscillation with uncontrolled divergence**, culminating in a loss of spatial regulation.

@@ -1,0 +1,13 @@
+The agent exhibits an **oscillatory and unstable navigation behavior** throughout the sequence, characterized by erratic thrust patterns and poor stabilization.
+
+1. **Behavioral Trajectory**
+The agent starts with a high position (~4.63) and consistently applies action 1 (likely a downward thrust), causing a steep descent by frame 3 (~1.72). It briefly stabilizes with action 0 (upward thrust) at frames 4, 6, and 7, but these corrections are short-lived. The agent repeatedly overshoots its target, oscillating between rapid descents (action 1) and brief upward corrections (action 0), failing to maintain steady hover or controlled motion. The state values fluctuate wildly between high (e.g., 5.05 at frame 12) and low (e.g., 0.97 at frame 7), reflecting no consistent progress toward a stable position.
+
+2. **Temporal Consistency**
+Movement is **abrupt and delayed**, with sudden thrust reversals (e.g., frames 3-4, 8-9) producing jerky motion. Corrections appear reactive and overcompensated rather than gradual, leading to persistent oscillations without stabilization. The erratic pattern intensifies over time, as seen in the divergence of state values (e.g., 3.36 at frame 20).
+
+3. **Critical Moments**
+Instability is most evident between **frames 8-12**, where oscillations peak (e.g., 1.06 → 1.23 → 4.81) and the agent drifts uncontrollably upward before crashing downward. Frame 11 shows extreme overshooting (4.81), suggesting a failure to regulate thrust effectively. Earlier frames (e.g., 4-7) reveal minor oscillations that foreshadow later instability.
+
+4. **Outcome Pattern**
+The policy produces a **chaotic, oscillatory control style**, combining aggressive thrusting with delayed, overreactive corrections. The agent fails to dampen oscillations or achieve controlled landing, instead persisting in a cycle of drift and abrupt reversals. The behavior resembles an underdamped system struggling with feedback delay.

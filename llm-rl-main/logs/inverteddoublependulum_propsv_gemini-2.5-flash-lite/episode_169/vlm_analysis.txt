@@ -1,0 +1,1 @@
+The agent begins with the inverted double pendulum slightly tilted to the right. Despite an initial positive action, the system immediately displays instability, as both pendulum links rapidly accelerate their tilt to the right. Within just

@@ -1,0 +1,1 @@
+The agent primarily engages in an oscillatory control strategy, exhibiting noticeable swings from left to right as it attempts to keep the inverted double pendulum upright. While it frequently achieves high rewards by bringing the pendulum
