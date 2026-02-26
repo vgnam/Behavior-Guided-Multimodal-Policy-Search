@@ -1,1 +1,0 @@
-The inverted double pendulum begins in a nearly upright posture, exhibiting a slight lean to the right. Initially, the agent applies a small force to the left. However, over the brief span of 1

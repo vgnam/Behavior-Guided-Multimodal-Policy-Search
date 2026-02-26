@@ -1,1 +1,0 @@
-The agent begins with the double pendulum nearly upright, exhibiting a slight lean to the left. Initially, a small positive action is applied, but over 17 timesteps, the pendulum progressively tilts further

@@ -1,1 +1,0 @@
-The agent begins with the double pendulum in a nearly upright, stable position, exhibiting only a slight lean to the left. Over a very short duration of 8 time steps, the system rapidly loses

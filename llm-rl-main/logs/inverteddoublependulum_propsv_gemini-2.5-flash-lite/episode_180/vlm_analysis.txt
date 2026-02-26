@@ -1,1 +1,0 @@
-The agent begins with the double inverted pendulum nearly upright, showing a slight lean to the left. Over a short span of nine frames, the system rapidly destabilizes. The pendulum swiftly falls to the left,

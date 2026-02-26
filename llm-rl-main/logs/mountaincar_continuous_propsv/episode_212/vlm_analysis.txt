@@ -1,9 +1,0 @@
-TheThe agent exhibits a highly dynamic and oscillatory behavior pattern, characterized by abrupt acceleration, repeated direction changes, and noticeable instability in its motion.
-
-Initially, the agent starts in a stationary or near-stationary posture with minimal acceleration, maintaining a cautious stance (Frame 1). As it begins to move (Frames 2-8), the agent demonstrates a gradual buildup of instability, exhibiting slight oscillations in its lateral position while slowly gaining speed and showing early signs of difficulty in maintaining a straight trajectory.
-
-By Frames 9-15, the oscillatory behavior becomes more pronounced, with the agent showing aggressive thrusting and high-frequency direction changes. It struggles to stabilize, frequently overcorrecting its posture and trajectory, which results in erratic motion and a zigzag pattern. This phase highlights the agent's increased acceleration but decreased control, reinforcing its difficulty in balancing speed and direction.
-
-Frames 16-18 depict a culmination of the erratic behavior, where the agent’s oscillatory control ultimately leads to a significant failure. The agent executes a large, uncontrolled thrust that propels it upward and forward, resulting in a terminal state and successful navigation to the goal but in an unintended manner.
-
-Overall, the agent's movement showcases a repeated pattern of cautious stabilization transitioning into aggressive, erratic thrusts, leading to loss of control and an eventual, albeit accidental, success. This behavior suggests a need for improved balance and smoother control strategies to achieve more stable and intended outcomes.

@@ -1,1 +1,0 @@
-The agent begins with the first pendulum link slightly tilted to the left, while the base is centered. It applies a small rightward force, perhaps attempting an initial correction or movement. Over a short span

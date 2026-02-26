@@ -1,1 +1,0 @@
-The agent starts with the inverted double pendulum in a nearly perfectly upright and stable position. Despite a very small initial action, the pendulum rapidly loses its balance, falling quickly and smoothly to the left

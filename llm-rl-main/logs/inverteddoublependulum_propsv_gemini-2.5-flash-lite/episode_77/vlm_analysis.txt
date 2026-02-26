@@ -1,1 +1,0 @@
-The agent begins with the inverted double pendulum slightly leaning to the right, attempting a small corrective action. However, within a mere six timesteps, the pendulum rapidly loses its upright posture, quickly tilting further

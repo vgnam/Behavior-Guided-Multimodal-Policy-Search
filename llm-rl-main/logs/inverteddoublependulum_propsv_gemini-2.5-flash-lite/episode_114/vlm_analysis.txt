@@ -1,1 +1,0 @@
-The agent begins with the inverted double pendulum slightly tilted to the left. It applies a small positive action, but within 11 time steps, the pendulum rapidly loses stability. By the final

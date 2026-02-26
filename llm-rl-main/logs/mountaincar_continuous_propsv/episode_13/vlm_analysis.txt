@@ -1,7 +1,0 @@
-The agent’s observable behavior across this frame sequence reveals a **highly erratic and oscillatory control strategy**, primarily characterized by repeated, abrupt thrusts that fail to achieve smooth or sustained progress.
-
-Over time, the car’s **position** swings wildly between the left and right sides of the valley, often accelerating aggressively up one slope only to stall or reverse direction before reaching the goal. Its **orientation** mirrors this instability: the car frequently points upward on one slope, applies a full-throttle thrust, then quickly pivots or reverses as it loses momentum or overshoots. The **motion** is dominated by sharp, overcorrected acceleration bursts rather than gradual, controlled propulsion.
-
-This movement lacks stabilization, frequently **diverging** from a steady climb and exhibiting pronounced **drift and oscillation** as the car repeatedly slips back after partial ascents. There is no noticeable stabilization in velocity or direction—each thrust seems to reset momentum rather than build on it.
-
-Overall, the agent’s behavioral style can be described as **aggressive, jerky thrusting with persistent oscillation and no effective momentum management**, resulting in chaotic, non-convergent motion.

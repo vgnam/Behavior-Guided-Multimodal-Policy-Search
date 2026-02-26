@@ -1,1 +1,0 @@
-The agent begins with the inverted double pendulum slightly tilted to the left, maintaining a nearly upright posture. Over a short duration of 9 time steps, the pendulum rapidly loses its balance, collapsing

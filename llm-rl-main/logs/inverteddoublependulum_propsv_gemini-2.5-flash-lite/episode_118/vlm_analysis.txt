@@ -1,1 +1,0 @@
-The agent starts with the double pendulum almost perfectly upright, exhibiting a very slight lean to the left. Over a mere 8 timesteps, the pendulum rapidly loses its stability, visibly tilting further and further

@@ -1,1 +1,0 @@
-The agent begins with the inverted double pendulum slightly tilted to the right of vertical. An initial, small corrective action attempts to push the base to the left. However, this action is insufficient or misdirected

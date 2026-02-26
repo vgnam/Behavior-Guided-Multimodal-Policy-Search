@@ -1,9 +1,0 @@
-TheThe agent demonstrates a consistent behavioral pattern throughout the episode, characterized by **erratic, oscillatory control** with **abrupt thrusting** and **repeated positional instability**.
-
-Initially, the agent applies **high-magnitude thrusts** (typically around +4.0) that propel it upward with significant acceleration, resulting in **abrupt upward motion**. This thrust is often followed by an opposing high-magnitude thrust in the downward direction, creating a **rapid oscillatory effect** between upward and downward movements.
-
-The agent's **posture shifts** are pronounced and sudden, with the car swinging wildly between near-vertical orientations and sharp downward tilts. These oscillations lead to **loss of control**, as the agent frequently overcorrects rather than stabilizing the car in a smooth, balanced trajectory.
-
-The **motion is neither smooth nor delayed**; instead, it is **reactive and overcorrected**, causing the car to jerk violently rather than glide. The agent appears to be **diverging rather than stabilizing**, as it fails to maintain a consistent altitude or orientation, repeatedly drifting into extreme angles.
-
-Overall, the agent's behavior reflects a **chaotic thruster-based control strategy**, lacking finesse and demonstrating **persistent drift and oscillation** rather than controlled ascent or landing. The style is **aggressive thrusting** combined with **oscillatory instability**, indicative of a reactive policy without smooth stabilization.

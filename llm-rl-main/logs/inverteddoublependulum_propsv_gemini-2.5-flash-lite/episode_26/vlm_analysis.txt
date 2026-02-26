@@ -1,1 +1,0 @@
-The inverted double pendulum begins in a nearly perfectly upright and balanced position. Over a short duration of 17 frames, the system rapidly loses stability, tilting significantly to the right. Despite an initial

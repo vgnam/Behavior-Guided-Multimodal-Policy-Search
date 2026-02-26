@@ -1,1 +1,0 @@
-The agent begins with the inverted double pendulum nearly upright, showing a slight lean to the right. Despite an initial small counteracting action, the pendulum rapidly loses stability. Over the course of 11 tim

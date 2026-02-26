@@ -1,1 +1,0 @@
-The agent begins with the double pendulum already slightly tilted to the left. Despite an initial action that applies a leftward force, the pendulum rapidly loses stability. Over a mere 7 timesteps, the

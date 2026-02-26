@@ -1,4 +1,0 @@
-Iteration, Lambda, VLM Invoked, Phase, Num Frames
-0, 1.000, True, Visual Guidance Active (λ=1.00, VLM invocation probability: 100%), 35
-1, 1.000, True, Visual Guidance Active (λ=1.00, VLM invocation probability: 100%), 35
-2, 1.000, True, Visual Guidance Active (λ=1.00, VLM invocation probability: 100%), 35

@@ -1,1 +1,0 @@
-The inverted double pendulum begins with a slight lean to the right. Over the short duration, the system exhibits a rapid and continuous divergence from its upright posture, progressively tilting further to the right. Despite

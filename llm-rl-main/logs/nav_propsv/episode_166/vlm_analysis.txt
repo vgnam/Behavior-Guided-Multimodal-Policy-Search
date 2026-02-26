@@ -1,9 +1,0 @@
-The agent's behavior in this navigation task exhibits an **oscillatory, overcorrecting motion pattern** with **abrupt direction shifts** and **inconsistent stabilization**:
-
-1. **Behavioral Trajectory** – The agent starts near a target (high reward at *Frame 1*), but its position fluctuates erratically, swinging between forward thrusts (*action 0*, rewarded) and backward corrections (*action 1*, penalized). After *Frame 12*, it drifts rapidly into higher state values (e.g., *state=5.22*), indicating a loss of control, followed by gradual deceleration (*Frames 16–21*) toward the end.
-
-2. **Temporal Consistency** – Movements are **jerky and delayed**, with sudden reversals (e.g., *Frame 2*’s backward action after forward reward). Corrections are **overcompensated**, leading to oscillations rather than smooth convergence. The behavior stabilizes only briefly before diverging again.
-
-3. **Critical Moments** – Instability is evident at *Frame 12–13* (sharp drift) and *Frame 19–20* (abrupt deceleration). The agent’s oscillations peak around *Frames 4–11* (alternating actions) and *16–18* (high state variance), suggesting poor action dampening.
-
-4. **Outcome Pattern** – The policy produces a **chaotic, reactive control style**, prioritizing immediate corrections over sustained progress, resulting in persistent overshooting and instability. The agent fails to maintain steady motion toward the goal.

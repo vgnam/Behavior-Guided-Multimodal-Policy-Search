@@ -1,1 +1,0 @@
-The agent exhibits an oscillatory control style, actively thrusting to maintain the inverted double pendulum in an upright position. It successfully keeps the pendulums near vertical for extended periods, as indicated by consistently high
