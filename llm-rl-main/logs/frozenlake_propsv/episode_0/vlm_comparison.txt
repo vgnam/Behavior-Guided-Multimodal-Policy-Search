@@ -1,0 +1,25 @@
+## 1. Environment Description
+
+The FrozenLake environment is a 4x4 grid world where each cell is represented as a discrete state (0 to 15). The grid features:
+- **Terrain**: A slippery surface where actions (left, down, right, up) have stochastic outcomes, often moving the agent in unintended directions.
+- **Goal**: Located at state 15 (bottom-right corner), rewarding the agent with +1 upon arrival.
+- **Holes**: Certain cells terminate the episode without reward, visible through failed trajectories where the agent disappears.
+- **Agent**: Represented as a small entity navigating the grid.
+- **Visual Constraints**: The agent’s movement is unpredictable due to slipperiness, and holes are inferred from repeated failures in specific states.
+
+---
+
+## 2. Behavioral Comparison
+
+### **Behavioral Differences**
+- **Previous Policy**: The agent exhibits erratic, repetitive movements, often oscillating between states or getting stuck in loops (e.g., circling near the top-left). Trajectories show abrupt terminations near holes, indicating poor hole avoidance.
+- **Current Policy**: The agent demonstrates more directed, albeit still cautious, exploration. Movements appear less repetitive, with attempts to navigate toward the bottom-right while avoiding previously failed paths. Hesitation near risky states is observable.
+
+### **What Changed**
+- **Improved Path Diversity**: The current policy reduces looping, suggesting better state coverage and reduced overfitting to suboptimal actions.
+- **Risk Awareness**: The agent now avoids actions leading to immediate termination (holes), though it remains overly conservative, failing to reach the goal.
+- **Stability**: Posture (directional consistency) is marginally better, with fewer abrupt reversals, but timing remains slow and indecisive.
+
+### **Behavioral Quality**
+- **Previous Policy**: Lower quality due to repetitive, unstable movements and frequent hole encounters. Lacked goal-directed progress.
+- **Current Policy**: Slightly improved control and hole avoidance, but stability is still lacking. The policy avoids catastrophic failures but lacks the precision to reach the goal efficiently. Visual frames show fewer abrupt terminations, supporting modest progress in safety.

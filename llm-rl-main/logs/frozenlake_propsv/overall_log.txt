@@ -1,0 +1,4 @@
+Iteration, CPU Time, API Time (LLM+VLM), Total Episodes, Total Steps, Total Reward
+0, 0.80, 64.18, 43, 291, 0.00
+1, 1.16, 117.75, 66, 467, 0.00
+2, 1.62, 171.35, 89, 1150, 0.55

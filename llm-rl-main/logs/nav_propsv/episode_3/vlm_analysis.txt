@@ -1,0 +1,9 @@
+The agent exhibits a **persistent, uncontrolled forward drift** with no visible correction, leading to an inevitable collision. Across the three frames:
+
+1. **Behavioral Trajectory**: The agent moves in a single, rigid direction from its initial position (state=1.53) steadily downward to state=0.42 over 18 timesteps, maintaining the same action (0) throughout. There is no observable deceleration, turning, or posture adjustment; the motion is linear and unchanging until impact.
+
+2. **Temporal Consistency**: The movement is smooth but **monotonic and unstoppable**, with no abrupt changes or corrections. The lack of variation in action suggests no response to positional feedback, resulting in a **divergent trajectory** toward failure.
+
+3. **Critical Moments**: Instability and failure become visually evident by **Frame 3 (t=18)**, where the agent's position (state=0.42) indicates collision or boundary violation, triggering termination with a large negative reward (–200).
+
+4. **Outcome Pattern**: The policy produces **passive, unresponsive drifting**—a complete absence of active control—leading to rapid, predictable failure.

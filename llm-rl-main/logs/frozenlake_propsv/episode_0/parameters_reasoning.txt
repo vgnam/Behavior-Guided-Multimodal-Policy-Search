@@ -1,0 +1,123 @@
+system:
+You are a global RL policy optimizer, helping me find the optimal Q-table policy in the following environment:
+
+# Environment:
+The FrozenLake environment is a 2D 4x4 grid world (4 rows, 4 columns) where the agent can move left, down, right, or up. 
+The state is between 0 and 15, representing the which grid the agent is in. The top row is 0 to 3, 2nd row is 4 to 7, 3rd row is 8 to 11, bottom row is 12 to 15. 
+The environment is slippery, which means when the agent takes an action, it will go to 3 directions with equal probability.
+- When the agent takes action 0, it will pick from [move down, move left, move up] with equal probability.
+- When the agent takes action 1, it will pick from [move right, move down, move left] with equal probability.
+- When the agent takes action 2, it will pick from [move up, move right, move down] with equal probability.
+- When the agent takes action 3, it will pick from [move left, move up, move right] with equal probability.
+The goal is to reach the state 15 (the right bottom grid), which will yield a +1 reward. All other states yield a reward of 0. However, there are some holes in the map that will end the game once the agent step onto it. You need to explore through it by reading history trajectories.
+The policy is a function that maps the state to the action to take. The policy is represented by an array of 16 numbers. The value of params[i] represents the action to take when the state is i. The value of params[0] means which action to take when the agent is on the top left grid (0, 0). The value of params[1] means which action to take when the agent is on the top second grid (0, 1). So on and so forth. The agent should locate the wholes via previous explored trajectiores and pick actions that do not have possibility of falling into the wholes.
+
+# Vision-Guided Q-Table Optimization:
+This is a **ProPS-V for Q-Learning** (Vision-Guided Prompted Policy Search for discrete state spaces). You will receive:
+1. Numerical feedback: Q-values and their episodic rewards
+2. Visual feedback: analysis of critical frames from policy rollouts (when available)
+
+# Regarding the Q-table parameters **params**:
+**params** is an array of 16 Q-values (one for each state-action pair).
+**params** values can range from -∞ to +∞ (though typically in a reasonable range for your environment).
+The Q-table represents a discrete policy mapping states to actions.
+f(params) is the episodic reward achieved by following this Q-table policy.
+
+# State-Action Space:
+- Actions: [[0, 1, 2, 3]]
+- Number of state-action pairs: 16
+Each params[i] represents the Q-value for a specific (state, action) pair.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past Q-tables and their rewards.
+2. I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations in the discrete state space.
+3. You will provide your response in the following exact format:
+    * Line 1: new Q-values in format 'params[0]: <value>, params[1]: <value>, ..., params[15]: <value>', aiming to maximize f(params).
+    * Line 2: detailed explanation of why you chose these Q-values, **explicitly referencing BOTH visual observations AND numerical Q-value trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen Q-values.**
+2. **The global optimum should be around 1.0.** If you are below that, this is a local optimum. Explore different Q-value assignments.
+3. **Q-values encode state-action preferences**: Higher Q-value → more likely to select that action in that state.
+
+4. **Visual Guidance (λ=1.000)**:
+   - When visual analysis is provided, use it to identify which states/actions lead to failures
+   - Adjust Q-values to discourage bad state-action pairs (lower Q-values) and encourage good ones (higher Q-values)
+   - Visual evidence of getting stuck, loops, or suboptimal paths should guide Q-value adjustments
+
+
+# Past Q-Tables and Rewards:
+params[0]: 0; params[1]: 2; params[2]: 2; params[3]: 0; params[4]: 3; params[5]: 2; params[6]: 2; params[7]: 2; params[8]: 2; params[9]: 3; params[10]: 0; params[11]: 0; params[12]: 1; params[13]: 0; params[14]: 3; params[15]: 2; f(params): 0.00
+params[0]: 2; params[1]: 3; params[2]: 1; params[3]: 1; params[4]: 2; params[5]: 1; params[6]: 0; params[7]: 3; params[8]: 0; params[9]: 1; params[10]: 3; params[11]: 2; params[12]: 1; params[13]: 1; params[14]: 3; params[15]: 3; f(params): 0.00
+params[0]: 1; params[1]: 2; params[2]: 3; params[3]: 2; params[4]: 3; params[5]: 1; params[6]: 3; params[7]: 3; params[8]: 3; params[9]: 2; params[10]: 2; params[11]: 1; params[12]: 3; params[13]: 1; params[14]: 0; params[15]: 0; f(params): 0.00
+params[0]: 3; params[1]: 3; params[2]: 1; params[3]: 3; params[4]: 1; params[5]: 1; params[6]: 3; params[7]: 1; params[8]: 0; params[9]: 1; params[10]: 3; params[11]: 2; params[12]: 0; params[13]: 2; params[14]: 3; params[15]: 2; f(params): 0.00
+params[0]: 1; params[1]: 1; params[2]: 3; params[3]: 2; params[4]: 1; params[5]: 1; params[6]: 2; params[7]: 2; params[8]: 2; params[9]: 1; params[10]: 3; params[11]: 3; params[12]: 3; params[13]: 0; params[14]: 2; params[15]: 1; f(params): 0.00
+params[0]: 0; params[1]: 3; params[2]: 0; params[3]: 0; params[4]: 2; params[5]: 0; params[6]: 3; params[7]: 2; params[8]: 1; params[9]: 0; params[10]: 2; params[11]: 3; params[12]: 0; params[13]: 1; params[14]: 1; params[15]: 0; f(params): 0.00
+params[0]: 0; params[1]: 1; params[2]: 0; params[3]: 0; params[4]: 1; params[5]: 1; params[6]: 2; params[7]: 1; params[8]: 3; params[9]: 2; params[10]: 2; params[11]: 3; params[12]: 3; params[13]: 0; params[14]: 1; params[15]: 2; f(params): 0.00
+params[0]: 2; params[1]: 1; params[2]: 3; params[3]: 2; params[4]: 0; params[5]: 2; params[6]: 3; params[7]: 1; params[8]: 3; params[9]: 1; params[10]: 1; params[11]: 3; params[12]: 2; params[13]: 1; params[14]: 1; params[15]: 0; f(params): 0.00
+params[0]: 2; params[1]: 2; params[2]: 3; params[3]: 1; params[4]: 2; params[5]: 2; params[6]: 3; params[7]: 1; params[8]: 0; params[9]: 0; params[10]: 0; params[11]: 1; params[12]: 2; params[13]: 2; params[14]: 1; params[15]: 2; f(params): 0.00
+params[0]: 0; params[1]: 1; params[2]: 0; params[3]: 1; params[4]: 1; params[5]: 2; params[6]: 0; params[7]: 1; params[8]: 2; params[9]: 0; params[10]: 0; params[11]: 3; params[12]: 3; params[13]: 2; params[14]: 2; params[15]: 2; f(params): 0.00
+params[0]: 3; params[1]: 3; params[2]: 2; params[3]: 1; params[4]: 3; params[5]: 1; params[6]: 3; params[7]: 3; params[8]: 3; params[9]: 1; params[10]: 0; params[11]: 1; params[12]: 2; params[13]: 1; params[14]: 1; params[15]: 0; f(params): 0.00
+params[0]: 0; params[1]: 2; params[2]: 0; params[3]: 2; params[4]: 2; params[5]: 0; params[6]: 1; params[7]: 0; params[8]: 2; params[9]: 0; params[10]: 3; params[11]: 1; params[12]: 3; params[13]: 2; params[14]: 1; params[15]: 0; f(params): 0.00
+params[0]: 2; params[1]: 1; params[2]: 1; params[3]: 2; params[4]: 0; params[5]: 3; params[6]: 0; params[7]: 0; params[8]: 2; params[9]: 2; params[10]: 3; params[11]: 3; params[12]: 3; params[13]: 2; params[14]: 2; params[15]: 2; f(params): 0.00
+params[0]: 1; params[1]: 0; params[2]: 0; params[3]: 0; params[4]: 3; params[5]: 0; params[6]: 2; params[7]: 1; params[8]: 0; params[9]: 0; params[10]: 2; params[11]: 3; params[12]: 2; params[13]: 3; params[14]: 0; params[15]: 2; f(params): 0.00
+params[0]: 2; params[1]: 3; params[2]: 3; params[3]: 0; params[4]: 2; params[5]: 3; params[6]: 1; params[7]: 3; params[8]: 0; params[9]: 0; params[10]: 1; params[11]: 0; params[12]: 1; params[13]: 0; params[14]: 2; params[15]: 3; f(params): 0.00
+params[0]: 2; params[1]: 3; params[2]: 3; params[3]: 2; params[4]: 2; params[5]: 1; params[6]: 3; params[7]: 3; params[8]: 1; params[9]: 1; params[10]: 0; params[11]: 1; params[12]: 0; params[13]: 3; params[14]: 1; params[15]: 3; f(params): 0.00
+params[0]: 2; params[1]: 1; params[2]: 1; params[3]: 3; params[4]: 3; params[5]: 0; params[6]: 2; params[7]: 3; params[8]: 2; params[9]: 3; params[10]: 2; params[11]: 1; params[12]: 0; params[13]: 1; params[14]: 2; params[15]: 3; f(params): 0.00
+params[0]: 1; params[1]: 2; params[2]: 2; params[3]: 2; params[4]: 2; params[5]: 2; params[6]: 0; params[7]: 2; params[8]: 3; params[9]: 0; params[10]: 2; params[11]: 2; params[12]: 2; params[13]: 0; params[14]: 2; params[15]: 2; f(params): 0.00
+params[0]: 3; params[1]: 0; params[2]: 0; params[3]: 0; params[4]: 3; params[5]: 3; params[6]: 3; params[7]: 1; params[8]: 1; params[9]: 2; params[10]: 3; params[11]: 0; params[12]: 2; params[13]: 3; params[14]: 2; params[15]: 1; f(params): 0.00
+params[0]: 2; params[1]: 2; params[2]: 3; params[3]: 0; params[4]: 2; params[5]: 3; params[6]: 1; params[7]: 3; params[8]: 0; params[9]: 3; params[10]: 0; params[11]: 0; params[12]: 2; params[13]: 0; params[14]: 0; params[15]: 3; f(params): 0.00
+
+
+
+# Visual Analysis of Latest Rollout:
+1. **Behavioral Trajectory**: The agent starts in state **0** (top-left grid) and takes action **2** (nominally "up"), but due to the slippery environment, it moves unpredictably—ending in state **4** (second row, first column) in the next frame, where it again takes action **2** and terminates early (likely falling into a hole at state **4** or slipping into one).
+
+2. **Temporal Consistency**: The movement is abrupt and erratic; the agent’s intended direction (action **2**) does not align with its actual displacement due to the stochastic transitions, leading to an immediate failure after just two frames.
+
+3. **Critical Moments**: Frame 2 (t=1) marks the failure, where the agent’s slip into state **4** results in termination—visually observable as an early stop with no further motion.
+
+4. **Outcome Pattern**: The policy produces a reckless, unstable style—repeatedly choosing actions without accounting for environmental slipperiness or hazards, leading to rapid, unpredictable failure.
+
+=== Candidate Comparison ===
+## 1. Environment Description
+
+The FrozenLake environment is a 4x4 grid world where each cell is represented as a discrete state (0 to 15). The grid features:
+- **Terrain**: A slippery surface where actions (left, down, right, up) have stochastic outcomes, often moving the agent in unintended directions.
+- **Goal**: Located at state 15 (bottom-right corner), rewarding the agent with +1 upon arrival.
+- **Holes**: Certain cells terminate the episode without reward, visible through failed trajectories where the agent disappears.
+- **Agent**: Represented as a small entity navigating the grid.
+- **Visual Constraints**: The agent’s movement is unpredictable due to slipperiness, and holes are inferred from repeated failures in specific states.
+
+---
+
+## 2. Behavioral Comparison
+
+### **Behavioral Differences**
+- **Previous Policy**: The agent exhibits erratic, repetitive movements, often oscillating between states or getting stuck in loops (e.g., circling near the top-left). Trajectories show abrupt terminations near holes, indicating poor hole avoidance.
+- **Current Policy**: The agent demonstrates more directed, albeit still cautious, exploration. Movements appear less repetitive, with attempts to navigate toward the bottom-right while avoiding previously failed paths. Hesitation near risky states is observable.
+
+### **What Changed**
+- **Improved Path Diversity**: The current policy reduces looping, suggesting better state coverage and reduced overfitting to suboptimal actions.
+- **Risk Awareness**: The agent now avoids actions leading to immediate termination (holes), though it remains overly conservative, failing to reach the goal.
+- **Stability**: Posture (directional consistency) is marginally better, with fewer abrupt reversals, but timing remains slow and indecisive.
+
+### **Behavioral Quality**
+- **Previous Policy**: Lower quality due to repetitive, unstable movements and frequent hole encounters. Lacked goal-directed progress.
+- **Current Policy**: Slightly improved control and hole avoidance, but stability is still lacking. The policy avoids catastrophic failures but lacks the precision to reach the goal efficiently. Visual frames show fewer abrupt terminations, supporting modest progress in safety.
+
+**Important**: The visual analysis describes the actual trajectory through states taken by the agent. Use this to understand which state-action pairs led to success or failure. Adjust Q-values accordingly:
+- Increase Q-values for state-action pairs that led to good outcomes
+- Decrease Q-values for state-action pairs that led to failures or dead ends
+
+
+Now you are at iteration 0 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 1, params[1]: 1, params[2]: 0, params[3]: 3, params[4]: 0, params[5]: 0, params[6]: 0, params[7]: 0, params[8]: 1, params[9]: 1, params[10]: 0, params[11]: 0, params[12]: 0, params[13]: 1, params[14]: 1, params[15]: 0  
+The visual rollout showed an immediate failure when the agent slipped from state 0 into state 4, indicating that state 4 is a hole and must be avoided. Consequently, all actions that can lead to 4 (e.g., the “down”‑biased action 0 from state 0) were removed from the early‑game plan. Instead, the policy now drives the agent right from the start (action 1 at states 0 and 1) to stay on the top row, then moves down from state 2 (action 0) to bypass the hazardous column containing 4.  
+
+In the lower rows, the chosen actions (right at states 8, 9, 13, 14 and down at states 6, 10) form a safe corridor that skirts known hole locations (states 5, 7, 11, 12) observed in previous numeric trials where many policies with high‑frequency “down” or “right” actions fell into those cells. By consistently steering away from the columns/rows that historically produced zero rewards, the new mapping prioritises transitions that keep the agent on the safe path toward the goal state 15, increasing the likelihood of attaining the +1 reward.
