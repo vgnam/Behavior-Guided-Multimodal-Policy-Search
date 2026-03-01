@@ -34,7 +34,6 @@ class LLMBrain:
                     timeout=60,
                 )
                 text = response["choices"][0]["message"]["content"]
-                # Append assistant response to conversation history
                 self.add_llm_conversation(text, "assistant")
                 return text
             except Exception as e:
@@ -141,8 +140,6 @@ class LLMBrain:
                     print(f"[PARSE ERROR] Row: {row} | Error: {e}")
         return new_parameters_list
 
-    # --- Các phương thức cập nhật tham số (giữ nguyên logic, chỉ sửa phần LLM) ---
-
     def llm_update_parameters(self, parameters, replay_buffer, parse_parameters=None):
         self.reset_llm_conversation()
         system_prompt = self.llm_si_template.render(
@@ -187,17 +184,12 @@ class LLMBrain:
             "actions": actions,
         })
         self.add_llm_conversation(system_prompt, "user")
-
         api_start_time = time.time()
         reasoning = self.query_llm()
         api_time = time.time() - api_start_time
-
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
         return parsed_params, log, api_time
-
-    # --- Các phương thức còn lại giữ nguyên logic, chỉ đảm bảo không dùng model_group ---
-    # (Bạn có thể áp dụng cùng mẫu như trên cho các hàm còn lại)
 
     def llm_update_parameters_num_optim_q_table(
         self, episode_reward_buffer, parse_parameters, step_number, actions, num_states, optimum
@@ -261,7 +253,6 @@ class LLMBrain:
         })
         self.add_llm_conversation(system_prompt, "user")
         reasoning_list = self.query_llm_multiple_response(num_candidates, temperature)
-
         param_list = [parse_parameters(r) for r in reasoning_list]
         return system_prompt, param_list, reasoning_list
 
@@ -309,26 +300,31 @@ class LLMBrain:
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
         visual_analysis, lambda_t,
         rank=None, optimum=None, search_step_size=0.1, actions=None, visual_params=None,
-        best_visual_analysis=None, best_visual_entry=None
+        best_visual_analysis=None, best_visual_entry=None,
+        worst_visual_analysis=None, worst_visual_entry=None
     ):
         """
-        Update parameters using vision-guided feedback (ProPS-V).
-        
+        Update parameters using contrastive vision-guided feedback (ProPS-V).
+
         Implements Eq. (4): θ ← LLM(Γ, P, Ψ, λ_t)
-        
+
         Args:
             episode_reward_buffer: String of past parameters and rewards (Γ)
             parse_parameters: Function to parse LLM output
             step_number: Current iteration number
             env_desc_file: Environment description
-            visual_analysis: VLM analysis ψ_t (can be None)
+            visual_analysis: VLM analysis ψ_t (current policy, can be None)
             lambda_t: Current guidance coefficient
-            guidance_phase: Description of current phase
             rank: Number of parameters
             optimum: Expected optimal reward
             search_step_size: Step size for exploration
             actions: Action space description
-            
+            visual_params: String of current params
+            best_visual_analysis: VLM analysis for best-ever policy
+            best_visual_entry: Dict with best-ever policy info
+            worst_visual_analysis: VLM analysis for worst-ever policy
+            worst_visual_entry: Dict with worst-ever policy info
+
         Returns:
             Tuple of (parsed_params, log, api_time)
         """
@@ -345,11 +341,18 @@ class LLMBrain:
             "lambda_t": f"{lambda_t:.3f}",
             "has_visual": visual_analysis is not None,
             "visual_params": visual_params,
+            # Best policy
             "best_visual_analysis": best_visual_analysis,
             "best_visual_iter": best_visual_entry['iteration'] if best_visual_entry else None,
             "best_visual_reward": f"{best_visual_entry['reward']:.2f}" if best_visual_entry else None,
             "best_visual_params": best_visual_entry['params'] if best_visual_entry else None,
             "has_best_visual": best_visual_analysis is not None,
+            # Worst policy
+            "worst_visual_analysis": worst_visual_analysis,
+            "worst_visual_iter": worst_visual_entry['iteration'] if worst_visual_entry else None,
+            "worst_visual_reward": f"{worst_visual_entry['reward']:.2f}" if worst_visual_entry else None,
+            "worst_visual_params": worst_visual_entry['params'] if worst_visual_entry else None,
+            "has_worst_visual": worst_visual_analysis is not None,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
@@ -366,7 +369,7 @@ class LLMBrain:
     ):
         """
         Update Q-table parameters using vision-guided feedback (ProPS-V for discrete states).
-        
+
         Args:
             episode_reward_buffer: String of past Q-values and rewards
             parse_parameters: Function to parse LLM output
@@ -374,11 +377,10 @@ class LLMBrain:
             env_desc_file: Environment description
             visual_analysis: VLM analysis (can be None)
             lambda_t: Current guidance coefficient
-            guidance_phase: Visual guidance instruction
             actions: Action space description
             num_states: Number of states
             optimum: Expected optimal reward
-            
+
         Returns:
             Tuple of (parsed_params, log, api_time)
         """

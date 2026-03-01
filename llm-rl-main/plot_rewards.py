@@ -319,4 +319,4 @@ if __name__ == "__main__":
 
 # C:/Users/user/AppData/Local/Programs/Python/Python311/python.exe plot_rewards.py --exps mountaincar
 
-# cd d:\Prompted-Policy-Search\llm-rl-main; C:/Users/user/AppData/Local/Programs/Python/Python311/python.exe plot_rewards.py --exps mountaincar
+# cd d:\Prompted-Policy-Search\llm-rl-main; C:/Users/user/AppData/Local/Programs/Python/Python311/python.exe plot_rewards.py --exps nav

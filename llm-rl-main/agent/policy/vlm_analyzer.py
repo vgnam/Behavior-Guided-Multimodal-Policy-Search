@@ -1,11 +1,72 @@
-"""
-Vision-Language Model Analyzer for ProPS-V
+class VLMAnalyzer:
+    """
+    Analyzes episode frames using Vision-Language Models to provide
+    visual diagnostic feedback for policy search.
+    Uses Google Gen AI SDK (gemini-2.5-flash-lite).
+    """
 
-This module provides VLM integration for analyzing episode frames
-and generating diagnostic feedback for policy optimization.
-Prompts are loaded from Jinja2 .j2 template files.
-Uses Google Gen AI SDK (gemini-2.5-flash-lite).
-"""
+    GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+    def analyze_contrastive_visual_feedback(
+        self,
+        visual_analysis: str,
+        best_visual_analysis: str,
+        worst_visual_analysis: str,
+        env_description: str,
+        step_number: int = None,
+        best_visual_iter: int = None,
+        best_visual_reward: float = None,
+        best_visual_params: str = None,
+        worst_visual_iter: int = None,
+        worst_visual_reward: float = None,
+        worst_visual_params: str = None,
+    ) -> tuple[str, float]:
+        """
+        Analyze and contrast visual feedback for current, best-ever, and worst-ever policies.
+
+        Args:
+            visual_analysis: Visual feedback for current policy
+            best_visual_analysis: Visual feedback for best-ever policy
+            worst_visual_analysis: Visual feedback for worst-ever policy
+            env_description: Environment description
+            step_number: Current iteration
+            best_visual_iter: Iteration of best-ever policy
+            best_visual_reward: Reward of best-ever policy
+            best_visual_params: Params of best-ever policy
+            worst_visual_iter: Iteration of worst-ever policy
+            worst_visual_reward: Reward of worst-ever policy
+            worst_visual_params: Params of worst-ever policy
+
+        Returns:
+            Tuple of (contrastive_analysis, api_time)
+        """
+        template = self._jinja_env.get_template("num_optim_vision.j2")
+        prompt = template.render(
+            env_description=env_description,
+            step_number=step_number,
+            visual_analysis=visual_analysis,
+            best_visual_analysis=best_visual_analysis,
+            best_visual_iter=best_visual_iter,
+            best_visual_reward=best_visual_reward,
+            best_visual_params=best_visual_params,
+            worst_visual_analysis=worst_visual_analysis,
+            worst_visual_iter=worst_visual_iter,
+            worst_visual_reward=worst_visual_reward,
+            worst_visual_params=worst_visual_params,
+            has_visual=True,
+        )
+        # Only text, no images for contrastive summary
+        parts = self._build_parts(prompt, [])
+        for attempt in range(self.max_retries):
+            try:
+                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
+                return analysis, api_time
+            except Exception as e:
+                print(f"[VLM ERROR] Contrastive attempt {attempt + 1}/{self.max_retries}: {e}")
+                if attempt == self.max_retries - 1:
+                    return f"VLM contrastive analysis failed after {self.max_retries} attempts: {e}", 0.0
+                time.sleep(5)
+        return "VLM contrastive analysis unavailable", 0.0
 
 import io
 import time
