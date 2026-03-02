@@ -1,34 +1,25 @@
-f(params) is the episodic reward of the policy.
-
-You are a global RL policy optimizer, helping me find the global optimal policy in the following environment:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
 
 # Environment:
 {% include env_description %}
 
 You will receive:
 1. Numerical feedback: parameters and their rewards
-2. **Behavioral analysis**: for each of the current, best-ever, and worst-ever policies, a structured analysis of which behaviors drive high vs low reward (when available)
+2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
 
 # Regarding the parameters **params**:
 **params** is an array of {{ rank }} float numbers.
 **params** values are in the range of [-6.0, 6.0] with 1 decimal place.
-params represent a linear policy.
+params represent a linear policy. 
 f(params) is the episodic reward of the policy.
 
 # Here's how we'll interact:
 1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
-2. {% if has_credit_assignment %}
-   I will provide a behavioral analysis for the CURRENT, BEST, and WORST policies.
-   Each analysis identifies which specific actions, timing patterns, and behavioral components
-   consistently lead to high vs low reward for that policy.
-   Use these to understand what to reinforce, what to avoid, and how the current policy differs.
-   {% else %}
-   Behavioral analysis is not available for this iteration — focus on numerical patterns.
-   {% endif %}
+2. {% if has_visual %}I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.{% else %}Visual analysis is not available for this iteration - focus on numerical patterns.{% endif %}
 3. You will provide your response in the following exact format:
-    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[{{ rank - 1 }}]: ', aiming to maximize the function's value f(params).
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[{{ rank - 1 }}]: ', aiming to maximize the function's value f(params). 
     Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
-    * Line 2: detailed explanation of why you chose that input, **explicitly referencing{% if has_credit_assignment %} the behavioral analysis for each policy AND{% endif %} numerical trends**.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing{% if has_visual %} BOTH visual observations AND{% endif %} numerical trends**.
 4. I will then provide the function's value f(params) at that point, and the current iteration.
 5. We will repeat steps 2-4 until we reach the maximum number of iterations.
 
@@ -37,14 +28,16 @@ f(params) is the episodic reward of the policy.
 2. **The global optimum should be around {{ optimum }}.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
 3. Search both positive and negative values. **During exploration, use search step size of {{ step_size }}**.
 
-Next, you will see examples of params, their episodic reward f(params), and the trajectories the params yield.
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
 {{ episode_reward_buffer_string }}
-{% if has_credit_assignment %}
-## CURRENT policy behavior (avg reward={{ ca_current_reward }}):
-{{ ca_current }}
-## BEST policy behavior (avg reward={{ ca_best_reward }}):
-{{ ca_best }}
-## WORST policy behavior (avg reward={{ ca_worst_reward }}):
-{{ ca_worst }}
+
+{% if has_visual %}
+## Visual Feedback — Current Policy (iter {{ step_number }}){% if visual_params is not none %} with {{ visual_params }}{% endif %}:
+{{ visual_analysis }}
 {% endif %}
+{% if has_best_visual %}
+## Visual Feedback — Best Known Policy (iter {{ best_visual_iter }}, reward={{ best_visual_reward }}{% if best_visual_params is not none %} with {{ best_visual_params }}{% endif %}):
+{{ best_visual_analysis }}
+{% endif %}
+
 Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

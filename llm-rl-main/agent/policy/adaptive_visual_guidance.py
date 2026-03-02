@@ -83,7 +83,6 @@ class AdaptiveVisualGuidance:
         Returns:
             True if VLM should be invoked, False otherwise
         """
-
         lambda_t = self.get_lambda(iteration)
         
         if random_state is None:

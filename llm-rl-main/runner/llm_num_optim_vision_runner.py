@@ -42,9 +42,6 @@ def run_training_loop(
     decay_horizon=100,
     frame_sample_period=50,
     enable_vision=True,
-    n_pre_rollouts=15,
-    k_rollouts=3,
-    **kwargs,
 ):
     """
     Run ProPS-V training loop.
@@ -145,9 +142,6 @@ def run_training_loop(
             decay_horizon=decay_horizon,
             frame_sample_period=frame_sample_period,
             enable_vision=enable_vision,
-            n_pre_rollouts=n_pre_rollouts,
-            k_rollouts=k_rollouts,
-            template_dir=template_dir,
         )
     
     print('[ProPS-V] Initialization done')

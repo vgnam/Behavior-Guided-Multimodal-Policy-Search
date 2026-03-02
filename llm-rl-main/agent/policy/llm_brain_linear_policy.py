@@ -9,12 +9,10 @@ class LLMBrain:
         llm_si_template: Template,
         llm_output_conversion_template: Template,
         llm_model_name: str,
-        credit_assignment_template: Template = None,
     ):
         self.llm_si_template = llm_si_template
         self.llm_output_conversion_template = llm_output_conversion_template
         self.llm_model_name = llm_model_name
-        self.credit_assignment_template = credit_assignment_template
         self.llm_conversation = []
 
     def reset_llm_conversation(self):
@@ -26,109 +24,110 @@ class LLMBrain:
             raise ValueError(f"Invalid role: {role}. Use 'user', 'assistant', or 'system'.")
         self.llm_conversation.append({"role": role, "content": text})
 
-    # def query_llm(self, temperature=1.0):
-    #     for attempt in range(5):
-    #         try:
-    #             response = completion(
-    #                 model=self.llm_model_name,
-    #                 messages=self.llm_conversation,
-    #                 temperature=temperature,
-    #                 timeout=60,
-    #             )
-    #             text = response["choices"][0]["message"]["content"]
-    #             self.add_llm_conversation(text, "assistant")
-    #             return text
-    #         except Exception as e:
-    #             print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
-    #             if attempt == 4:
-    #                 raise RuntimeError("Failed to get LLM response after 5 attempts") from e
-    #             time.sleep(10)
-    #     return ""  # unreachable
-    #
-    # def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
-    #     for attempt in range(3):
-    #         try:
-    #             response = completion(
-    #                 model=self.llm_model_name,
-    #                 messages=self.llm_conversation,
-    #                 n=num_responses,
-    #                 temperature=temperature,
-    #                 timeout=60,
-    #             )
-    #             responses = [choice.message.content for choice in response.choices]
-    #             if len(responses) == num_responses:
-    #                 return responses
-    #             else:
-    #                 raise ValueError(f"Expected {num_responses} responses, got {len(responses)}")
-    #         except Exception as e:
-    #             print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
-    #             if attempt == 2:
-    #                 raise RuntimeError("Failed to get multiple LLM responses after 3 attempts") from e
-    #             time.sleep(5)
-    #     return []
-
     def query_llm(self, temperature=1.0):
         for attempt in range(5):
             try:
                 response = completion(
-                    model="openai/gpt-oss-120b",  # ví dụ: "openai/DeepSeek-V3.2-Speciale"
+                    model=self.llm_model_name,
                     messages=self.llm_conversation,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
-                    api_base="https://mkp-api.fptcloud.com/v1",
-                    stream=False,  # vì bạn đang lấy full text
                 )
-
                 text = response["choices"][0]["message"]["content"]
-
                 # Append assistant response to conversation history
                 self.add_llm_conversation(text, "assistant")
                 return text
-
             except Exception as e:
                 print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
                 if attempt == 4:
                     raise RuntimeError("Failed to get LLM response after 5 attempts") from e
                 time.sleep(10)
-
         return ""  # unreachable
 
     def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
         for attempt in range(3):
             try:
                 response = completion(
-                    model="openai/DeepSeek-R1",
+                    model=self.llm_model_name,
                     messages=self.llm_conversation,
                     n=num_responses,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
-                    api_base="https://mkp-api.fptcloud.com/v1",
-                    stream=False,
                 )
-
-                responses = [
-                    choice["message"]["content"]
-                    for choice in response["choices"]
-                ]
-
+                responses = [choice.message.content for choice in response.choices]
                 if len(responses) == num_responses:
                     return responses
                 else:
-                    raise ValueError(
-                        f"Expected {num_responses} responses, got {len(responses)}"
-                    )
-
+                    raise ValueError(f"Expected {num_responses} responses, got {len(responses)}")
             except Exception as e:
                 print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
                 if attempt == 2:
-                    raise RuntimeError(
-                        "Failed to get multiple LLM responses after 3 attempts"
-                    ) from e
+                    raise RuntimeError("Failed to get multiple LLM responses after 3 attempts") from e
                 time.sleep(5)
-
         return []
+
+    # def query_llm(self, temperature=1.0):
+    #     for attempt in range(5):
+    #         try:
+    #             response = completion(
+    #                 model="openai/gpt-oss-120b",  # ví dụ: "openai/DeepSeek-V3.2-Speciale"
+    #                 messages=self.llm_conversation,
+    #                 temperature=temperature,
+    #                 timeout=60,
+    #                 api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+    #                 api_base="https://mkp-api.fptcloud.com/v1",
+    #                 stream=False,  # vì bạn đang lấy full text
+    #             )
+    #
+    #             text = response["choices"][0]["message"]["content"]
+    #
+    #             # Append assistant response to conversation history
+    #             self.add_llm_conversation(text, "assistant")
+    #             return text
+    #
+    #         except Exception as e:
+    #             print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
+    #             if attempt == 4:
+    #                 raise RuntimeError("Failed to get LLM response after 5 attempts") from e
+    #             time.sleep(10)
+    #
+    #     return ""  # unreachable
+    #
+    # def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
+    #     for attempt in range(3):
+    #         try:
+    #             response = completion(
+    #                 model="openai/DeepSeek-R1",
+    #                 messages=self.llm_conversation,
+    #                 n=num_responses,
+    #                 temperature=temperature,
+    #                 timeout=60,
+    #                 api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+    #                 api_base="https://mkp-api.fptcloud.com/v1",
+    #                 stream=False,
+    #             )
+    #
+    #             responses = [
+    #                 choice["message"]["content"]
+    #                 for choice in response["choices"]
+    #             ]
+    #
+    #             if len(responses) == num_responses:
+    #                 return responses
+    #             else:
+    #                 raise ValueError(
+    #                     f"Expected {num_responses} responses, got {len(responses)}"
+    #                 )
+    #
+    #         except Exception as e:
+    #             print(f"[LLM MULTIPLE ERROR] Attempt {attempt + 1}/3: {e}")
+    #             if attempt == 2:
+    #                 raise RuntimeError(
+    #                     "Failed to get multiple LLM responses after 3 attempts"
+    #                 ) from e
+    #             time.sleep(5)
+    #
+    #     return []
 
     def parse_parameters(self, parameters_string: str):
         new_parameters_list = []
@@ -141,6 +140,8 @@ class LLMBrain:
                 except Exception as e:
                     print(f"[PARSE ERROR] Row: {row} | Error: {e}")
         return new_parameters_list
+
+    # --- Các phương thức cập nhật tham số (giữ nguyên logic, chỉ sửa phần LLM) ---
 
     def llm_update_parameters(self, parameters, replay_buffer, parse_parameters=None):
         self.reset_llm_conversation()
@@ -186,12 +187,17 @@ class LLMBrain:
             "actions": actions,
         })
         self.add_llm_conversation(system_prompt, "user")
+
         api_start_time = time.time()
         reasoning = self.query_llm()
         api_time = time.time() - api_start_time
+
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
         return parsed_params, log, api_time
+
+    # --- Các phương thức còn lại giữ nguyên logic, chỉ đảm bảo không dùng model_group ---
+    # (Bạn có thể áp dụng cùng mẫu như trên cho các hàm còn lại)
 
     def llm_update_parameters_num_optim_q_table(
         self, episode_reward_buffer, parse_parameters, step_number, actions, num_states, optimum
@@ -255,6 +261,7 @@ class LLMBrain:
         })
         self.add_llm_conversation(system_prompt, "user")
         reasoning_list = self.query_llm_multiple_response(num_candidates, temperature)
+
         param_list = [parse_parameters(r) for r in reasoning_list]
         return system_prompt, param_list, reasoning_list
 
@@ -298,115 +305,33 @@ class LLMBrain:
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
         return parsed_params, log, api_time
 
-    def llm_credit_assignment(
-        self,
-        policy_group: dict,
-        env_desc_file: str,
-        n_rollouts: int,
-    ) -> tuple:
-        """
-        ProPS-V per-policy credit assignment step.
-
-        Given one labeled policy's top-k and bottom-k rollout descriptions,
-        identify which behavioral components are responsible for high vs low reward.
-
-        Args:
-            policy_group:   Dict with keys:
-                              'label'         : str (e.g. 'current', 'best', 'worst')
-                              'avg_reward'    : float
-                              'best_rollouts' : list of {reward, description}
-                              'worst_rollouts': list of {reward, description}
-            env_desc_file:  Environment description string
-            n_rollouts:     How many rollouts were run (for the template)
-
-        Returns:
-            Tuple of (credit_assignment_text, api_time)
-        """
-        env_str = env_desc_file if env_desc_file else "RL environment"
-
-        if self.credit_assignment_template is not None:
-            prompt = self.credit_assignment_template.render(
-                env_description=env_str,
-                label=policy_group.get('label', ''),
-                avg_reward=policy_group.get('avg_reward', 0.0),
-                best_rollouts=policy_group.get('best_rollouts', []),
-                worst_rollouts=policy_group.get('worst_rollouts', []),
-                n_rollouts=n_rollouts,
-            )
-        else:
-            # Fallback inline prompt
-            def _fmt(rollouts, tag):
-                if not rollouts:
-                    return f"({tag}: no rollouts available)"
-                return "\n\n".join(
-                    f"{tag} rollout {i+1} (reward={r['reward']:.2f}):\n{r['description']}"
-                    for i, r in enumerate(rollouts)
-                )
-            label = policy_group.get('label', '').upper()
-            avg = policy_group.get('avg_reward', 0.0)
-            best_block  = _fmt(policy_group.get('best_rollouts',  []), f"{label} high-reward")
-            worst_block = _fmt(policy_group.get('worst_rollouts', []), f"{label} low-reward")
-            prompt = (
-                f"You are analyzing rollouts of a reinforcement learning agent.\n"
-                f"Environment: {env_str}\n\n"
-                f"The {label} policy (average reward = {avg:.2f}) was rolled out {n_rollouts} times.\n\n"
-                f"High-reward rollouts:\n{best_block}\n\n"
-                f"Low-reward rollouts:\n{worst_block}\n\n"
-                f"Compare high vs low reward rollouts. Identify which specific actions, decisions, "
-                f"timing patterns, or behavioral components consistently appear in high-reward rollouts "
-                f"and are absent or reversed in low-reward rollouts. Explain what each behavior is and "
-                f"why it plausibly causes the reward difference. "
-                f"Do not suggest parameter values. Write 4-6 concise sentences as a single paragraph."
-            )
-
-        self.reset_llm_conversation()
-        self.add_llm_conversation(prompt, "user")
-        api_start_time = time.time()
-        text = self.query_llm()
-        api_time = time.time() - api_start_time
-        return text, api_time
-
     def llm_update_parameters_num_optim_vision(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
         visual_analysis, lambda_t,
         rank=None, optimum=None, search_step_size=0.1, actions=None, visual_params=None,
-        best_visual_analysis=None, best_visual_entry=None,
-        worst_visual_analysis=None, worst_visual_entry=None,
-        credit_assignment=None,
+        best_visual_analysis=None, best_visual_entry=None
     ):
         """
-        Update parameters using behavioral credit assignment feedback (ProPS-V).
-
+        Update parameters using vision-guided feedback (ProPS-V).
+        
         Implements Eq. (4): θ ← LLM(Γ, P, Ψ, λ_t)
-
+        
         Args:
             episode_reward_buffer: String of past parameters and rewards (Γ)
             parse_parameters: Function to parse LLM output
             step_number: Current iteration number
             env_desc_file: Environment description
-            visual_analysis: unused (kept for API compatibility)
+            visual_analysis: VLM analysis ψ_t (can be None)
             lambda_t: Current guidance coefficient
+            guidance_phase: Description of current phase
             rank: Number of parameters
             optimum: Expected optimal reward
             search_step_size: Step size for exploration
             actions: Action space description
-            visual_params: unused (kept for API compatibility)
-            best_visual_analysis: unused (kept for API compatibility)
-            best_visual_entry: unused (kept for API compatibility)
-            worst_visual_analysis: unused (kept for API compatibility)
-            worst_visual_entry: unused (kept for API compatibility)
-            credit_assignment: dict with keys 'current', 'best', 'worst' (text),
-                               and 'current_reward', 'best_reward', 'worst_reward' (floats)
-
+            
         Returns:
             Tuple of (parsed_params, log, api_time)
         """
-        ca = credit_assignment or {}
-        ca_current = ca.get('current') if isinstance(ca, dict) else None
-        ca_best    = ca.get('best')    if isinstance(ca, dict) else None
-        ca_worst   = ca.get('worst')   if isinstance(ca, dict) else None
-        has_ca = bool(ca_current or ca_best or ca_worst)
-
         self.reset_llm_conversation()
         system_prompt = self.llm_si_template.render({
             "episode_reward_buffer_string": str(episode_reward_buffer),
@@ -416,117 +341,15 @@ class LLMBrain:
             "optimum": str(optimum),
             "step_size": str(search_step_size),
             "actions": actions,
+            "visual_analysis": visual_analysis if visual_analysis else "No visual analysis available for this iteration.",
             "lambda_t": f"{lambda_t:.3f}",
-            # Per-policy credit assignment outputs
-            "has_credit_assignment": has_ca,
-            "ca_current": ca_current or "",
-            "ca_best":    ca_best    or "",
-            "ca_worst":   ca_worst   or "",
-            "ca_current_reward": ca.get('current_reward', 'N/A') if isinstance(ca, dict) else 'N/A',
-            "ca_best_reward":    ca.get('best_reward',    'N/A') if isinstance(ca, dict) else 'N/A',
-            "ca_worst_reward":   ca.get('worst_reward',   'N/A') if isinstance(ca, dict) else 'N/A',
-        })
-        self.add_llm_conversation(system_prompt, "user")
-        api_start_time = time.time()
-        reasoning = self.query_llm()
-        api_time = time.time() - api_start_time
-        parsed_params = parse_parameters(reasoning)
-        log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log, api_time
-
-    # ------------------------------------------------------------------ #
-    #  BL-ProPS helpers                                                    #
-    # ------------------------------------------------------------------ #
-
-    def llm_generate_behavioral_hypothesis(
-        self,
-        anchors: dict,
-        history_str: str,
-        step_number: int,
-        env_description: str = None,
-        rank: int = None,
-        actions=None,
-    ) -> tuple[str, str, float]:
-        """
-        BL-ProPS STEP 1: LLM → Behavioral Hypothesis b_hyp.
-
-        Uses 'blprops_step1_hypothesis.j2'. The LLM is given the three
-        behavioral anchor descriptions (worst / current / best) plus the
-        full numerical history, and returns a structured b_hyp paragraph.
-
-        Args:
-            anchors: dict with keys 'worst', 'current', 'best', each a dict
-                     with 'params', 'reward', 'description'
-            history_str: Formatted numerical history string (θ_k, r_k)
-            step_number: Current iteration index
-            env_description: Jinja2 include path for env description (optional)
-            rank: Number of parameters (optional, used by Q-table templates)
-            actions: Valid action values (optional, used by Q-table templates)
-
-        Returns:
-            Tuple of (b_hyp_text, log_string, api_time)
-        """
-        self.reset_llm_conversation()
-        system_prompt = self.llm_si_template.render({
-            "anchors": anchors,
-            "history_str": history_str,
-            "step_number": str(step_number),
-            "env_description": env_description,
-            "rank": rank,
-            "actions": actions,
-        })
-        self.add_llm_conversation(system_prompt, "user")
-        api_start_time = time.time()
-        b_hyp = self.query_llm()
-        api_time = time.time() - api_start_time
-        log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + b_hyp
-        return b_hyp, log, api_time
-
-    def llm_propose_parameters_blprops(
-        self,
-        b_post: str,
-        anchors: dict,
-        history_str: str,
-        rank: int,
-        step_number: int,
-        parse_parameters,
-        optimum: float = 1000.0,
-        search_step_size: float = 0.1,
-        env_description: str = None,
-        actions=None,
-    ) -> tuple:
-        """
-        BL-ProPS STEP 3: LLM → Parameter Proposal θ_{t+1}.
-
-        Uses 'blprops_step3_proposal.j2'. Given the VLM behavioral posterior
-        b_post, the three anchor policies, and the numerical history, the LLM
-        performs inverse mapping (behavior → params) while respecting CLIFF /
-        FLAT topology constraints.
-
-        Args:
-            b_post:            VLM behavioral posterior string (from Step 2)
-            anchors:           Same anchor dict as in Step 1
-            history_str:       Formatted numerical history string
-            rank:              Number of policy parameters
-            step_number:       Current iteration index
-            parse_parameters:  Callable that extracts np.ndarray from LLM text
-            optimum:           Expected optimal reward
-            search_step_size:  Reference step size hint
-
-        Returns:
-            Tuple of (parsed_params, log_string, api_time)
-        """
-        self.reset_llm_conversation()
-        system_prompt = self.llm_si_template.render({
-            "b_post": b_post,
-            "anchors": anchors,
-            "history_str": history_str,
-            "rank": rank,
-            "step_number": str(step_number),
-            "optimum": str(optimum),
-            "step_size": str(search_step_size),
-            "env_description": env_description,
-            "actions": actions,
+            "has_visual": visual_analysis is not None,
+            "visual_params": visual_params,
+            "best_visual_analysis": best_visual_analysis,
+            "best_visual_iter": best_visual_entry['iteration'] if best_visual_entry else None,
+            "best_visual_reward": f"{best_visual_entry['reward']:.2f}" if best_visual_entry else None,
+            "best_visual_params": best_visual_entry['params'] if best_visual_entry else None,
+            "has_best_visual": best_visual_analysis is not None,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
@@ -543,7 +366,7 @@ class LLMBrain:
     ):
         """
         Update Q-table parameters using vision-guided feedback (ProPS-V for discrete states).
-
+        
         Args:
             episode_reward_buffer: String of past Q-values and rewards
             parse_parameters: Function to parse LLM output
@@ -551,10 +374,11 @@ class LLMBrain:
             env_desc_file: Environment description
             visual_analysis: VLM analysis (can be None)
             lambda_t: Current guidance coefficient
+            guidance_phase: Visual guidance instruction
             actions: Action space description
             num_states: Number of states
             optimum: Expected optimal reward
-
+            
         Returns:
             Tuple of (parsed_params, log, api_time)
         """

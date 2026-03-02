@@ -1,10 +1,10 @@
 task: cont_state_llm_num_optim_vision
-num_episodes: 200
-gym_env_name: gym_navigation:NavigationTrack-v0
+num_episodes: 400
+gym_env_name: InvertedDoublePendulum-v5
 render_mode: rgb_array  # Required for frame capture
-logdir: logs/nav_propsv_gpt-oss_2
-dim_actions: 3
-dim_states: 5
+logdir: logs/InvertedDoublePendulum_propsv_gemini-2.5-flash-lite
+dim_actions: 1
+dim_states: 9
 max_traj_count: 1000
 max_traj_length: 1000
 template_dir: agent/policy/templates
@@ -15,14 +15,12 @@ num_evaluation_episodes: 20
 warmup_episodes: 20
 warmup_dir: null
 bias: true
-optimum: 2500
-search_step_size: 1.0
-env_desc_file: env_descriptions/nav.j2
-n_pre_rollouts: 15
-k_rollouts: 5
+optimum: 10000
+search_step_size: 0.1
+env_desc_file: env_descriptions/inverteddoublependulum.j2
 
 # ProPS-V specific parameters
 vlm_model_name: meta/llama-4-scout-17b-16e-instruct
-decay_horizon: 100
-frame_sample_period: 50
+decay_horizon: 200  # Longer decay for harder balancing task
+frame_sample_period: 50  # Episodes up to 1000 steps
 enable_vision: true

@@ -13,8 +13,6 @@ Key components:
 - Integrated update rule (Eq. 4)
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from jinja2 import Environment, FileSystemLoader
 from agent.policy.linear_policy_no_bias import LinearPolicy as LinearPolicyNoBias
 from agent.policy.linear_policy import LinearPolicy
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias, ReplayBuffer
@@ -58,10 +56,6 @@ class LLMNumOptimVisionAgent:
         decay_horizon=100,
         frame_sample_period=50,
         enable_vision=True,
-        n_pre_rollouts=15,
-        k_rollouts=3,
-        template_dir="agent/policy/templates",
-        **kwargs,
     ):
         """
         Initialize ProPS-V agent.
@@ -100,13 +94,7 @@ class LLMNumOptimVisionAgent:
         self.env_desc_file = env_desc_file
         self.max_traj_length = max_traj_length
         self.enable_vision = enable_vision
-        self.n_pre_rollouts = n_pre_rollouts
-        self.k_rollouts = k_rollouts
-        self._best_params = None   # params array with highest avg reward seen
-        self._worst_params = None  # params array with lowest avg reward seen
-        self._best_avg_reward = float('-inf')
-        self._worst_avg_reward = float('inf')
-
+        
         # Compute parameter count
         if not self.bias:
             param_count = dim_action * dim_state
@@ -130,19 +118,10 @@ class LLMNumOptimVisionAgent:
         self.visual_analysis_history = []  # Store ψ_1, ..., ψ_N
         
         # Initialize LLM brain
-        jinja_env = Environment(
-            loader=FileSystemLoader(template_dir),
-            keep_trailing_newline=True,
-        )
-        try:
-            credit_assignment_template = jinja_env.get_template("credit_assignment.j2")
-        except Exception:
-            credit_assignment_template = None
         self.llm_brain = LLMBrain(
             llm_si_template,
             llm_output_conversion_template,
-            llm_model_name,
-            credit_assignment_template=credit_assignment_template,
+            llm_model_name
         )
         
         # Initialize vision components
@@ -196,12 +175,16 @@ class LLMNumOptimVisionAgent:
         
         done = False
         step_idx = 0
+        episode_num = 1
         trajectory = []
+        first_episode_done = False
+        first_episode_reward = None
+        first_episode_steps = None
         
         if record:
             self.traj_buffer.start_new_trajectory()
         
-        while not done:
+        while True:
             # Get action from policy
             action = self.policy.get_action(state.T)
             action = np.reshape(action, (1, self.dim_action))
@@ -216,16 +199,22 @@ class LLMNumOptimVisionAgent:
             # Log
             logging_file.write(f"{state.T[0]} | {action[0]} | {reward}\n")
             
-            # Capture frame if requested
+            # Capture frame only at sampled timesteps to avoid rendering every step
             frame = None
             if capture_frames and hasattr(world.env, 'render'):
-                try:
-                    frame = world.env.render()
-                    # Ensure frame is numpy array
-                    if not isinstance(frame, np.ndarray):
+                is_sampled_step = (
+                    step_idx == 0
+                    or step_idx % self.frame_sampler.sample_period == 0
+                    or done
+                    or step_idx == self.max_traj_length - 1
+                )
+                if is_sampled_step:
+                    try:
+                        frame = world.env.render()
+                        if not isinstance(frame, np.ndarray):
+                            frame = None
+                    except:
                         frame = None
-                except:
-                    frame = None
             
             # Store trajectory step
             if record or capture_frames:
@@ -233,24 +222,50 @@ class LLMNumOptimVisionAgent:
                     'state': state.T[0].copy(),
                     'action': action[0].copy(),
                     'reward': reward,
-                    'frame': frame
+                    'frame': frame,
+                    'episode_num': episode_num,
                 })
             
             # Add to replay buffer
             if record:
                 self.traj_buffer.add_step(state, action, reward)
             
-            state = next_state
             step_idx += 1
             self.total_steps += 1
+            
+            if done:
+                # Record first natural episode completion for reward/terminated_early
+                if not first_episode_done:
+                    first_episode_done = True
+                    first_episode_reward = world.get_accu_reward()
+                    first_episode_steps = step_idx
+                
+                if capture_frames and step_idx < self.max_traj_length:
+                    # Pre-rollout: auto-reset and keep collecting frames for VLM
+                    # so we always have a full max_traj_length trajectory
+                    episode_num += 1
+                    state = world.reset()
+                    state = np.expand_dims(state, axis=0)
+                    continue
+                else:
+                    break
+            else:
+                state = next_state
+            
+            if step_idx >= self.max_traj_length:
+                break
+        
+        # Use reward/steps from the first natural episode end when available
+        if first_episode_reward is not None:
+            total_reward = first_episode_reward
+            terminated_early = first_episode_steps < self.max_traj_length
+        else:
+            total_reward = world.get_accu_reward()
+            terminated_early = step_idx < self.max_traj_length
         
         # Log total reward
-        total_reward = world.get_accu_reward()
         logging_file.write(f"Total reward: {total_reward}\n")
         self.total_episodes += 1
-        
-        # Check if terminated early (failure)
-        terminated_early = step_idx < self.max_traj_length
         
         # Return trajectory info if capturing frames
         if capture_frames:
@@ -258,86 +273,6 @@ class LLMNumOptimVisionAgent:
         else:
             return total_reward
     
-    def _rollout_and_describe_n(self, world, params_arr, n, k, env_str, label, logdir=None):
-        """
-        Set policy to params_arr, run N rollouts with frame capture (sequential, env not
-        thread-safe), then dispatch all VLM describe calls in parallel via ThreadPoolExecutor.
-        Returns top-k and bottom-k described rollouts by episodic reward.
-        Restores original policy params before returning.
-
-        Returns dict:
-            {
-              'label': str,
-              'avg_reward': float,
-              'best_rollouts':  [{'reward': float, 'description': str}, ...],  # top k
-              'worst_rollouts': [{'reward': float, 'description': str}, ...],  # bottom k
-            }
-        """
-        original_params = self.policy.get_parameters().reshape(-1).copy()
-        self.policy.update_policy(params_arr)
-        params_str = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(params_arr))
-
-        # ── Phase 1: collect rollouts (sequential — env is not thread-safe) ──────
-        raw = []  # list of (index, reward, frames_with_data)
-        rewards_all = []
-        for i in range(n):
-            log_path = f"{logdir}/{label}_pre_{i}.txt" if logdir else os.devnull
-            with open(log_path, "w") as lf:
-                r, traj, term = self.rollout_episode(world, lf, record=False, capture_frames=True)
-            rewards_all.append(r)
-            frame_indices = self.frame_sampler.sample_frames(traj, term, self.max_traj_length)
-            frames = self.frame_sampler.get_frames(traj, frame_indices)
-            has_frames = frames and any(f.get('frame') is not None for f in frames)
-            raw.append((i, r, frames if has_frames else None))
-            print(f"  [{label}] rollout {i+1}/{n}: reward={r:.2f} {'(frames ready)' if has_frames else '(no frames)'}")
-
-        self.policy.update_policy(original_params)
-        avg_reward = float(np.mean(rewards_all)) if rewards_all else 0.0
-
-        # ── Phase 2: batch VLM calls in parallel ─────────────────────────────────
-        to_describe = [(idx, r, frames) for idx, r, frames in raw if frames is not None]
-        descriptions = {}  # idx → str
-        if to_describe:
-            print(f"  [{label}] launching {len(to_describe)} VLM calls in parallel...")
-            vlm_wall_start = time.time()
-            def _call_vlm(idx, r, frames):
-                desc, vlm_t = self.vlm_analyzer.describe_behavior(
-                    frames, env_str, r, params=params_str
-                )
-                return idx, desc, vlm_t
-
-            total_vlm_time = 0.0
-            with ThreadPoolExecutor(max_workers=min(len(to_describe), 8)) as pool:
-                futures = {pool.submit(_call_vlm, idx, r, fr): idx
-                           for idx, r, fr in to_describe}
-                for fut in as_completed(futures):
-                    idx, desc, vlm_t = fut.result()
-                    descriptions[idx] = desc
-                    total_vlm_time += vlm_t
-            vlm_wall = time.time() - vlm_wall_start
-            self.vlm_api_time  += total_vlm_time
-            self.api_call_time += total_vlm_time
-            print(f"  [{label}] VLM batch done: wall={vlm_wall:.1f}s, total_api={total_vlm_time:.1f}s")
-
-        rollouts = [
-            {'reward': r, 'description': descriptions.get(idx, '')}
-            for idx, r, _ in raw
-        ]
-
-        described = [ro for ro in rollouts if ro['description']]
-        sorted_rollouts = sorted(described, key=lambda x: x['reward'])
-        actual_k = min(k, max(1, len(sorted_rollouts) // 2))
-        best_rollouts  = sorted_rollouts[-actual_k:]
-        worst_rollouts = sorted_rollouts[:actual_k]
-        print(f"  [{label}] avg={avg_reward:.2f} | top-{actual_k}: {[round(r['reward'],2) for r in best_rollouts]} | bot-{actual_k}: {[round(r['reward'],2) for r in worst_rollouts]}")
-
-        return {
-            'label': label,
-            'avg_reward': avg_reward,
-            'best_rollouts': best_rollouts,
-            'worst_rollouts': worst_rollouts,
-        }
-
     def random_warmup(self, world: BaseWorld, logdir, num_episodes):
         """
         Perform random warmup episodes to initialize replay buffer.
@@ -427,82 +362,76 @@ class LLMNumOptimVisionAgent:
             print(f"λ_t = {lambda_t:.3f}")
             print(f"VLM invocation: {use_vision_this_iter}")
 
-        # ===== STEP 2: N rollouts for CURRENT only → VLM describe → behavioral analysis =====
-        # BEST and WORST are taken from visual_analysis_history (no re-rollout).
-        credit_assignment = None
+        # Get best visual analysis from history BEFORE running VLM this iter
+        best_visual_analysis = None
+        best_visual_entry = None
+        if self.visual_analysis_history:
+            best_visual_entry = max(self.visual_analysis_history, key=lambda x: x['reward'])
+            best_visual_analysis = best_visual_entry['analysis']
+            print(f"[VLM] Best history: iter {best_visual_entry['iteration']} reward={best_visual_entry['reward']:.2f}")
+
+        # ===== STEP 2: Rollout current policy with frame capture for VLM ======
         if use_vision_this_iter:
-            env_str = self.env_desc_file if self.env_desc_file else "RL Environment"
-            current_params = self.policy.get_parameters().reshape(-1)
-            params_str = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params))
-            n = self.n_pre_rollouts
-            k = self.k_rollouts
-
-            print(f"[ProPS-V] Running {n} rollouts for CURRENT policy...")
-            pre_dir = os.path.join(logdir, "pre_rollouts")
-            os.makedirs(pre_dir, exist_ok=True)
-
-            curr_group = self._rollout_and_describe_n(world, current_params, n, k, env_str, "current", pre_dir)
-
-            ca_dict = {}
-
-            # --- behavioral analysis for CURRENT (high vs low rollout contrast) ---
-            if curr_group['best_rollouts'] or curr_group['worst_rollouts']:
-                print(f"[ProPS-V] Behavioral analysis LLM — CURRENT policy...")
-                ca_text, ca_time = self.llm_brain.llm_credit_assignment(
-                    curr_group, env_str, self.n_pre_rollouts
+            print("Running episode with frame capture for VLM analysis...")
+            pre_log_filename = f"{logdir}/training_rollout_pre.txt"
+            with open(pre_log_filename, "w") as pre_log:
+                pre_result, trajectory, terminated_early = self.rollout_episode(
+                    world, pre_log, record=False, capture_frames=True
                 )
-                self.api_call_time += ca_time
-                print(f"  CURRENT ({ca_time:.1f}s): {ca_text[:100]}...")
-                ca_dict['current'] = ca_text
-                ca_dict['current_reward'] = round(curr_group['avg_reward'], 2)
-                with open(f"{logdir}/behavioral_analysis_current.txt", "w", encoding="utf-8") as f:
-                    f.write(ca_text)
 
-            # --- BEST and WORST: look up from visual_analysis_history (no rollout) ---
-            if self.visual_analysis_history:
-                best_h  = max(self.visual_analysis_history, key=lambda x: x['reward'])
-                worst_h = min(self.visual_analysis_history, key=lambda x: x['reward'])
-                ca_dict['best']         = best_h['analysis']
-                ca_dict['best_reward']  = round(best_h['reward'], 2)
-                ca_dict['worst']        = worst_h['analysis']
-                ca_dict['worst_reward'] = round(worst_h['reward'], 2)
-                print(f"[VLM] History best:  iter {best_h['iteration']}  reward={best_h['reward']:.2f}")
-                print(f"[VLM] History worst: iter {worst_h['iteration']} reward={worst_h['reward']:.2f}")
+            # ===== STEP 3: Sample frames and run VLM =====
+            frame_indices = self.frame_sampler.sample_frames(
+                trajectory, terminated_early, self.max_traj_length
+            )
+            frames = self.frame_sampler.get_frames(trajectory, frame_indices)
 
-            credit_assignment = ca_dict if ca_dict else None
-            if credit_assignment:
-                with open(f"{logdir}/behavioral_analysis.txt", "w", encoding="utf-8") as f:
-                    parts = [
-                        f"[{lbl.upper()} POLICY]\n{ca_dict[lbl]}"
-                        for lbl in ('current', 'best', 'worst') if lbl in ca_dict
-                    ]
-                    f.write("\n\n".join(parts))
+            if len(frames) > 0 and any(f.get('frame') is not None for f in frames):
+                current_params = self.policy.get_parameters().reshape(-1)
+                params_str = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params))
+                visual_analysis, vlm_time = self.vlm_analyzer.analyze_frames(
+                    frames,
+                    self.env_desc_file if self.env_desc_file else "RL Environment",
+                    pre_result,
+                    terminated_early,
+                    current_params=params_str,
+                )
+                self.vlm_api_time += vlm_time
+                self.api_call_time += vlm_time
 
-            # --- store CURRENT analysis in history for future iterations ---
-            if curr_group['best_rollouts']:
                 self.visual_analysis_history.append({
                     'iteration': self.training_episodes,
                     'lambda': lambda_t,
-                    'reward': curr_group['avg_reward'],
-                    'analysis': curr_group['best_rollouts'][-1]['description'],
-                    'num_frames': n,
+                    'reward': pre_result,
+                    'analysis': visual_analysis,
+                    'num_frames': len(frames),
                     'params': params_str,
                 })
-            print(f"[ProPS-V] Behavioral analysis phase complete")
+
+                visual_log_file = f"{logdir}/vlm_analysis.txt"
+                with open(visual_log_file, "w", encoding="utf-8") as vf:
+                    vf.write(visual_analysis)
+
+                print(f"[VLM] Analysis complete ({len(visual_analysis)} chars)")
+            else:
+                print("No frames captured for visual analysis")
 
         # ===== STEP 4: Update policy using LLM with vision context =====
         print("\nUpdating policy with LLM...")
+        current_params_for_llm = self.policy.get_parameters().reshape(-1)
+        params_str_for_llm = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params_for_llm))
         new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_vision(
             str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
             parse_parameters,
             self.training_episodes,
             self.env_desc_file,
-            None,   # visual_analysis — unused, behavioral analysis is in credit_assignment
+            visual_analysis,
             lambda_t,
             self.rank,
             self.optimum,
             self.search_step_size,
-            credit_assignment=credit_assignment,
+            visual_params=params_str_for_llm if visual_analysis else None,
+            best_visual_analysis=best_visual_analysis,
+            best_visual_entry=best_visual_entry,
         )
         self.api_call_time += api_time
 

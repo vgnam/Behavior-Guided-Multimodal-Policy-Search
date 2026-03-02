@@ -2,7 +2,7 @@ task: cont_state_llm_num_optim_vision
 num_episodes: 400
 gym_env_name: InvertedDoublePendulum-v5
 render_mode: rgb_array  # Required for frame capture
-logdir: logs/InvertedDoublePendulum_propsv_gemini-2.5-flash-lite
+logdir: logs/inverteddoublependulum_propsv_gemini-2.5-flash-lite
 dim_actions: 1
 dim_states: 9
 max_traj_count: 1000
@@ -22,5 +22,5 @@ env_desc_file: env_descriptions/inverteddoublependulum.j2
 # ProPS-V specific parameters
 vlm_model_name: meta/llama-4-scout-17b-16e-instruct
 decay_horizon: 200  # Longer decay for harder balancing task
-frame_sample_period: 40  # Episodes up to 1000 steps
+frame_sample_period: 30  # Episodes up to 1000 steps
 enable_vision: true
