@@ -6,6 +6,8 @@ from runner import (
 from runner import llm_num_optim_runner
 from runner import llm_num_optim_semantics_runner
 from runner import llm_num_optim_vision_runner
+from runner import llm_num_optim_blprops_runner
+from runner import llm_num_optim_blprops_qtable_runner
 # import gym_maze
 # import gym_navigation
 from envs import nim, pong
@@ -36,6 +38,10 @@ def main():
         llm_num_optim_semantics_runner.run_training_loop(**config)
     elif config["task"] in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"]:
         llm_num_optim_vision_runner.run_training_loop(**config)
+    elif config["task"] == "blprops":
+        llm_num_optim_blprops_runner.run_training_loop(**config)
+    elif config["task"] == "blprops_qtable":
+        llm_num_optim_blprops_qtable_runner.run_training_loop(**config)
     else:
         raise ValueError(f"Task {config['task']} not recognized.")
 
