@@ -1,1 +1,0 @@
-The agent's pendulum starts in a slightly tilted position and begins to oscillate. The oscillations become increasingly erratic, with rapid changes in direction and amplitude. The pendulum swings widely and unpredictably, indicating a loss of control. The movement is abrupt and overcorrected, culminating in a complete failure. The overall behavioral style is chaotic motion.

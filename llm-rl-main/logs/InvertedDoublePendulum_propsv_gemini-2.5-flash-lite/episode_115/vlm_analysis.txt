@@ -1,1 +1,0 @@
-The agent begins with the pendulum slightly tilted to the right. It then swings back and forth, with increasing amplitude. The pendulum's motion becomes more erratic and unstable as it gains momentum, with sharp, overcorrected movements. By the end of the sequence, the pendulum is swinging wildly and is clearly out of control, indicating a chaotic motion.

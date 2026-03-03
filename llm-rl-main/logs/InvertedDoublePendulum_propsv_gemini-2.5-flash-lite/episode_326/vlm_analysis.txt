@@ -1,1 +1,0 @@
-The double pendulum initially swings slightly to the right, then begins to oscillate with increasing amplitude. The movements appear somewhat jerky and overcorrected, with sharp changes in direction. The pendulum drifts to the right and then sharply to the left, indicating a loss of control. This leads to a chaotic motion that ultimately results in the pendulum falling.
