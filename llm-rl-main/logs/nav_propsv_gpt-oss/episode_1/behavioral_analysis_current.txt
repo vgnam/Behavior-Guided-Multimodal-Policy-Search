@@ -1,0 +1,14 @@
+**1. SUCCESS PATTERNS**  
+Across the majority of high‑reward rollouts the agent **executes a modest steering adjustment within the first 2–3 time‑steps** (e.g., a slight left or right turn after an initial forward thrust). This early correction keeps the vehicle away from the outer wall and lets it enter the interior corridor. The agent also **moderates its thrust**, avoiding a maximal forward push and instead using a smoother, lower‑magnitude acceleration that yields a stable, controllable speed. Finally, the successful runs show **sustained multi‑step navigation** – the agent remains alive for many steps, weaving gently along interior walls rather than crashing immediately.
+
+**2. FAILURE PATTERNS**  
+The low‑reward rollouts all share an **unmodulated forward thrust (action 0) right from the start**, with no subsequent steering or speed adjustment. This single, aggressive push propels the agent straight into a wall or out of the track, producing an immediate termination. The episodes also lack any corrective turning; the trajectory is completely linear and “chaotic” only because it ends abruptly.
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)  
+
+1. **Early corrective steering (first ≤ 3 steps)** – present in ≥ 4/5 high‑reward rollouts, absent in all low‑reward rollouts.  
+2. **Early thrust moderation (initial action ≠ maximal forward thrust)** – high‑reward runs use a reduced‑magnitude forward command or combine it with a turn; low‑reward runs use a pure maximal forward thrust.  
+3. **Extended episode length (≥ 4 steps before termination)** – high‑reward rollouts survive many steps; low‑reward rollouts terminate within 1–2 steps.
+
+**4. TIMING**  
+The top discriminative pattern—early corrective steering—occurs **at the very beginning of the episode**, making it a likely causal factor for success. Thrust moderation also appears **in the first few steps**, reinforcing its causal role. The extended episode length is a **later‑stage indicator** (it reflects that earlier good decisions kept the agent alive), but it is downstream of the first two patterns. The optimizer should therefore prioritize shaping the policy to produce a small turn and a softened forward command within the first couple of actions.

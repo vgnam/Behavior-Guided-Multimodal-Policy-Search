@@ -1,0 +1,16 @@
+**1. SUCCESS PATTERNS**  
+Across the majority of high‑reward rollouts the agent **starts with a modest forward thrust and quickly aligns its heading with the nearest corridor** (usually within the first 2–3 frames). Once aligned it proceeds with **steady, low‑variance forward speed**, inserting only **small, smooth turn corrections** when the maze geometry demands a change of direction. These behaviours keep the agent centred in the passage, avoid wall contacts and let it accrue positive reward for distance travelled before any termination event. The occasional mild oscillation observed is always bounded and never followed by a large‑amplitude swing, indicating that the policy is effectively damping overshoot.
+
+**2. FAILURE PATTERNS**  
+In most low‑reward rollouts the agent **issues a single, high‑magnitude forward action and repeats it (action 0) without any early steering correction**. This creates an abrupt surge in the state/value metric that drives the agent straight into a wall within the first two frames. The lack of any modest‑speed phase or early turn leads to an immediate collision and a large negative reward. When a turn is attempted it is usually **large and sudden**, producing an over‑correction that also ends in a crash.
+
+**3. DISCRIMINATIVE PATTERNS** *(ranked by how uniquely they separate success from failure)*  
+
+1. **Early moderate‑thrust forward move (low‑speed entry)** – present in ≥ 80 % of high‑reward rollouts, absent in low‑reward ones.  
+2. **Small, incremental turn corrections (≤ 15° change per frame)** – frequent in high‑reward (≥ 70 %) and virtually never seen in failures, which either make no turn or a single large swing (> 45°).  
+3. **Sustained low velocity variance (speed changes < 0.2 units per frame)** – characteristic of successful episodes, while failures show spikes > 0.5 units almost immediately.  
+
+The optimizer should **strongly reinforce patterns 1 and 2** and **suppress the opposite (large early thrusts and abrupt turns)**.
+
+**4. TIMING**  
+Pattern 1 (moderate early thrust) occurs within the **first 2–3 frames** and therefore is likely causal: it sets the agent on a safe corridor before any wall can be reached. Pattern 2 (incremental turn corrections) appears **continuously from the early alignment phase onward**, acting as a stabilising feedback loop that prevents drift. In contrast, the failure‑inducing large thrust and abrupt turn happen **immediately at episode start**, suggesting they are the root cause of early terminations rather than downstream consequences.

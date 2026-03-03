@@ -1,0 +1,22 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of the top‑performing rollouts the agent **starts with a modest forward thrust (action 0) and within the first 2–3 frames makes a deliberate turn that keeps it hugging a wall or corridor**. After this early turn the trajectory becomes smooth and the agent’s state values change incrementally (≈0.5‑1.0 per step) rather than jumping dramatically. This “wall‑follow‑after‑initial‑thrust” pattern lets the agent stay inside the maze, gather useful sensor information, and avoid the abrupt collisions that dominate the worst rollouts, thereby increasing cumulative reward.
+
+**2. FAILURE PATTERNS**  
+The low‑reward rollouts share two harmful behaviours: (a) **uncontrolled, large‑magnitude thrusts that produce sudden position jumps (Δstate > 2.0) and propel the agent straight into a boundary**, and (b) **absence of any early turning or wall‑following – the agent simply races forward until it hits the outer wall**. Both behaviours produce rapid loss of control, prevent the agent from exploiting the maze geometry, and result in immediate large negative rewards.
+
+**3. DISCRIMINATIVE PATTERNS**  
+| Rank | Pattern (high‑vs‑low) | Why it matters |
+|------|----------------------|----------------|
+| 1 | **Early, modest turn that initiates wall‑following (present in ≥4/5 high rollouts, 0/5 low rollouts)** | Keeps the agent inside the navigable corridor and provides continuous sensory feedback, directly preventing boundary crashes. |
+| 2 | **Controlled incremental speed (Δstate ≤ 1.0 per step) after the first turn (≥3/5 high, 0/5 low)** | Maintains stability, allowing the policy to react to obstacles instead of overshooting them. |
+| 3 | **Avoidance of large, single‑step position jumps (Δstate > 2.0) (0/5 high, ≥4/5 low)** | Large jumps are a reliable predictor of imminent collision; suppressing them removes a primary failure mode. |
+
+**4. TIMING**  
+The top discriminative pattern – the early modest turn that starts wall‑following – occurs within the first 2–3 decision steps, i.e., very early in the episode, suggesting a causal role in shaping the entire trajectory. The controlled incremental speed pattern follows immediately after that turn, also early, reinforcing the stabilising effect. Conversely, the harmful large‑jump thrusts tend to happen either as the first action or as a sudden spike later in the episode; in either case they are temporally proximal to the crash, making them clear targets for early‑phase suppression.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at a state of 1.51 and consistently moves with action 2. Its position fluctuates between approximately 1 and 8, indicating some erratic movement and difficulty maintaining a stable trajectory. While the action remains constant, the agent's state changes significantly, suggesting it is not moving in a straight line or at a constant speed. The large state change from 1.00 to 8.09, and then back to 4.68, points to overcorrections or oscillations. The agent's behavior appears to be a persistent drift with some instability, ultimately leading to a negative reward and termination. The overall behavioral style is one of uncontrolled, oscillatory motion.

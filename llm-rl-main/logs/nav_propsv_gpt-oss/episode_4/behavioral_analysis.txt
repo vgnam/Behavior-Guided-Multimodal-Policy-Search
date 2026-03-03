@@ -1,0 +1,22 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across four of the five top rollouts the agent **starts with a series of small, incremental state changes** (|Δstate| ≈ 0.2–0.5) that keep the state value inside a tight corridor (≈ 0.8–2.5) for the first 60‑80 % of the episode. These modest moves are paired with **frequent, low‑magnitude corrective actions** (tiny left/right or throttle adjustments) that prevent the trajectory from drifting toward a wall. The net effect is a prolonged period of forward progress that accumulates the bulk of the reward before any failure occurs.  
+
+**2. FAILURE PATTERNS**  
+In the low‑reward set the dominant behaviour is a **single, large‑magnitude thrust or turn** that drives the state value up by more than 2 units within one step, often right at the start of the episode. This aggressive acceleration pushes the agent straight into a wall or out‑of‑bounds, ending the rollout after only 1–2 frames. A secondary but consistent pattern is **continuous oscillation without convergence**: the agent repeatedly over‑corrects, producing alternating large Δstate swings that never settle, leading to early collisions.  
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)  
+1. **Sustained low‑amplitude Δstate (< 0.6) for ≥ 5 consecutive steps** – present in 4/5 high‑reward rollouts, absent in all low‑reward ones.  
+2. **Absence of any Δstate > 2 in the first half of the episode** – true for 4/5 high‑reward rollouts, true for 0/5 low‑reward rollouts.  
+3. **Early‑episode single‑step large thrust (Δstate > 2) leading to immediate termination** – occurs in 4/5 low‑reward rollouts, never in the high‑reward set.  
+
+**4. TIMING**  
+The first two discriminative patterns (steady small Δstate and avoidance of large early jumps) manifest **early to mid‑episode** (steps 1‑12 of a typical 20‑step horizon) and therefore are likely causal drivers of success. The third pattern (large early thrust) also appears **at the very start** of failing rollouts, confirming it as an early‑stage failure trigger rather than a late‑episode symptom.  
+
+*Actionable guidance*: reinforce policies that produce a sequence of modest state updates and penalize any action that yields a Δstate > 2 in the first half of the episode; bias the action distribution toward gentle corrective tweaks rather than maximal thrusts. This will amplify the high‑reward “steady‑progress” regime while suppressing the catastrophic early‑jump behaviour that dominates the low‑reward rollouts.
+
+[BEST POLICY]
+The agent begins at the bottom left of the maze and initially moves forward. It then appears to turn and move towards the interior of the maze, making several adjustments in its path. The movement seems somewhat oscillatory, with the agent making small corrections to its trajectory. In the later frames, the agent's position suggests it is moving along the inner walls of the maze. The agent's motion is not perfectly smooth, exhibiting some minor erratics. It eventually moves into a corner and then appears to move along a wall, before ultimately failing. The overall behavioral style appears to be an attempt at controlled navigation with some oscillatory correction.
+
+[WORST POLICY]
+The agent starts near the top-left corner of the environment, facing right. It makes a sharp turn to the left, moving along the inner wall. The movement appears somewhat abrupt, with a noticeable change in direction. The agent then seems to attempt to move forward, but its orientation is still slightly off, causing it to drift towards the outer wall. This drift becomes more pronounced, and the agent ultimately collides with the outer wall, leading to an early termination. The behavior exhibits a degree of instability and loss of control as it attempts to navigate the corner. The overall behavioral style is characterized by an initial attempt at controlled movement that quickly devolves into a drift and collision.

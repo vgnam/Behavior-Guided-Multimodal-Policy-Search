@@ -1,0 +1,21 @@
+**1. SUCCESS PATTERNS**  
+- **Incremental forward steps** – In the majority of high‑reward rollouts the agent advances by a series of modest position changes (Δstate ≈ 0.1–0.3) rather than a single huge jump. This keeps the agent inside the traversable corridor and lets it accumulate positive reward over many frames.  
+- **Wall‑following trajectory** – The successful rollouts keep the agent hugging the outer wall of the maze, moving parallel to the boundary for several consecutive frames. Staying next to the wall gives a reliable “safe” region that avoids sudden collisions and yields steady reward.  
+- **Reactive corner turns** – When the forward‑wall line ends, the agent makes a sharp, single‑frame turn (usually right) and immediately resumes the incremental forward motion. The timely turn prevents the agent from driving into a dead‑end and prolongs the episode.  
+
+**2. FAILURE PATTERNS**  
+- **Large single‑step jumps** – Low‑reward rollouts consistently contain one abrupt state increase (Δstate > 1.5) right after the first action, which instantly pushes the agent out of the safe corridor and triggers a “fail”.  
+- **Straight‑line thrust without correction** – The failing episodes stay on a straight trajectory for the whole rollout, never adjusting direction when a wall is approached, so they collide with the boundary early.  
+- **Repeated identical action (action = 0) despite changing state** – Several low‑reward runs keep issuing the same neutral/action‑0 command even as the state drifts, resulting in either a tiny uncontrolled drift or a catastrophic overshoot; the lack of conditional response leads to early termination.  
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate success from failure)  
+1. **Small incremental forward steps** – present in ≥ 80 % of high‑reward rollouts, absent in low‑reward ones.  
+2. **Wall‑following (maintaining proximity to a boundary)** – observed in ≥ 70 % of successful runs, never in failures.  
+3. **Single‑frame reactive turn at corners** – appears in ≈ 60 % of successes, missing from all failures.  
+4. **Avoidance of large single‑step jumps** – the converse of pattern 1; large jumps dominate the failure set but are virtually never seen in the high‑reward set.  
+
+**4. TIMING**  
+- The **small incremental steps** start at the very first frame and persist throughout the episode, making them an early and causal driver of success.  
+- **Wall‑following** is also established immediately (first few frames) and maintained, so it is an early, structural cue.  
+- **Reactive corner turns** occur mid‑episode when the forward wall ends; they are temporally later but still essential for extending the episode after the initial safe phase.  
+- The **large jumps** that cause failure happen almost always in the first or second frame, indicating an early, directly detrimental decision.

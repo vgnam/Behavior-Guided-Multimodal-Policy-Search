@@ -1,0 +1,143 @@
+system:
+You are good global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+The mountain car environment is a 2D world where the agent (car) is in a U shaped valley, and can accelerate to the left, do no acceleration, or accelerate to the right (corresponding to action 0, 1, 2). The state is a vector of 2 elements, representing position (-1.2 to 0.6) and velocity (-0.07 to 0.07) respectively. Negative means left and positive means right for both position and velocity. The goal is to reach the flag at the far right side of the hill. 
+The policy is a linear policy with 9 parameters and works as follows: 
+action = argmax([state[0], state[1]] dot W + B)
+where 
+W = [[params[0], params[1]], [params[2]]
+     [params[3]], [params[4], params[5]]]
+B = [params[6], params[7], params[8]]
+The reward is -1 for each step. The goal is to reach the flag at the far right side of the hill. The agent should pick actions that will help it reach far right side as fast as possible.
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. Neighborhood behavioral landscape (when available): a local exploration around key anchor policies (CURRENT, BEST, WORST) — each showing VLM visual analysis of the agent's behavior and how small parameter perturbations affect reward
+
+# Regarding the parameters **params**:
+**params** is an array of 9 float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy. 
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide a **Neighborhood Behavioral Landscape** — for each anchor policy (CURRENT, BEST, WORST), I show its behavior and the behavior of its nearby neighbors (obtained by small Poisson-sampled parameter perturbations). Use this to understand which local directions improve or hurt performance.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[8]: ', aiming to maximize the function's value f(params). 
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing the neighborhood landscape and numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around -120.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of 1.0**.
+
+Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
+params[0]: 1.1; params[1]: -2.4; params[2]: 3.4; params[3]: -0.4; params[4]: 0.5; params[5]: -1.1; params[6]: 5.7; params[7]: 0.6; params[8]: 4.2; f(params): -200.00
+params[0]: 0.4; params[1]: 1.9; params[2]: -1.3; params[3]: -1.7; params[4]: 1.9; params[5]: -0.2; params[6]: 2.7; params[7]: -2.1; params[8]: 5.4; f(params): -200.00
+params[0]: -0.9; params[1]: -3.4; params[2]: 1.7; params[3]: -0.2; params[4]: -5.6; params[5]: -1.6; params[6]: 0.8; params[7]: 2.1; params[8]: -1.4; f(params): -200.00
+params[0]: 2.6; params[1]: 0.9; params[2]: 5.5; params[3]: 5.3; params[4]: 1.4; params[5]: -0.5; params[6]: 2.1; params[7]: -3; params[8]: -0.2; f(params): -200.00
+params[0]: -4.5; params[1]: -2.4; params[2]: 7.2; params[3]: 1; params[4]: 4.9; params[5]: 3.8; params[6]: -2.7; params[7]: -4; params[8]: 5.3; f(params): -200.00
+params[0]: 3; params[1]: 5.8; params[2]: 1.3; params[3]: -2.9; params[4]: -2.5; params[5]: 3.2; params[6]: -3.6; params[7]: 7.8; params[8]: -2.5; f(params): -200.00
+params[0]: 1.2; params[1]: -2.9; params[2]: 4.2; params[3]: 2.5; params[4]: -1.9; params[5]: 5.1; params[6]: 3; params[7]: -1.3; params[8]: -2.7; f(params): -200.00
+params[0]: -3; params[1]: -3.1; params[2]: -0.8; params[3]: 1.7; params[4]: 1.5; params[5]: -0.7; params[6]: -4.1; params[7]: 2.3; params[8]: -1.5; f(params): -200.00
+params[0]: -6; params[1]: -1.5; params[2]: 0.1; params[3]: -2.3; params[4]: -6.4; params[5]: 2; params[6]: -0; params[7]: 4; params[8]: 1.2; f(params): -200.00
+params[0]: 1.2; params[1]: 0.7; params[2]: 6.7; params[3]: -3.4; params[4]: -2.3; params[5]: 1.3; params[6]: 2.9; params[7]: -0.2; params[8]: -4.6; f(params): -200.00
+params[0]: -5; params[1]: 0.7; params[2]: -1.1; params[3]: -1.6; params[4]: -4.1; params[5]: -0.8; params[6]: 0.9; params[7]: -7; params[8]: 1.8; f(params): -200.00
+params[0]: -4.7; params[1]: 1.1; params[2]: -1; params[3]: 1.8; params[4]: -2.3; params[5]: -2.1; params[6]: -3.2; params[7]: -3.5; params[8]: 0.7; f(params): -200.00
+params[0]: 0.2; params[1]: -0.3; params[2]: 0.8; params[3]: -2.7; params[4]: 2.8; params[5]: 2.9; params[6]: -4.7; params[7]: 3; params[8]: 0.4; f(params): -200.00
+params[0]: 0.7; params[1]: 3.6; params[2]: 2.6; params[3]: 2.1; params[4]: 1.8; params[5]: -0.8; params[6]: 0.5; params[7]: -0.3; params[8]: -1.2; f(params): -200.00
+params[0]: 1.7; params[1]: -1.4; params[2]: -1.6; params[3]: 3.4; params[4]: -3.4; params[5]: -3.7; params[6]: -4.2; params[7]: 2.8; params[8]: 2.8; f(params): -200.00
+params[0]: 2.9; params[1]: -0; params[2]: -5.2; params[3]: 1.4; params[4]: -6.5; params[5]: 1.8; params[6]: 0.3; params[7]: 0.8; params[8]: -0.1; f(params): -200.00
+params[0]: 2.1; params[1]: 0.9; params[2]: 1; params[3]: -5.8; params[4]: 0.4; params[5]: -0.4; params[6]: -1.6; params[7]: 2.9; params[8]: -1.3; f(params): -200.00
+params[0]: -2.8; params[1]: -6; params[2]: 3.4; params[3]: -2.6; params[4]: 4.4; params[5]: -1; params[6]: 5.4; params[7]: -3.6; params[8]: 0.6; f(params): -200.00
+params[0]: -4.8; params[1]: 1.9; params[2]: -7; params[3]: 2.8; params[4]: -1.6; params[5]: -2.8; params[6]: 0.1; params[7]: -6; params[8]: -2.6; f(params): -200.00
+params[0]: -0.1; params[1]: 5.6; params[2]: -2.1; params[3]: 0.5; params[4]: 6.5; params[5]: -6.6; params[6]: 0.4; params[7]: -3.9; params[8]: -0.6; f(params): -200.00
+params[0]: 0; params[1]: 0; params[2]: 0; params[3]: 0; params[4]: 0.5; params[5]: 0.5; params[6]: -2; params[7]: -2; params[8]: 4; f(params): -200.00
+params[0]: 0; params[1]: -1; params[2]: 0; params[3]: 0; params[4]: 0; params[5]: 1; params[6]: 0; params[7]: -0.1; params[8]: 0; f(params): -200.00
+params[0]: -1; params[1]: -1; params[2]: -0.5; params[3]: -0.5; params[4]: 2; params[5]: 0.5; params[6]: 0; params[7]: 0; params[8]: 5; f(params): -200.00
+params[0]: 2; params[1]: 2; params[2]: -2; params[3]: -2; params[4]: -2; params[5]: 2; params[6]: -4; params[7]: 4; params[8]: -4; f(params): -200.00
+params[0]: -5; params[1]: -5; params[2]: 5; params[3]: 5; params[4]: 0; params[5]: 0; params[6]: -1; params[7]: 1; params[8]: 3; f(params): -200.00
+params[0]: 1; params[1]: -2; params[2]: 3; params[3]: -0.5; params[4]: 0; params[5]: 0; params[6]: 5; params[7]: 0.5; params[8]: 6; f(params): -200.00
+params[0]: 2; params[1]: -3; params[2]: 4; params[3]: -1.5; params[4]: 1; params[5]: -1; params[6]: 4; params[7]: -0.5; params[8]: 5; f(params): -200.00
+params[0]: 0; params[1]: 0; params[2]: 0; params[3]: 0; params[4]: 3; params[5]: 0; params[6]: -1; params[7]: -1; params[8]: 6; f(params): -200.00
+params[0]: -1; params[1]: 0; params[2]: 0; params[3]: -1; params[4]: 2; params[5]: 1; params[6]: -2; params[7]: -2; params[8]: 0; f(params): -200.00
+params[0]: -2; params[1]: -5; params[2]: 0; params[3]: 0; params[4]: 2; params[5]: 5; params[6]: 0; params[7]: 0; params[8]: 0; f(params): -200.00
+params[0]: -2; params[1]: -5; params[2]: 0; params[3]: 0; params[4]: 4; params[5]: 4; params[6]: -2; params[7]: 0; params[8]: 6; f(params): -200.00
+params[0]: -2; params[1]: -5; params[2]: 0; params[3]: 0; params[4]: 4; params[5]: 4; params[6]: -6; params[7]: 0; params[8]: 6; f(params): -200.00
+params[0]: -1; params[1]: -1; params[2]: -1; params[3]: -1; params[4]: 5; params[5]: 5; params[6]: -3; params[7]: -3; params[8]: 3; f(params): -200.00
+params[0]: 2; params[1]: -2; params[2]: -1; params[3]: 1; params[4]: 3; params[5]: -3; params[6]: 1; params[7]: -1; params[8]: 5; f(params): -200.00
+params[0]: 0; params[1]: 0; params[2]: 0; params[3]: 0; params[4]: 0; params[5]: 0; params[6]: -6; params[7]: -6; params[8]: 6; f(params): -200.00
+params[0]: -1; params[1]: -2; params[2]: 0; params[3]: 0; params[4]: 2; params[5]: 2; params[6]: -1; params[7]: 0; params[8]: 1; f(params): -200.00
+params[0]: 0; params[1]: -1; params[2]: 1; params[3]: 1; params[4]: 3; params[5]: 3; params[6]: -2; params[7]: 1; params[8]: 3; f(params): -200.00
+params[0]: 1.1; params[1]: -2.4; params[2]: 3.4; params[3]: -0.4; params[4]: 1.5; params[5]: -1.1; params[6]: 5.7; params[7]: 0.6; params[8]: 5.2; f(params): -200.00
+params[0]: -5; params[1]: -5; params[2]: -5; params[3]: -5; params[4]: 5; params[5]: 5; params[6]: -5; params[7]: -5; params[8]: 5; f(params): -200.00
+params[0]: -1; params[1]: -1; params[2]: -1; params[3]: -1; params[4]: 2; params[5]: 2; params[6]: -5; params[7]: -2; params[8]: 6; f(params): -200.00
+params[0]: -2; params[1]: -2; params[2]: -1; params[3]: -1; params[4]: 2; params[5]: 2; params[6]: -5; params[7]: -5; params[8]: 5; f(params): -200.00
+params[0]: -2; params[1]: -2; params[2]: -1; params[3]: -1; params[4]: 5; params[5]: 2; params[6]: -5; params[7]: -5; params[8]: 5; f(params): -200.00
+params[0]: 2.1; params[1]: -2.4; params[2]: 3.4; params[3]: -0.4; params[4]: 1.5; params[5]: -1.1; params[6]: 6.7; params[7]: 0.6; params[8]: 5.2; f(params): -200.00
+params[0]: 5; params[1]: 5; params[2]: -5; params[3]: 5; params[4]: -5; params[5]: 5; params[6]: -5; params[7]: 5; params[8]: -5; f(params): -200.00
+
+
+## Neighborhood Behavioral Landscape:
+The following shows 3 **anchor** policies and their nearby **neighbors**.
+- An **Anchor** is a reference policy (CURRENT iteration's policy, BEST known policy, or WORST known policy).
+- A **Neighbor** is a policy obtained by applying small Poisson-sampled perturbations to the anchor's params. Each neighbor differs from its anchor by random step sizes drawn from a Poisson distribution.
+- For each anchor, only the top-K highest-reward and bottom-K lowest-reward neighbors are shown to highlight the most informative contrast.
+- Use this landscape to identify: which parameter directions are beneficial (high-reward neighbors), which are harmful (low-reward neighbors), and how the anchor's behavior compares to its local neighborhood.
+
+## Neighborhood Behavioral Landscape
+
+
+### Anchor [CURRENT]  reward=-200.00
+  Params : params[0]: 5, params[1]: 5, params[2]: -5, params[3]: 5, params[4]: -5, params[5]: 5, params[6]: -5, params[7]: 5, params[8]: -5
+  Behavior: The agent consistently attempts to move forward (action=1), but its progress is erratic. It seems to gain some momentum, then loses it, oscillating around its initial position without significant advancement. The movement is not smooth, exhibiting repeated cycles of acceleration and deceleration. There's no clear stabilization or divergence, but rather a persistent, uncontrolled oscillation within the valley. This suggests an oscillatory control style where the agent repeatedly tries to push forward but fails to overcome the terrain effectively.
+
+  ---- Neighbors of [CURRENT] ----
+  Neighbor #1  reward=-200.00
+    Params : params[0]: 4.8, params[1]: 5, params[2]: -5.1, params[3]: 4.9, params[4]: -4.9, params[5]: 5.2, params[6]: -4.7, params[7]: 4.9, params[8]: -5.2
+    Behavior: The agent repeatedly attempts to ascend the hill, pushing forward with consistent action. However, it lacks the momentum to reach the summit and instead oscillates between the bottom of the valley and a point partway up the slope. This motion appears somewhat jerky, with slight variations in its position on each attempt. The agent never gains significant upward traction, indicating a struggle to overcome the incline. Its overall behavior is characterized by persistent, yet ultimately unsuccessful, oscillatory thrusting.
+  Neighbor #2  reward=-200.00
+    Params : params[0]: 5, params[1]: 4.8, params[2]: -5.1, params[3]: 5.1, params[4]: -5.2, params[5]: 4.8, params[6]: -5.3, params[7]: 5.3, params[8]: -5.1
+    Behavior: The agent consistently accelerates to the right, moving from the bottom of the valley towards the right side of the hill. It appears to be building momentum in a single direction, as indicated by its increasing position values over time. There are no noticeable direction changes or oscillations, suggesting a persistent, albeit unsuccessful, attempt to climb. The movement is smooth, with no abrupt shifts or apparent overcorrections, but the agent consistently fails to reach the goal. The overall behavioral style is one of persistent, unidirectional thrusting without achieving stabilization or progress towards the objective.
+  Neighbor #3  reward=-200.00
+    Params : params[0]: 5.5, params[1]: 4.8, params[2]: -4.7, params[3]: 4.9, params[4]: -4.7, params[5]: 4.9, params[6]: -4.9, params[7]: 4.7, params[8]: -5
+    Behavior: The agent consistently attempts to move to the right, as indicated by the action '1' in all frames. Its position fluctuates, moving slightly left and right within the valley. There's no clear upward progress towards the flag, suggesting a lack of sufficient momentum or an inability to overcome the slope. The movement appears somewhat oscillatory, with small back-and-forth motions rather than a sustained push. Overall, the agent exhibits a persistent but ultimately ineffective attempt to gain upward momentum, resulting in a repetitive, drifting behavior within the lower part of the environment.
+  Neighbor #4  reward=-200.00
+    Params : params[0]: 4.8, params[1]: 4.6, params[2]: -5.3, params[3]: 5.4, params[4]: -4.7, params[5]: 5.6, params[6]: -5, params[7]: 4.6, params[8]: -4.9
+    Behavior: The agent consistently chooses action 1, which is to accelerate forward. This results in the car moving back and forth along the bottom of the valley. The car accelerates forward, reaches a certain point, then gravity pulls it back down, and it repeats this motion. The movement is not smooth but rather jerky as it oscillates between accelerating forward and rolling back. There is no stabilization or progress towards the goal, indicating a lack of control and a persistent drift pattern. The overall behavioral style is one of oscillatory control with a persistent drift to the left.
+  Neighbor #5  reward=-200.00
+    Params : params[0]: 5.4, params[1]: 5.2, params[2]: -5, params[3]: 5, params[4]: -4.8, params[5]: 4.7, params[6]: -5.2, params[7]: 5.2, params[8]: -4.6
+    Behavior: The agent consistently moves to the right, but its progress is slow and oscillates between slight forward and backward motion within the valley. It appears to be stuck in a loop of attempting to gain momentum, but it never reaches sufficient speed to climb the hill. The agent's movement is characterized by a lack of significant acceleration and a tendency to drift back down the slope, suggesting an inability to overcome the gravitational pull. This results in a persistent, low-energy oscillatory control pattern within the valley.
+
+### Anchor [BEST (replay buffer)]  reward=-200.00
+  Params : params[0]: 1.1, params[1]: -2.4, params[2]: 3.4, params[3]: -0.4, params[4]: 0.5, params[5]: -1.1, params[6]: 5.7, params[7]: 0.6, params[8]: 4.2
+  Behavior: The agent's behavior consists of repeated attempts to move uphill, but it consistently fails to gain significant altitude before rolling back down. The car starts in the valley, and despite applying the action to move forward (indicated by the consistent action=0), it only manages to move slightly up the left slope before gravity pulls it back. This pattern repeats across multiple episodes, showing no progress towards the goal. The movement is characterized by short, ineffective pushes followed by a gradual descent, indicating a lack of sufficient momentum or power to overcome the incline. The overall behavioral style is one of **oscillatory control with persistent drift downwards**.
+
+  ---- Neighbors of [BEST (replay buffer)] ----
+  Neighbor #1  reward=-200.00
+    Params : params[0]: 1.4, params[1]: -2.2, params[2]: 3.6, params[3]: -0.3, params[4]: 0.7, params[5]: -1, params[6]: 5.7, params[7]: 0.5, params[8]: 3.8
+    Behavior: The agent begins near the bottom of the valley and attempts to climb the left hill. It moves slightly up the hill, then rolls back down. This pattern repeats across multiple episodes, with the agent consistently failing to gain significant upward momentum. The movement is characterized by short, insufficient thrusts followed by gravity-induced slides back down. There is no apparent stabilization or progress towards the goal, indicating a persistent inability to overcome the incline. The overall behavioral style is one of oscillatory motion within the valley, with repeated, unsuccessful attempts to ascend.
+  Neighbor #2  reward=-200.00
+    Params : params[0]: 1.4, params[1]: -2, params[2]: 3.4, params[3]: -0.2, params[4]: 0.3, params[5]: -1.2, params[6]: 5.5, params[7]: 0.9, params[8]: 4
+    Behavior: The agent consistently moves to the left, oscillating around the bottom of the valley. Its position fluctuates between approximately -0.77 and -0.49, indicating it is unable to gain enough momentum to climb the hill. The movement is characterized by a recurring pattern of moving left, then slightly right, without significant progress towards the goal. This suggests a lack of effective control, leading to a persistent drift and an inability to stabilize or advance. The overall behavioral style is one of oscillatory control with persistent drift.
+  Neighbor #3  reward=-200.00
+    Params : params[0]: 0.9, params[1]: -2.2, params[2]: 3.1, params[3]: -0.5, params[4]: 0.4, params[5]: -1.4, params[6]: 5.7, params[7]: 1, params[8]: 4.4
+    Behavior: The agent begins in the valley and attempts to move uphill. It exhibits a back-and-forth oscillating motion, pushing itself up one side of the valley and then sliding back down, struggling to gain sufficient momentum. This pattern repeats across multiple episodes, with the car oscillating within the valley without significant progress towards the goal. The movement appears somewhat jerky and overcorrected, as it repeatedly pushes and then loses ground. The agent never stabilizes or progresses towards the goal, demonstrating a persistent oscillatory control within the low point of the environment.
+  Neighbor #4  reward=-200.00
+    Params : params[0]: 0.8, params[1]: -2.3, params[2]: 3.5, params[3]: -0.9, params[4]: 0.7, params[5]: -1.1, params[6]: 5.8, params[7]: 0.7, params[8]: 4.1
+    Behavior: The agent's behavior is characterized by a consistent pattern of oscillating back and forth within the valley. In each episode, the agent starts at a similar position and repeatedly attempts to gain momentum by moving towards one side of the valley, then reverses direction to move towards the other. This motion is not smooth; there are noticeable periods of acceleration and deceleration as it oscillates. Despite repeated attempts, the agent never gains enough momentum to reach the flag on the right. The movement appears somewhat erratic due to the constant reversal of direction, suggesting an inability to stabilize or progress towards the goal. This demonstrates an oscillatory control style, trapped in a cycle of ineffective attempts.
+  Neighbor #5  reward=-200.00
+    Params : params[0]: 1.1, params[1]: -2.2, params[2]: 3.6, params[3]: -0.4, params[4]: 0.4, params[5]: -1.4, params[6]: 5.5, params[7]: 0.9, params[8]: 4.2
+    Behavior: The agent consistently exhibits oscillatory behavior, moving back and forth within the valley. In each episode, it attempts to drive uphill (indicated by the positive position values and negative reward), but its momentum is insufficient to reach the flag. The movement appears somewhat jerky and overcorrected, as it oscillates between pushing uphill and sliding back down. There is no clear progress towards the goal, and the agent appears to be stuck in a loop of partial uphill attempts and subsequent slides. This results in a persistent drift towards the bottom of the valley, rather than a controlled or stable movement.
+
+Now you are at iteration 24 out of 400. Please provide the results in the indicated format. Do not provide any additional texts.
+
+
+LLM:
+params[0]: 0.0, params[1]: -1.0, params[2]: 0.0, params[3]: 0.0, params[4]: 0.0, params[5]: 1.0, params[6]: 0.5, params[7]: -0.1, params[8]: -0.5  
+I chose a simple velocity‑based policy: action 0 (accelerate left) fires when velocity is negative (w₀,vel = ‑1) with a modest positive bias, action 2 (accelerate right) fires when velocity is positive (w₂,vel = +1) with a negative bias, and action 1 (no thrust) remains neutral. This mirrors the classic MountainCar strategy of “push opposite to current velocity” to build momentum, which should break the oscillatory patterns seen in the current and best anchors and move the car toward the goal, improving the reward beyond the -200 plateau.

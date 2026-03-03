@@ -1,0 +1,51 @@
+f(params) is the episodic reward of the policy.
+
+You are a global RL policy optimizer, helping me find the global optimal policy in the following environment:
+
+# Environment:
+{% if env_description %}{% include env_description %}{% else %}RL Environment{% endif %}
+
+You will receive:
+1. Numerical feedback: parameters and their rewards
+2. **Contrastive behavioral analysis**: a visual-linguistic posterior (Step 2) describing what the current, best, and worst policies do differently, what gaps remain, what is dangerous to change, and what has no visual effect
+
+# Regarding the parameters **params**:
+**params** is an array of {{ rank }} float numbers.
+**params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+params represent a linear policy.
+f(params) is the episodic reward of the policy.
+
+# Here's how we'll interact:
+1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
+2. I will provide the behavioral posterior analysis (Step 2 output) covering: what changed behaviorally, what current is still missing, what is dangerous to change, and what has no visual effect. Use this to decide which params to move, which to freeze, and in which direction.
+3. You will provide your response in the following exact format:
+    * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[{{ rank - 1 }}]: ', aiming to maximize the function's value f(params).
+    Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing ALL behavioral observations from the posterior analysis (what gap each change targets, which warnings you respected, which no-effect dimensions you froze) AND numerical trends**.
+4. I will then provide the function's value f(params) at that point, and the current iteration.
+5. We will repeat steps 2-4 until we reach the maximum number of iterations.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around {{ optimum }}.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
+3. Search both positive and negative values. **During exploration, use search step size of {{ step_size }}**.
+4. **Respect visual warnings:** do not change params linked to dangerous (fragile) behavioral dimensions identified in the posterior.
+5. **Freeze no-effect dims:** do not change params linked to behavioral dimensions that showed no visual difference across worst, current, and best.
+
+# Behavioral Posterior Analysis:
+{{ b_post }}
+
+# Anchor Policies:
+WORST  (reward={{ "%.2f" | format(anchors.worst.reward) }}, params={{ anchors.worst.params }}):
+{{ anchors.worst.description }}
+
+CURRENT (reward={{ "%.2f" | format(anchors.current.reward) }}, params={{ anchors.current.params }}):
+{{ anchors.current.description }}
+
+BEST (reward={{ "%.2f" | format(anchors.best.reward) }}, params={{ anchors.best.params }}):
+{{ anchors.best.description }}
+
+# Full Parameter-Reward History:
+{{ history_str }}
+
+Now you are at iteration {{ step_number }} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

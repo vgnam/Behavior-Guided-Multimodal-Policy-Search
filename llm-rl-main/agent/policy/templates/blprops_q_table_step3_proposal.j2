@@ -1,0 +1,46 @@
+f(params) is the episodic reward of the policy.
+
+You are a global RL policy optimizer for a discrete state space.
+You now have two sources of information: numerical patterns from history, and a detailed visual understanding of what behavior needs to change. Use both to propose the next Q-table.
+
+# Environment:
+{% if env_description %}{% include env_description %}{% else %}RL Environment{% endif %}
+
+# Regarding the parameters **params**:
+**params** is an array of {{ rank }} integers — one per state.
+params[i] = the action the agent takes in state i.
+Valid action values: {{ actions }}.
+f(params) is the episodic reward achieved by following this state-action mapping.
+
+# Here's how we'll interact:
+1. I will provide a visual behavioral analysis (Step 2 output), three anchor policy descriptions with their rewards and params, and the full parameter-reward history.
+2. You will propose the next Q-table in the following exact format:
+   * Line 1: new params in format 'params[0]: <action>, params[1]: <action>, ..., params[{{ rank - 1 }}]: <action>', aiming to maximize f(params).
+     Each value must be a valid action from: {{ actions }}.
+   * Line 2: detailed explanation — which behavioral gap each significant change targets, which warning it respects, and why this direction over alternatives.
+3. I will then evaluate the proposed Q-table and continue to the next iteration.
+
+# Remember:
+1. **Do not propose previously seen params.**
+2. **The global optimum should be around {{ optimum }}.** If you are below that, this is a local optimum. Explore different state-action assignments.
+3. Search different action combinations. **During exploration, try flipping actions for states identified as critical in the visual analysis.**
+4. **Respect visual warnings:** do not change actions for states linked to dangerous (fragile) behavioral dimensions. Keep actions unchanged for states where all policies look identical (no visual effect).
+5. **Connect behavior to states:** use the visual analysis and numerical history together to identify which states are most responsible for each behavioral gap.
+
+# Visual Behavioral Analysis (Step 2 output):
+{{ b_post }}
+
+# Anchor Policies:
+WORST  (reward={{ "%.2f" | format(anchors.worst.reward) }}, params={{ anchors.worst.params }}):
+{{ anchors.worst.description }}
+
+CURRENT (reward={{ "%.2f" | format(anchors.current.reward) }}, params={{ anchors.current.params }}):
+{{ anchors.current.description }}
+
+BEST (reward={{ "%.2f" | format(anchors.best.reward) }}, params={{ anchors.best.params }}):
+{{ anchors.best.description }}
+
+# Full Parameter-Reward History:
+{{ history_str }}
+
+Now you are at iteration {{ step_number }} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

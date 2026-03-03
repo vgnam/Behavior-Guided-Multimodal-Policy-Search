@@ -1,0 +1,1 @@
+The agent begins with its pendulum slightly tilted to the right. It then oscillates back and forth with increasing amplitude and speed, demonstrating an uncontrolled, chaotic motion. The pendulum swings widely, indicating a loss of stability and control. This erratic movement ultimately leads to the episode termination.

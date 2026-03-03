@@ -1,0 +1,1 @@
+The agent starts in a perfectly upright position. It then begins to lean to the right with increasing speed. By the final frame, the agent has fallen completely to its right side, indicating a loss of balance. The movement appears to be a continuous, accelerating lean without any corrective actions. The overall behavioral style is one of uncontrolled falling.

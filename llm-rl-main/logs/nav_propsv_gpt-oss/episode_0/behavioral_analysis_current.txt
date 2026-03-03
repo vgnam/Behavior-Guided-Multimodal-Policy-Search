@@ -1,0 +1,14 @@
+**1. SUCCESS PATTERNS**  
+The rollouts that achieve the highest rewards all share a **very short episode caused by an immediate forward thrust (action = 2) from the start state that terminates within 1–2 steps**. This pattern appears at the very beginning of the episode and produces a drastic reduction in the number of timesteps over which the environment’s per‑step penalty is accrued, thereby keeping the total negative return relatively small. A second, less dominant, pattern is the **initial alignment toward a wall or corner** before that thrust; being next to a boundary guarantees the episode ends quickly after the first forward command.
+
+**2. FAILURE PATTERNS**  
+The low‑reward rollouts consistently exhibit a **prolonged sequence of forward‑type actions (mostly action = 2, occasionally interleaved with action = 1) that drive the agent steadily deeper into the maze for many timesteps**. Because the environment penalises each step, the longer the agent stays alive the larger the accumulated negative reward, even if the motion is smooth. A secondary failure cue is the **late, sudden switch to a different action (often action = 0) right before termination**, which tends to coincide with a large final penalty and indicates that the agent only discovers the fatal mistake after a long drift.
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)  
+
+1. **Immediate termination via a single forward thrust at episode start** – present in ≥ 80 % of high‑reward rollouts and absent from all low‑reward rollouts.  
+2. **Absence of any early turning or corrective action** – high‑reward runs never execute a turn before termination, whereas low‑reward runs frequently include at least one turn (action = 1) within the first few steps.  
+3. **Late‑episode abrupt action switch (to 0) right before failure** – common in low‑reward rollouts, never observed in the high‑reward set.
+
+**4. TIMING**  
+The top discriminative pattern (immediate termination) occurs **at the very start of the episode (step 0–1)**, making it a likely causal driver of the higher return rather than a side effect. The second pattern (lack of early turning) also manifests **in the first few steps**, reinforcing that early decision‑making is critical. The third pattern (late abrupt switch) appears **near the episode’s end**, suggesting it is a symptom of failure rather than a cause.

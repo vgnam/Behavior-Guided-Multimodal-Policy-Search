@@ -1,0 +1,1 @@
+The agent starts in a stable upright position. It then begins to oscillate, with the upper pendulum swinging back and forth. The oscillations initially appear controlled, but gradually increase in amplitude, indicating a loss of stability. This chaotic motion culminates in the pendulum falling over, leading to termination.

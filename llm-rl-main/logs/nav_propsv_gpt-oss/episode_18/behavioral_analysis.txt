@@ -1,0 +1,20 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of the high‑reward rollouts the agent **initiates a modest forward thrust and then quickly aligns itself with the nearest wall, maintaining a “wall‑hugging” trajectory for several timesteps**. This alignment usually occurs within the first 2–3 decision points and is followed by small, smooth steering adjustments that keep the agent sliding along the wall rather than heading straight into open space. By staying close to the boundary the agent avoids early collisions, accrues many positive reward increments, and only later—when a sharp turn is required—does the episode terminate. The prolonged wall‑following phase is the primary driver of the unusually high cumulative scores.
+
+**2. FAILURE PATTERNS**  
+In the low‑reward rollouts the agent exhibits a **single, aggressive forward thrust with virtually no steering correction**, often from the initial pose. This pattern appears immediately (step 1) and leads to a direct impact with a boundary or obstacle, terminating the episode after one or two timesteps. The lack of any wall‑following, speed modulation, or corrective turn means the agent never gathers intermediate rewards and incurs a large negative penalty right away.
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)  
+1. **Early wall‑following (within the first 2–3 steps)** – present in > 80 % of high‑reward rollouts, absent in all low‑reward ones.  
+2. **Gradual speed modulation (initial modest thrust followed by slower, smoother motion)** – evident in the majority of successful runs, never observed in the failed runs which use a maximal thrust throughout.  
+3. **Small corrective steering adjustments (minor angle changes rather than large, abrupt turns)** – common in high‑reward episodes, rare in low‑reward episodes where the sole turn (if any) is a single large, fatal maneuver.
+
+**4. TIMING**  
+The top discriminative pattern—early wall‑following—occurs **right at the start of the episode (steps 1‑3)**, making it a likely causal factor for the higher returns rather than a downstream correlation. The accompanying speed‑modulation and fine‑grained steering adjustments also manifest early, within the first half of the trajectory, reinforcing that these behaviours are antecedent drivers of success rather than by‑products of a surviving episode.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

@@ -1,0 +1,22 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of the high‑reward rollouts the agent **holds a single action (or a very slowly varying action) for the first ~200 – 250 timesteps**, producing only tiny position changes (≈0.1–0.3 units per 50‑step block). This “steady‑thrust” phase keeps the state inside a safe corridor and delays any contact with walls, allowing the episode to accumulate a large positive sum before the inevitable termination. When the agent finally changes action it does so **gradually**, with a modest increase in speed rather than a sudden jump, which postpones the crash and adds extra reward.  
+
+**2. FAILURE PATTERNS**  
+In the low‑reward rollouts the opposite pattern dominates: the agent **executes a large‑magnitude action within the first 10‑30 timesteps**, causing an abrupt position shift of >1 unit and an immediate drift toward a wall. This early, high‑speed move is followed by little or no corrective adjustment, so the agent collides almost immediately. A secondary failure mode is **persistent straight‑line thrust without any heading correction**, which drives the agent straight into a boundary despite being otherwise smooth.  
+
+**3. DISCRIMINATIVE PATTERNS (ranked)**  
+1. **Long early stability – single‑action, low‑amplitude thrust for ≳200 steps** – present in 4/5 high‑reward rollouts, absent in all low‑reward ones.  
+2. **Gradual speed ramp‑up (small incremental increase in action magnitude) after the stable phase** – seen in 3/5 high‑reward rollouts, never in low‑reward rollouts.  
+3. **Early large‑magnitude action (Δposition > 1 unit in ≤30 steps)** – appears in 4/5 low‑reward rollouts, only in 1 high‑reward rollout.  
+
+The optimizer should **strongly reinforce pattern 1**, **moderately reinforce pattern 2**, and **suppress pattern 3**.  
+
+**4. TIMING**  
+Pattern 1 (early long‑term stability) occurs at the very start of the episode and is therefore a likely causal driver of high reward. Pattern 2 (gradual ramp‑up) typically appears after the first 200 steps, still early enough to influence total return. Pattern 3 (early large jump) happens within the first few dozen steps, making it an early predictor of failure. Adjusting the policy to enforce a calm, low‑amplitude thrust for the initial quarter of the episode, then allowing a controlled increase, should push the average reward upward.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

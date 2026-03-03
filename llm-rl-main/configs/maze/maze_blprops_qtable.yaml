@@ -1,0 +1,21 @@
+task: blprops_qtable
+num_episodes: 400
+gym_env_name: maze-sample-3x3-v0
+render_mode: rgb_array
+logdir: logs/maze_blprops_qtable
+dim_actions: [[0, 1, 2, 3]]
+dim_states: [[0, 1, 2, 3, 4, 5, 6, 7, 8]]
+max_traj_count: 1000
+max_traj_length: 20
+template_dir: agent/policy/templates
+llm_hypothesis_template_name: blprops_q_table_step1_hypothesis.j2
+llm_proposal_template_name: blprops_q_table_step3_proposal.j2
+llm_model_name: gemini/gemini-2.5-flash
+num_evaluation_episodes: 1
+warmup_episodes: 10
+warmup_dir: null
+optimum: 0.9
+search_step_size: 0.1
+env_desc_file: env_descriptions/maze.j2
+vlm_model_name: gemini-2.5-flash-lite
+frame_sample_period: 5

@@ -1,0 +1,13 @@
+**1. SUCCESS PATTERNS**  
+Across the majority of the top‑reward rollouts the agent executes a long, uninterrupted stretch of the same primitive (either action 1 or action 2) for the first half of the episode, producing a smooth monotonic change in the state variable. This steady thrust keeps the distance to walls decreasing in small increments, which appears to delay any collision and therefore limits the accumulated penalty. When a turn is finally taken it occurs only once and near the episode’s end, suggesting that a single, late correction is preferable to many early switches.
+
+**2. FAILURE PATTERNS**  
+The low‑reward rollouts share frequent, rapid alternations between actions 1 and 2, often every few timesteps, creating jerky, oscillatory trajectories. These frequent switches generate large, abrupt jumps in the state (Δstate ≫ 1) that quickly push the agent into wall‑proximate regions and cause early terminations. Moreover, the erratic turning is distributed throughout the episode rather than being confined to a single late adjustment, amplifying instability and penalty accumulation.
+
+**3. DISCRIMINATIVE PATTERNS**  
+1️⃣ **Sparse action switching** – a prolonged monotonic action segment (≥ 30 consecutive steps) is present in > 80 % of high‑reward rollouts and absent in low‑reward ones.  
+2️⃣ **Single late turn** – exactly one direction change occurring after the midpoint of the episode appears in most high‑reward cases but is rare (< 15 %) among low‑reward runs.  
+3️⃣ **Small incremental state changes** – step‑to‑step state differences staying below a modest threshold (≈ 0.5) dominate the high‑reward set, whereas low‑reward trajectories frequently exceed this bound. The optimizer should therefore boost parameters that encourage long steady action runs, schedule the sole turn late, and penalize large Δstate spikes.
+
+**4. TIMING**  
+Pattern 1 (sparse switching) manifests early, typically within the first 30–40 timesteps, making it a likely causal driver of better performance. Pattern 2 (single late turn) emerges late, usually in the final 10–15 % of the episode, so it may be more of a corrective signal than a primary cause. Pattern 3 (small Δstate) is observable throughout but is especially critical during the early steady‑action phase, reinforcing the need for gentle, controlled motion from the start.

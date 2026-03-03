@@ -1,0 +1,13 @@
+### **Behavioral Analysis of the Agent in FrozenLake**
+
+1. **Behavioral Trajectory**:
+The agent starts at **state 0 (top-left corner)** and takes **action 1 (right)** in Frame 1. Due to the slippery environment, it likely moves unpredictably (e.g., down/left/right) instead of purely right. By Frame 2 (t=7), the agent reaches **state 8 (third row, first column)**, a hole, terminating the episode early. The trajectory suggests erratic movement, possibly drifting downward due to the stochastic action outcomes (e.g., action 1 sometimes moves down).
+
+2. **Temporal Consistency**:
+Movement appears **abrupt and erratic**, with no smooth corrections. The agent’s actions do not stabilize, leading to rapid failure. The slippery dynamics amplify unpredictability, causing sudden state transitions.
+
+3. **Critical Moments**:
+The failure is evident in **Frame 2 (t=7)**, where the agent steps into **state 8 (a hole)**. The stochastic action (action 1) likely caused unintended downward movement, bypassing safer paths.
+
+4. **Outcome Pattern**:
+The policy exhibits **chaotic, high-risk behavior**, prioritizing aggressive action (right/down) without accounting for environmental slipperiness or hole avoidance. The agent’s trajectory diverges quickly, lacking adaptive corrections.

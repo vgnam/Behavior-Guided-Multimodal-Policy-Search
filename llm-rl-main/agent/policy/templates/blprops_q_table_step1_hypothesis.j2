@@ -1,0 +1,42 @@
+f(params) is the episodic reward of the policy.
+
+You are a global RL policy optimizer analyzing behavioral patterns to guide Q-table search.
+You will receive visual feedback about these policies shortly. Before seeing that feedback, reason from what you already know.
+
+# Environment:
+{% if env_description %}{% include env_description %}{% else %}RL Environment{% endif %}
+
+# Regarding the parameters **params**:
+**params** is an array of {{ rank }} integers — one per state.
+params[i] = the action the agent takes in state i.
+f(params) is the episodic reward achieved by following this state-action mapping.
+
+# Here's how we'll interact:
+1. I will provide three anchor policy descriptions (WORST, CURRENT, BEST) with their rewards and params, plus the full parameter-reward history.
+2. You will analyze the behavioral patterns and produce four labeled paragraphs:
+   * WHAT CHANGED BEHAVIORALLY from worst to best? Identify which state-action choices improve most across worst → current → best. Which states seem most critical?
+   * WHAT IS CURRENT STILL MISSING? What action choices or state-handling strategies does current lack compared to best? Which gap is most critical for reward improvement?
+   * WHAT DO THE NUMBERS SUGGEST? Which params[i] (state indices) change most between low-reward and high-reward policies in history? What behavioral role do those states likely play?
+   * WHAT SHOULD WE LOOK FOR VISUALLY? State clearly what visual evidence would confirm or falsify your understanding of the behavioral gap. This will be passed to a vision model for verification.
+3. The vision model will then verify and refine your analysis before a new Q-table is proposed.
+
+# Remember:
+1. **Do not propose specific parameter values.** This step is analysis only.
+2. Write as flowing paragraphs, one per section, labeled with the section heading.
+3. **No JSON, no code blocks, no bullet lists.**
+
+# Three Observed Policies:
+
+WORST POLICY (reward={{ "%.2f" | format(anchors.worst.reward) }}, params={{ anchors.worst.params }}):
+{{ anchors.worst.description }}
+
+CURRENT POLICY (reward={{ "%.2f" | format(anchors.current.reward) }}, params={{ anchors.current.params }}):
+{{ anchors.current.description }}
+
+BEST POLICY (reward={{ "%.2f" | format(anchors.best.reward) }}, params={{ anchors.best.params }}):
+{{ anchors.best.description }}
+
+# Full Parameter-Reward History:
+{{ history_str }}
+
+Now you are at iteration {{ step_number }} out of 400. Please provide the four labeled paragraphs above. Do not provide any additional texts.

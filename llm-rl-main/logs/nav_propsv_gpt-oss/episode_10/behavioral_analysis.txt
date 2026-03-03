@@ -1,0 +1,22 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of high‑reward rollouts the agent issues a **low‑magnitude, forward‑biased action for the first 4–6 steps**, producing a smooth, monotonic increase in its positional value while staying near the centre of the corridor. After this initial “steady‑thrust” phase the policy makes **only modest corrective turns (≤ 15°) and does so only after a clear gap is observed**, which keeps the trajectory aligned with the corridor walls. This gradual‑acceleration / gentle‑turn regimen lets the agent accumulate large forward‑progress rewards before any inevitable collision, thus driving the high episodic scores.
+
+**2. FAILURE PATTERNS**  
+In most low‑reward rollouts the agent executes an **abrupt, high‑amplitude action within the first three timesteps** (state jumps of > 2 units), either a strong forward thrust or a sharp turn, which immediately sends it toward a wall. The policy then shows **over‑correction – a sudden reversal of direction or a large angular change – when it reaches a corner**, leading to rapid divergence from the safe corridor and early termination. These early, violent motions waste the limited episode budget on collision rather than forward progress, producing the strongly negative totals.
+
+**3. DISCRIMINATIVE PATTERNS (ranked)**  
+1. **Early large state jumps (> 2 units in ≤ 3 steps)** – present in 5/5 low‑reward rollouts, absent in 4/5 high‑reward rollouts.  
+2. **Consistent low‑magnitude forward actions for the first 4–6 steps** – seen in 4/5 high‑reward rollouts, never in low‑reward ones.  
+3. **Delayed, small‑angle corrective turns (≤ 15°) after ≥ 5 steps** – appears in 3/5 high‑reward rollouts, missing from all low‑reward rollouts.  
+
+The optimizer should **strongly penalize early large jumps**, **reinforce a smooth low‑magnitude thrust window**, and **encourage small delayed turns**.
+
+**4. TIMING**  
+The most discriminative behaviours (early large jumps vs. early smooth thrust) occur **at the very start of the episode (steps 1–3)**, making them causal drivers of success or failure rather than mere correlates. The delayed‑turn pattern emerges **mid‑episode (around step 5–7)**; while still influential, it is secondary to the early motion profile. Adjusting parameters that shape the first‑few actions will therefore have the greatest impact on overall performance.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

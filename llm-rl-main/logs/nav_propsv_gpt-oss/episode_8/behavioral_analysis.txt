@@ -1,0 +1,27 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+- **Steady forward bias (action 0) in the opening phase** – In ≥ 4/5 high‑reward rollouts the agent begins with a constant “action 0” that pushes it straight ahead while keeping the state change small. This establishes forward momentum without a sudden jump in the state vector, letting the agent gather positive reward before any turns are required.  
+- **Gentle corrective turns after the first few steps** – The high‑reward trajectories all contain a modest turn (often a left‑handed bend) after the initial straight segment, performed with only a slight deviation in the state value. The turn is timed just before the first curvature of the L‑shaped corridor, preventing a head‑on collision with the outer wall.  
+- **Limited‑amplitude oscillations used for alignment** – When the agent encounters a bend it exhibits small, bounded oscillations (state swings of ≤ 1.0) that are quickly damped. This “micro‑oscillation” lets the policy fine‑tune heading without overshoot, preserving the accumulated reward while navigating the winding section.
+
+**2. FAILURE PATTERNS**  
+- **Aggressive initial thrust / large state jump** – In ≥ 3/5 low‑reward rollouts the first step produces a sizable change in the state (Δstate > 0.2) and the agent crashes into the outer wall almost immediately. The abrupt motion bypasses any gradual alignment and creates a collision penalty.  
+- **Absence of corrective turning** – Low‑reward episodes frequently show the agent continuing straight despite the corridor curving, leading to a wall impact. Without a turn the trajectory quickly leaves the safe corridor, ending the episode with a large negative reward.  
+- **Uncontrolled persistent forward motion** – Several failures maintain a constant forward push without any later adjustments; the state drifts to extreme values (≈ 9–10) and the episode terminates. The lack of any damping or steering means the agent cannot recover once it starts diverging.
+
+**3. DISCRIMINATIVE PATTERNS (ranked)**  
+1. **Consistent action 0 (steady forward bias) in the first 2–3 steps** – Present in 4/5 high‑reward rollouts, absent in all low‑reward ones that crash early.  
+2. **Early gentle turn (≤ 1 rad) before the first corridor bend** – Seen in every high‑reward rollout, never in the low‑reward set (which either goes straight into the wall or never turns).  
+3. **Micro‑oscillation damping (state swing ≤ 1.0) during bends** – Occurs in 4/5 high‑reward rollouts; low‑reward rollouts either show no oscillation (straight crash) or large uncontrolled swings.  
+4. **Large initial state jump (Δstate > 0.2) leading to immediate collision** – Dominant in 3/5 low‑reward rollouts, virtually never in high‑reward runs.
+
+**4. TIMING**  
+- Pattern #1 (steady action 0) and Pattern #2 (early gentle turn) both appear within the first 2–4 frames, i.e., *early* in the episode, indicating they are causal drivers of success rather than downstream side‑effects.  
+- Pattern #3 (micro‑oscillation damping) emerges shortly after the turn, still in the *early‑mid* phase, suggesting it helps maintain trajectory through the first curvature.  
+- Pattern #4 (large initial state jump) is an *early* event as well; its presence predicts imminent failure, making it a prime target for suppression.
+
+[BEST POLICY]
+The agent begins by moving forward in a relatively straight path. Its position appears to fluctuate slightly, suggesting minor adjustments to maintain its course. Between frames 3 and 4, there is a significant jump in the state value, indicating a sudden shift in position or orientation, possibly a turn or a rapid movement. Following this, the agent continues to move forward, with state values oscillating around a central point, hinting at some form of corrective behavior or oscillation. The movement appears somewhat jerky, especially around frame 4, and the agent ultimately diverges from a stable path, leading to a negative reward and termination. The overall behavioral style is one of attempted forward progression with noticeable instability and eventual loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

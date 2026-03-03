@@ -1,0 +1,15 @@
+**1. SUCCESS PATTERNS**  
+Across four of the five top rollouts the agent **starts with a series of small, incremental state changes** (|Δstate| ≈ 0.2–0.5) that keep the state value inside a tight corridor (≈ 0.8–2.5) for the first 60‑80 % of the episode. These modest moves are paired with **frequent, low‑magnitude corrective actions** (tiny left/right or throttle adjustments) that prevent the trajectory from drifting toward a wall. The net effect is a prolonged period of forward progress that accumulates the bulk of the reward before any failure occurs.  
+
+**2. FAILURE PATTERNS**  
+In the low‑reward set the dominant behaviour is a **single, large‑magnitude thrust or turn** that drives the state value up by more than 2 units within one step, often right at the start of the episode. This aggressive acceleration pushes the agent straight into a wall or out‑of‑bounds, ending the rollout after only 1–2 frames. A secondary but consistent pattern is **continuous oscillation without convergence**: the agent repeatedly over‑corrects, producing alternating large Δstate swings that never settle, leading to early collisions.  
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)  
+1. **Sustained low‑amplitude Δstate (< 0.6) for ≥ 5 consecutive steps** – present in 4/5 high‑reward rollouts, absent in all low‑reward ones.  
+2. **Absence of any Δstate > 2 in the first half of the episode** – true for 4/5 high‑reward rollouts, true for 0/5 low‑reward rollouts.  
+3. **Early‑episode single‑step large thrust (Δstate > 2) leading to immediate termination** – occurs in 4/5 low‑reward rollouts, never in the high‑reward set.  
+
+**4. TIMING**  
+The first two discriminative patterns (steady small Δstate and avoidance of large early jumps) manifest **early to mid‑episode** (steps 1‑12 of a typical 20‑step horizon) and therefore are likely causal drivers of success. The third pattern (large early thrust) also appears **at the very start** of failing rollouts, confirming it as an early‑stage failure trigger rather than a late‑episode symptom.  
+
+*Actionable guidance*: reinforce policies that produce a sequence of modest state updates and penalize any action that yields a Δstate > 2 in the first half of the episode; bias the action distribution toward gentle corrective tweaks rather than maximal thrusts. This will amplify the high‑reward “steady‑progress” regime while suppressing the catastrophic early‑jump behaviour that dominates the low‑reward rollouts.

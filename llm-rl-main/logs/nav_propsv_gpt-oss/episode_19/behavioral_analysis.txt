@@ -1,0 +1,21 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of the high‑reward rollouts the agent **alternates a forward thrust (action 0) with a quick backward correction (action 1) within the first three steps**. This creates a modest “oscillation” that keeps the state value changing by less than about 1 unit per step, preventing the large jumps that trigger collisions. The agent also tends to **hug the outer boundary for the first half of the episode**, moving laterally rather than diving straight toward the interior; this yields steady, low‑risk progress and accumulates reward before any eventual failure. Finally, **episodes last several timesteps (≥ 4) before termination**, giving the policy time to collect positive reward signals instead of ending after a single thrust.
+
+**2. FAILURE PATTERNS**  
+In most low‑reward rollouts the agent executes **a single forward action at the start and then terminates**, producing a dramatic state jump (Δstate > 2) that immediately crosses a wall or obstacle. There is **no corrective (backward) action ever observed**, nor any attempt to modulate speed; the behavior is a one‑shot thrust with no subsequent adjustment. Consequently the episode ends within 1–2 steps, yielding only the initial small positive reward followed by a large negative penalty.
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate success from failure)  
+1. **At least one backward (action 1) within the first 4 steps** – present in > 80 % of high‑reward rollouts, absent in all low‑reward ones.  
+2. **Incremental state change per step ≤ 1.5** during the early phase – observed in > 70 % of successful runs, never in failures (which show Δstate > 2 immediately).  
+3. **Episode length ≥ 4 steps before termination** – high‑reward rollouts consistently survive longer, low‑reward rollouts always end ≤ 2 steps.  
+4. **Initial movement parallel to the outer wall (boundary‑following)** – evident in most successful trajectories, while failures head straight toward the interior or out of bounds.
+
+**4. TIMING**  
+All three top discriminative patterns occur **very early in the episode** (within the first 1–4 timesteps). The presence of a backward correction, the modest per‑step state change, and the decision to stay near the perimeter are all causal signals that set the trajectory on a survivable path; their early appearance makes them reliable levers for the optimizer to reinforce. Conversely, the absence of these early cues is a strong predictor of immediate failure and should be aggressively suppressed.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

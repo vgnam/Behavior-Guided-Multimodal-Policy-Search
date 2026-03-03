@@ -1,0 +1,19 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS** – The majority of the high‑reward rollouts (4 / 5) begin with a *steady, low‑velocity forward thrust* (typically action 0 or a small positive action) that is maintained for several timesteps. During this early phase the agent makes only **gradual orientation corrections** (small changes in the red‑line angle) instead of abrupt turns, keeping the heading aligned with the corridor. This smooth, incremental motion lets the agent collect positive step‑rewards while safely hugging the walls, postponing any high‑speed maneuver until well after the midpoint of the episode. The later‑stage “crash” is therefore isolated to a single high‑speed burst, limiting the total penalty and preserving the large accumulated reward.
+
+**2. FAILURE PATTERNS** – In the low‑reward rollouts (5 / 5) the dominant error is an **early, large acceleration** (often a single action 1 that jumps the state/position by > 6 units). This creates an immediate, uncontrolled trajectory that quickly leaves the safe corridor and hits an inner wall. The agent also shows **minimal corrective actions** after the jump—no gradual re‑orientation, just a continuation of the high‑speed drift—so the episode terminates within a few steps, yielding a large negative reward.
+
+**3. DISCRIMINATIVE PATTERNS** –  
+1️⃣ **Early smooth low‑speed forward motion** (sustained action 0 or tiny positive action for ≥ 3 steps) – present in 4 high‑reward rollouts, absent in any low‑reward rollout.  
+2️⃣ **Gradual orientation adjustments** (angle change < 15° per step) – appears in 4 high‑reward rollouts, never observed in the low‑reward set, which all exhibit a single abrupt direction change.  
+3️⃣ **Avoidance of early large acceleration** (no action 1 that produces a > 5‑unit position jump before step 4) – occurs in all high‑reward rollouts, occurs in 4 / 5 low‑reward rollouts.  
+
+The optimizer should **strongly reinforce** patterns 1 and 2 and **suppress** pattern 3.
+
+**4. TIMING** – The discriminative patterns all manifest **very early** (within the first 2–4 timesteps). The presence of a smooth low‑speed start and gentle turning at the episode outset correlates causally with the later accumulation of reward, while an early large jump is a direct predictor of imminent failure. Consequently, shaping the policy to favor these early‑phase behaviors is expected to yield the greatest immediate improvement.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

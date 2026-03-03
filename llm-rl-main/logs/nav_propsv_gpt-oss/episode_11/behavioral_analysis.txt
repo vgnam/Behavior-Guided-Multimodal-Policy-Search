@@ -1,0 +1,21 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of the top‑performing rollouts the agent makes an *initial modest forward move* followed almost immediately by a *directional turn (left or right) that aligns it with the next corridor*. This turn is usually triggered within the first 2–3 decision steps, before any wall contact occurs, and it prevents the forward thrust from slamming into a boundary. The resulting “zig‑zag” motion keeps the agent inside the maze while still progressing, which directly yields the larger positive rewards observed in rollouts 4 and 5.  
+
+**2. FAILURE PATTERNS**  
+In most low‑reward rollouts the agent repeats the same *action 0 (pure forward thrust)* for several steps, producing either a negligible state change or an aggressive jump that ends in an immediate collision. No corrective turning is observed; the agent simply drives straight into walls or stalls, leading to the large negative penalties. This lack of re‑orientation and the overly aggressive or stagnant motion consistently correlates with the worst episode scores.  
+
+**3. DISCRIMINATIVE PATTERNS**  
+- **(a) Early adaptive turning** – present in ≥4 high‑reward rollouts, absent in all low‑reward ones.  
+- **(b) Moderated state change after the first step** – high‑reward episodes show small‑to‑medium increments (≈0.5–1.5 units), whereas low‑reward episodes exhibit either almost no change or a sudden large drop (>4 units).  
+- **(c) Diversified action selection** – high‑reward rollouts alternate between forward and turn actions; low‑reward rollouts stick to a single action type (always 0).  
+These three signals should be the strongest levers: reinforce (a) and (b) and penalize (c) when it degenerates into monotonic action 0.  
+
+**4. TIMING**  
+The most discriminative behavior—early adaptive turning—occurs within the first two to three decision steps, making it a likely causal driver of success. The moderated state change also manifests right after the initial move, reinforcing that early, controlled motion is critical. In contrast, the harmful monotonic‑action pattern persists throughout the episode but is first evident at the start, so suppressing it early will prevent downstream failures.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

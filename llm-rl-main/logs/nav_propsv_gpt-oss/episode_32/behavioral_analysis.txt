@@ -1,0 +1,20 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS** – The only roll‑outs that break the ‑500 wall (‑428) all keep **action 2 constant while the state stays inside a narrow band (≈1‑8) for several consecutive steps before any large jump**. In those episodes the first ~30 % of the trajectory shows a *steady, monotonic drift upward* (or a flat line) with **no reversal**; the magnitude of each step change is < 1.0. This low‑variance “smooth‑drift” phase lets the agent avoid the big over‑corrections that dominate the other runs, which plausibly preserves whatever hidden proximity‑to‑goal signal the environment rewards.
+
+**2. FAILURE PATTERNS** – Across the majority of low‑reward roll‑outs the agent **repeatedly makes large state jumps (> 3.0) and immediate back‑tracking within a few steps**, i.e., a high‑frequency oscillation around a mean. The constant use of action 2 combined with these abrupt spikes indicates an **unstable feedback loop**: the policy reacts too strongly to small errors, producing over‑corrections that drive the state far from any desirable region and keep the cumulative reward at the worst level.
+
+**3. DISCRIMINATIVE PATTERNS** (ranked by how uniquely they separate the two groups)
+
+1. **Sustained low‑variance drift** – ≥ 5 consecutive steps with |Δstate| ≤ 1.0 and no sign change; appears in 3/5 high‑reward roll‑outs (including the only >‑500 case) and 0/5 low‑reward roll‑outs.  
+2. **Absence of large spikes early** – No state value exceeding 8.0 in the first 25 % of the episode; present in 4/5 high‑reward roll‑outs, absent in 5/5 low‑reward roll‑outs.  
+3. **Limited peak amplitude** – Max(state) < 9.0 for the whole episode; occurs in 3/5 high‑reward roll‑outs, 0/5 low‑reward roll‑outs.  
+
+These three signals should be **strongly reinforced** (e.g., reward‑shaping or policy regularization) and the opposite (large early spikes, high‑frequency reversals) should be **penalized**.
+
+**4. TIMING** – The discriminative “smooth‑drift” and “no‑early‑spike” patterns manifest **very early**, typically within the first 10–15 steps of the episode. Because they occur at the start, they are likely causal: a stable early trajectory prevents the cascade of over‑corrections that later destroys performance. Consequently, the optimizer should prioritize parameters that govern the initial response to error (e.g., lower learning rate, stronger damping, smaller action‑output magnitude) to secure that early smooth behaviour.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.

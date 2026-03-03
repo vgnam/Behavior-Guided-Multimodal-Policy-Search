@@ -1,0 +1,16 @@
+**1. SUCCESS PATTERNS**  
+Across the majority of the high‑reward rollouts the agent first **aligns its heading with the nearest wall using sensor feedback and then applies a steady, moderate thrust** (instead of a maximal burst). This alignment happens within the first 10‑20 % of the episode and lets the agent slide along the corridor without early side‑wall collisions. After alignment it executes **smooth, gradual turns when a corner is approached**, keeping the angular velocity low; the turn is spread over several timesteps rather than a single abrupt change, which preserves momentum and extends the travelled distance before any loss of control occurs. The combination of early wall‑following and gentle cornering yields the longest safe traversal, and therefore the highest cumulative reward.
+
+**2. FAILURE PATTERNS**  
+The low‑reward rollouts share a clear pattern of **immediate, high‑magnitude thrust combined with abrupt steering or no steering at all**, causing the agent to leave the safe corridor within the first few timesteps. When a turn is performed, it is executed as a single sharp rotation, often “over‑correcting” and sending the agent into the opposite wall. Additionally, the agent rarely uses its sensor information to adjust its heading; it proceeds blindly, resulting in early collisions and large negative rewards. These behaviours truncate the episode almost instantly, explaining the very low scores.
+
+**3. DISCRIMINATIVE PATTERNS (ranked)**  
+1️⃣ **Gradual, multi‑step corner turns** – seen in ≥ 4/5 high‑reward runs, absent in low‑reward runs.  
+2️⃣ **Early wall‑following using sensor cues** – present in ≥ 3 high‑reward rollouts, missing in low‑reward rollouts.  
+3️⃣ **Moderate, sustained thrust rather than maximal acceleration** – evident in the majority of high‑reward episodes, while low‑reward episodes start with maximal thrust.  
+4️⃣ **Avoidance of abrupt, single‑frame direction changes** – common in high‑reward runs, virtually never in low‑reward runs.  
+
+The optimizer should **strongly reinforce** patterns 1 and 2 (gradual turns and sensor‑driven wall alignment) and **suppress** patterns 3 and 4 (maximal early thrust and instantaneous sharp turns).
+
+**4. TIMING**  
+Pattern 1 (gradual corner turns) typically manifests **mid‑episode** as the agent reaches a junction, so it is a causal factor that prolongs safe travel. Pattern 2 (early sensor‑guided wall alignment) occurs **very early** (first few frames) and is likely the primary trigger for a successful trajectory. Pattern 3 (moderate thrust) is an **early‑stage** decision that determines how quickly the agent reaches the wall‑following regime. Pattern 4 (abrupt turn avoidance) is **mid‑to‑late**; the absence of sudden turns prevents the catastrophic loss of control that usually ends low‑reward episodes.

@@ -1,0 +1,22 @@
+[CURRENT POLICY]
+**1. SUCCESS PATTERNS**  
+Across the majority of high‑reward rollouts the agent **maintains a single, consistent control command (typically action 0) for long stretches**, producing a smooth, monotonic increase of the state variable toward the goal region. This steady thrust is usually **paired with an early corrective signal (a switch to a different action or a small deceleration) within the first 30–50 steps**, which prevents overshoot and aligns the trajectory with the L‑shaped corridor. The agent also **exploits wall‑proximity sensors** – the red‑line cues show continuous contact with the right wall – keeping the vehicle tightly bounded to a safe path and avoiding collisions. Together these behaviours generate controlled forward progress and early stabilization, which directly translate into higher episodic reward.
+
+**2. FAILURE PATTERNS**  
+Low‑reward rollouts share a **persistent, unmodulated forward thrust (action 0) with no mid‑episode correction**, causing the state to drift continuously away from the desired corridor. The agent **fails to use wall‑sensor feedback**, moving straight into open space or corners and eventually colliding, which yields large negative penalties. When a crash does occur, it is typically **abrupt and late in the episode**, following a period of uncontrolled motion rather than a gradual correction, indicating a lack of reactive control.
+
+**3. DISCRIMINATIVE PATTERNS**  
+| Rank | Pattern (high‑reward ↔ low‑reward) | Why it matters |
+|------|-----------------------------------|----------------|
+| 1 | **Early corrective action (action change or deceleration) within the first 30–50 steps** – present in ≥ 4/5 high‑reward rollouts, absent in all low‑reward ones. | Stops overshoot, aligns with corridor, prevents crash. |
+| 2 | **Sustained wall‑following using right‑wall sensor data** – evident in ≥ 3 high‑reward rollouts, never mentioned in failures. | Provides a safe geometric guide, limits drift. |
+| 3 | **Long stretches of consistent action 0 coupled with monotonic state increase** – appears in both groups, but only high‑reward cases combine it with the two patterns above. | Baseline forward motion; success depends on surrounding corrective/wall‑following context. |
+
+**4. TIMING**  
+The top discriminative pattern—early corrective action—occurs **very early in the episode (first 30–50 timesteps)**, making it a likely causal driver of success rather than a mere by‑product. Wall‑following is **maintained throughout the episode**, but its initiation is also early (immediately after the first step), reinforcing the importance of early sensor‑guided alignment. Consequently, the optimizer should prioritize parameters that enable rapid detection of wall proximity and trigger a swift, small corrective maneuver shortly after episode start.
+
+[BEST POLICY]
+The agent initially moves forward and then makes a sharp turn to the left, exhibiting rapid acceleration. It then proceeds to move forward again, maintaining a consistent direction and speed. After a period of steady movement, the agent abruptly changes direction to the left and then to the right, indicating overcorrection or oscillation. Finally, the agent makes a strong, rapid left turn and moves forward, ultimately colliding with an obstacle and ending the episode. The overall behavioral style is characterized by aggressive thrusting followed by oscillatory control, leading to a loss of control.
+
+[WORST POLICY]
+The agent begins at an initial position and orientation. It then executes a single movement action, causing it to move and change its position significantly. This movement appears to be a forward thrust, as indicated by the substantial change in its state value from 4.3 to 1.43. The movement results in a large negative reward, suggesting it moved away from its target or into an undesirable state. The episode terminates abruptly after this single, large movement, indicating a potential loss of control or a failure to navigate effectively. The overall behavior is characterized by a single, abrupt, and likely uncontrolled movement that leads to failure.
