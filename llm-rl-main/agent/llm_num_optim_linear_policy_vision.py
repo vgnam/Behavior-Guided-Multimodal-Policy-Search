@@ -21,6 +21,7 @@ from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import re
 import time
@@ -56,6 +57,9 @@ class LLMNumOptimVisionAgent:
         decay_horizon=100,
         frame_sample_period=50,
         enable_vision=True,
+        n_neighbors=3,
+        poisson_lam=2.0,
+        neighbor_step=0.1,
     ):
         """
         Initialize ProPS-V agent.
@@ -78,6 +82,9 @@ class LLMNumOptimVisionAgent:
             decay_horizon: T_decay for visual guidance annealing
             frame_sample_period: P — capture a VLM frame every P timesteps
             enable_vision: Whether to enable vision-guided feedback
+            n_neighbors: Number of Poisson-perturbed neighbors per anchor
+            poisson_lam: Lambda (mean) of Poisson distribution for step sizes
+            neighbor_step: Base step size multiplied by Poisson sample
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -94,6 +101,9 @@ class LLMNumOptimVisionAgent:
         self.env_desc_file = env_desc_file
         self.max_traj_length = max_traj_length
         self.enable_vision = enable_vision
+        self.n_neighbors = n_neighbors
+        self.poisson_lam = poisson_lam
+        self.neighbor_step = neighbor_step
         
         # Compute parameter count
         if not self.bias:
@@ -144,6 +154,121 @@ class LLMNumOptimVisionAgent:
         if self.bias:
             self.dim_state += 1
     
+    # ------------------------------------------------------------------ #
+    #  Neighborhood Behavioral Sampling helpers                           #
+    # ------------------------------------------------------------------ #
+
+    def _generate_neighbors(self, params_arr, n):
+        """
+        Generate n parameter vectors near params_arr using Poisson perturbation.
+
+        For each dimension d:
+            steps  ~ Poisson(poisson_lam)          # non-negative integer steps
+            sign   ~ Uniform({-1, +1})
+            delta  = steps * sign * neighbor_step  # keeps values on 1-dp grid
+            new[d] = clip(round(params_arr[d] + delta, 1), -6.0, 6.0)
+
+        Args:
+            params_arr: 1-D numpy array of current parameter values
+            n: Number of neighbors to generate
+
+        Returns:
+            List of n numpy arrays, each perturbed from params_arr
+        """
+        rng = np.random.default_rng()
+        neighbors = []
+        for _ in range(n):
+            steps = rng.poisson(self.poisson_lam, size=len(params_arr))
+            signs = rng.choice([-1, 1], size=len(params_arr))
+            delta = steps * signs * self.neighbor_step
+            neighbor = np.round(np.clip(params_arr + delta, -6.0, 6.0), 1)
+            neighbors.append(neighbor)
+        return neighbors
+
+    def _rollout_neighbors(self, world, anchor_params, label, logdir):
+        """
+        Roll out the anchor policy and n Poisson-perturbed neighbors.
+
+        Rollouts are performed **sequentially** (env is not thread-safe).
+        VLM analysis calls are dispatched **in parallel** via ThreadPoolExecutor.
+
+        Args:
+            world: RL environment
+            anchor_params: 1-D numpy array for the anchor policy
+            label: String label used in log-file names (e.g. "current", "best")
+            logdir: Directory for rollout logs
+
+        Returns:
+            anchor_result: dict {params_str, reward, analysis} for the anchor itself
+            neighbor_results: list of dicts {params_str, reward, analysis} for the
+                              n perturbed neighbors, sorted by reward descending
+        """
+        # Build the full candidate list: anchor first, then n neighbors
+        all_params = [anchor_params] + self._generate_neighbors(anchor_params, self.n_neighbors)
+        rollout_data = []
+
+        # --- Sequential rollouts ----------------------------------------
+        for idx, params in enumerate(all_params):
+            self.policy.update_policy(params)
+            log_file = f"{logdir}/nb_{label}_{idx}.txt"
+            with open(log_file, "w") as f:
+                reward, traj, term_early = self.rollout_episode(
+                    world, f, record=False, capture_frames=True
+                )
+            params_str = ", ".join(f"params[{j}]: {v:.5g}" for j, v in enumerate(params))
+            rollout_data.append({
+                "params": params,
+                "params_str": params_str,
+                "reward": reward,
+                "trajectory": traj,
+                "terminated_early": term_early,
+            })
+
+        # --- Parallel VLM analysis --------------------------------------
+        def _analyze(entry, idx):
+            frame_indices = self.frame_sampler.sample_frames(
+                entry["trajectory"], entry["terminated_early"], self.max_traj_length
+            )
+            frames = self.frame_sampler.get_frames(entry["trajectory"], frame_indices)
+            if not frames or not any(f.get("frame") is not None for f in frames):
+                return idx, None, 0.0
+            analysis, vlm_time = self.vlm_analyzer.analyze_frames(
+                frames,
+                self.env_desc_file if self.env_desc_file else "RL Environment",
+                entry["reward"],
+                entry["terminated_early"],
+                current_params=entry["params_str"],
+            )
+            return idx, analysis, vlm_time
+
+        analyses = [None] * len(rollout_data)
+        total_vlm_time = 0.0
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(_analyze, entry, idx): idx
+                for idx, entry in enumerate(rollout_data)
+            }
+            for future in as_completed(futures):
+                idx, analysis, vlm_time = future.result()
+                analyses[idx] = analysis
+                total_vlm_time += vlm_time
+
+        self.vlm_api_time += total_vlm_time
+        self.api_call_time += total_vlm_time
+
+        # Assemble results
+        results = []
+        for i, entry in enumerate(rollout_data):
+            results.append({
+                "params_str": entry["params_str"],
+                "reward": entry["reward"],
+                "analysis": analyses[i],
+            })
+
+        anchor_result = results[0]
+        neighbor_results = sorted(results[1:], key=lambda x: x["reward"], reverse=True)
+        return anchor_result, neighbor_results
+
     def rollout_episode(
         self, 
         world: BaseWorld, 
@@ -370,50 +495,98 @@ class LLMNumOptimVisionAgent:
             best_visual_analysis = best_visual_entry['analysis']
             print(f"[VLM] Best history: iter {best_visual_entry['iteration']} reward={best_visual_entry['reward']:.2f}")
 
-        # ===== STEP 2: Rollout current policy with frame capture for VLM ======
+        # ===== STEP 2: Neighborhood Behavioral Sampling + VLM ======
+        # For each anchor (CURRENT, BEST, WORST) generate Poisson-perturbed
+        # neighbors, roll them out sequentially, then analyse all frames in
+        # parallel via the VLM.  Results feed a local behavioral landscape
+        # summary that is appended to the LLM prompt.
+        neighborhood_analysis = None
         if use_vision_this_iter:
-            print("Running episode with frame capture for VLM analysis...")
-            pre_log_filename = f"{logdir}/training_rollout_pre.txt"
-            with open(pre_log_filename, "w") as pre_log:
-                pre_result, trajectory, terminated_early = self.rollout_episode(
-                    world, pre_log, record=False, capture_frames=True
-                )
+            saved_params = self.policy.get_parameters().reshape(-1).copy()
+            print(f"[Neighborhood] Running {self.n_neighbors} neighbors per anchor "
+                  f"(Poisson λ={self.poisson_lam}, step={self.neighbor_step})...")
 
-            # ===== STEP 3: Sample frames and run VLM =====
-            frame_indices = self.frame_sampler.sample_frames(
-                trajectory, terminated_early, self.max_traj_length
+            # --- CURRENT anchor ---
+            print("[Neighborhood] Anchor: CURRENT")
+            cur_anchor, cur_neighbors = self._rollout_neighbors(
+                world, saved_params, "current", logdir
             )
-            frames = self.frame_sampler.get_frames(trajectory, frame_indices)
+            visual_analysis = cur_anchor["analysis"]   # keeps existing ProPS-V path
 
-            if len(frames) > 0 and any(f.get('frame') is not None for f in frames):
-                current_params = self.policy.get_parameters().reshape(-1)
-                params_str = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params))
-                visual_analysis, vlm_time = self.vlm_analyzer.analyze_frames(
-                    frames,
-                    self.env_desc_file if self.env_desc_file else "RL Environment",
-                    pre_result,
-                    terminated_early,
-                    current_params=params_str,
-                )
-                self.vlm_api_time += vlm_time
-                self.api_call_time += vlm_time
-
+            # Record current anchor in visual_analysis_history (matching original format)
+            if visual_analysis is not None:
                 self.visual_analysis_history.append({
                     'iteration': self.training_episodes,
                     'lambda': lambda_t,
-                    'reward': pre_result,
+                    'reward': cur_anchor["reward"],
                     'analysis': visual_analysis,
-                    'num_frames': len(frames),
-                    'params': params_str,
+                    'num_frames': self.frame_sampler.sample_period,
+                    'params': cur_anchor["params_str"],
                 })
-
                 visual_log_file = f"{logdir}/vlm_analysis.txt"
                 with open(visual_log_file, "w", encoding="utf-8") as vf:
                     vf.write(visual_analysis)
+                print(f"[VLM] CURRENT anchor analysis done ({len(visual_analysis)} chars)")
 
-                print(f"[VLM] Analysis complete ({len(visual_analysis)} chars)")
-            else:
-                print("No frames captured for visual analysis")
+            # --- BEST and WORST anchors from replay buffer ---
+            best_nb_anchor = None
+            best_nb_neighbors = []
+            worst_nb_anchor = None
+            worst_nb_neighbors = []
+
+            if len(self.replay_buffer.buffer) > 0:
+                rb = self.replay_buffer.buffer
+                best_rb_params, best_rb_reward = max(rb, key=lambda x: x[1])
+                worst_rb_params, worst_rb_reward = min(rb, key=lambda x: x[1])
+
+                print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
+                best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
+                    world, np.array(best_rb_params).reshape(-1), "best", logdir
+                )
+
+                # Only run WORST if it differs meaningfully from BEST
+                if worst_rb_reward != best_rb_reward:
+                    print(f"[Neighborhood] Anchor: WORST (reward={worst_rb_reward:.2f})")
+                    worst_nb_anchor, worst_nb_neighbors = self._rollout_neighbors(
+                        world, np.array(worst_rb_params).reshape(-1), "worst", logdir
+                    )
+
+            # Restore original policy so STEP 4 sees the right current params
+            self.policy.update_policy(saved_params)
+
+            # ===== STEP 3: Build neighborhood analysis summary for LLM =====
+            def _anchor_block(label, anchor_res, neighbors):
+                """Format a short behavioral-landscape block for one anchor."""
+                lines = [f"### Anchor [{label}]  reward={anchor_res['reward']:.2f}"]
+                lines.append(f"  Params : {anchor_res['params_str']}")
+                if anchor_res["analysis"]:
+                    lines.append(f"  Behavior: {anchor_res['analysis']}")
+                else:
+                    lines.append(f"  Behavior: (no VLM analysis available)")
+
+                if neighbors:
+                    lines.append(f"\n  ---- Neighbors of [{label}] ----")
+                    for rank_i, nb in enumerate(neighbors, start=1):
+                        lines.append(f"  Neighbor #{rank_i}  reward={nb['reward']:.2f}")
+                        lines.append(f"    Params : {nb['params_str']}")
+                        if nb["analysis"]:
+                            lines.append(f"    Behavior: {nb['analysis']}")
+                        else:
+                            lines.append(f"    Behavior: (no VLM analysis available)")
+                return "\n".join(lines)
+
+            blocks = ["## Neighborhood Behavioral Landscape\n"]
+            blocks.append(_anchor_block("CURRENT", cur_anchor, cur_neighbors))
+            if best_nb_anchor is not None:
+                blocks.append(_anchor_block("BEST (replay buffer)", best_nb_anchor, best_nb_neighbors))
+            if worst_nb_anchor is not None:
+                blocks.append(_anchor_block("WORST (replay buffer)", worst_nb_anchor, worst_nb_neighbors))
+            neighborhood_analysis = "\n\n".join(blocks)
+
+            nb_log_file = f"{logdir}/neighborhood_analysis.txt"
+            with open(nb_log_file, "w", encoding="utf-8") as nf:
+                nf.write(neighborhood_analysis)
+            print(f"[Neighborhood] Landscape summary saved ({len(neighborhood_analysis)} chars)")
 
         # ===== STEP 4: Update policy using LLM with vision context =====
         print("\nUpdating policy with LLM...")
@@ -432,6 +605,9 @@ class LLMNumOptimVisionAgent:
             visual_params=params_str_for_llm if visual_analysis else None,
             best_visual_analysis=best_visual_analysis,
             best_visual_entry=best_visual_entry,
+            neighborhood_analysis=neighborhood_analysis,
+            poisson_lam=self.poisson_lam,
+            neighbor_step=self.neighbor_step,
         )
         self.api_call_time += api_time
 

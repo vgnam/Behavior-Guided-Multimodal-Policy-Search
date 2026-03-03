@@ -24,3 +24,6 @@ vlm_model_name: meta/llama-4-scout-17b-16e-instruct  # Vision-Language Model for
 decay_horizon: 100  # T_decay: iterations to phase out visual guidance (Eq. 3)
 frame_sample_period: 25  # P: capture a frame every P timesteps for VLM
 enable_vision: true  # Enable vision-guided feedback
+n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
+poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
+neighbor_step: 0.1   # Base step size multiplied by Poisson sample

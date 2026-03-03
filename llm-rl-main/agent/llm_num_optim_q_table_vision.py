@@ -16,6 +16,7 @@ from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from world.base_world import BaseWorld
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import io
 import traceback
 import numpy as np
@@ -51,6 +52,9 @@ class LLMNumOptimQTableVisionAgent:
         frame_sample_period=50,
         enable_vision=True,
         env_kwargs=None,
+        n_neighbors=5,
+        poisson_lam=2.0,
+        neighbor_step=0.1,
     ):
         """
         Initialize ProPS-V Q-Table agent.
@@ -71,6 +75,9 @@ class LLMNumOptimQTableVisionAgent:
             decay_horizon: T_decay for visual guidance annealing
             frame_sample_period: P — capture a VLM frame every P timesteps
             enable_vision: Whether to enable vision-guided features            env_kwargs: Additional environment kwargs
+            n_neighbors: Number of Poisson-perturbed neighbors per anchor
+            poisson_lam: Lambda (mean) of Poisson distribution for step sizes
+            neighbor_step: Base step size multiplied by Poisson sample
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -86,6 +93,9 @@ class LLMNumOptimQTableVisionAgent:
         
         # Vision-specific parameters
         self.enable_vision = enable_vision
+        self.n_neighbors = n_neighbors
+        self.poisson_lam = poisson_lam
+        self.neighbor_step = neighbor_step
         self.visual_analysis_history = []  # Store visual analyses
         
         # Q-table policy
@@ -246,6 +256,103 @@ class LLMNumOptimQTableVisionAgent:
             result = self.rollout_episode(world, logging_file)
             print(f"Result: {result}")
 
+    # ------------------------------------------------------------------ #
+    #  Neighborhood Behavioral Sampling helpers                           #
+    # ------------------------------------------------------------------ #
+
+    def _generate_neighbors(self, params_arr, n):
+        """
+        Generate n parameter vectors near params_arr using Poisson perturbation.
+        Same logic as linear-policy agent but applied to flat Q-table param arrays.
+        """
+        rng = np.random.default_rng()
+        neighbors = []
+        for _ in range(n):
+            steps = rng.poisson(self.poisson_lam, size=len(params_arr))
+            signs = rng.choice([-1, 1], size=len(params_arr))
+            delta = steps * signs * self.neighbor_step
+            neighbor = np.round(np.clip(params_arr + delta, -6.0, 6.0), 1)
+            neighbors.append(neighbor)
+        return neighbors
+
+    def _rollout_neighbors(self, world, anchor_params, label, logdir, env_description):
+        """
+        Roll out the anchor Q-table and n Poisson-perturbed neighbors.
+        Rollouts sequential; VLM calls parallel via ThreadPoolExecutor.
+        Restores original Q-table after all rollouts.
+
+        Returns:
+            anchor_result: dict {params_str, reward, analysis}
+            neighbor_results: list of dicts sorted by reward descending
+        """
+        saved_mapping = dict(self.q_table.mapping)
+        all_params = [anchor_params] + self._generate_neighbors(anchor_params, self.n_neighbors)
+        rollout_data = []
+
+        # --- Sequential rollouts ----------------------------------------
+        for idx, params in enumerate(all_params):
+            self.q_table.update_policy(params)
+            log_file = f"{logdir}/nb_{label}_{idx}.txt"
+            with open(log_file, "w") as f:
+                reward, traj, term_early = self.rollout_episode_with_frames(
+                    world, f, record=False, capture_frames=True
+                )
+            params_str = ", ".join(f"params[{j}]: {v:.5g}" for j, v in enumerate(params))
+            rollout_data.append({
+                "params": params,
+                "params_str": params_str,
+                "reward": reward,
+                "trajectory": traj,
+                "terminated_early": term_early,
+            })
+
+        # Restore original Q-table immediately after rollouts
+        self.q_table.mapping = saved_mapping
+
+        # --- Parallel VLM analysis --------------------------------------
+        def _analyze(entry, idx):
+            frame_indices = self.frame_sampler.sample_frames(
+                entry["trajectory"], entry["terminated_early"], self.max_traj_length
+            )
+            frames = self.frame_sampler.get_frames(entry["trajectory"], frame_indices)
+            if not frames or not any(f.get("frame") is not None for f in frames):
+                return idx, None, 0.0
+            analysis, vlm_time = self.vlm_analyzer.analyze_frames(
+                frames,
+                env_description,
+                entry["reward"],
+                entry["terminated_early"],
+                current_params=entry["params_str"],
+            )
+            return idx, analysis, vlm_time
+
+        analyses = [None] * len(rollout_data)
+        total_vlm_time = 0.0
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(_analyze, entry, idx): idx
+                for idx, entry in enumerate(rollout_data)
+            }
+            for future in as_completed(futures):
+                idx, analysis, vlm_time = future.result()
+                analyses[idx] = analysis
+                total_vlm_time += vlm_time
+
+        self.vlm_api_time += total_vlm_time
+        self.api_call_time += total_vlm_time
+
+        results = []
+        for i, entry in enumerate(rollout_data):
+            results.append({
+                "params_str": entry["params_str"],
+                "reward": entry["reward"],
+                "analysis": analyses[i],
+            })
+
+        anchor_result = results[0]
+        neighbor_results = sorted(results[1:], key=lambda x: x["reward"], reverse=True)
+        return anchor_result, neighbor_results
+
     def _rollout_params_with_frames(self, world: BaseWorld, params: np.ndarray):
         """
         Temporarily apply a param vector to the Q-table, rollout with frame capture,
@@ -316,6 +423,7 @@ class LLMNumOptimQTableVisionAgent:
 
         # ===== STEP 1: Determine if VLM should be invoked =====
         visual_analysis = None
+        neighborhood_analysis = None
         lambda_t = 0.0
         
         if self.enable_vision:
@@ -327,93 +435,97 @@ class LLMNumOptimQTableVisionAgent:
             
             print(f"\n[ProPS-V] λ_t = {lambda_t:.3f}, VLM Invocation: {should_invoke_vlm}")
             
-            # ===== STEP 2: Run episode with frame capture if VLM will be used =====
+            # ===== STEP 2: Neighborhood Behavioral Sampling + VLM =====
             if should_invoke_vlm:
-                print("Running episode with frame capture for VLM analysis...")
-                logging_filename = f"{logdir}/training_rollout.txt"
-                with open(logging_filename, "w") as logging_file:
-                    episode_reward, trajectory, terminated_early = self.rollout_episode_with_frames(
-                        world, logging_file, record=False, capture_frames=True
-                    )
-                
-                # ===== STEP 3: Sample frames and analyze with VLM =====
-                frame_indices = self.frame_sampler.sample_frames(
-                    trajectory, terminated_early, self.max_traj_length
-                )
-                frames = self.frame_sampler.get_frames(
-                    trajectory, frame_indices
-                )
-
-                # Load environment description once (shared by analysis + comparison)
+                # Read env description once (shared across all VLM calls)
                 if self.env_desc_file:
                     with open(f"agent/policy/templates/{self.env_desc_file}", "r") as f:
                         env_description = f.read()
                 else:
                     env_description = "Q-learning environment"
 
-                if len(frames) > 0:
-                    # Analyze with VLM
-                    visual_analysis, vlm_api_time = self.vlm_analyzer.analyze_frames(
-                        frames,
-                        env_description,
-                        episode_reward,
-                        terminated_early
-                    )
-                    self.vlm_api_time += vlm_api_time
-                    self.api_call_time += vlm_api_time
+                saved_params = np.array(
+                    [self.q_table.mapping[i] for i in range(len(self.q_table.mapping))]
+                )
+                print(f"[Neighborhood] Running {self.n_neighbors} neighbors per anchor "
+                      f"(Poisson λ={self.poisson_lam}, step={self.neighbor_step})...")
 
-                    # Store visual analysis
+                # --- CURRENT anchor ---
+                print("[Neighborhood] Anchor: CURRENT")
+                cur_anchor, cur_neighbors = self._rollout_neighbors(
+                    world, saved_params, "current", logdir, env_description
+                )
+                visual_analysis = cur_anchor["analysis"]
+
+                if visual_analysis is not None:
                     self.visual_analysis_history.append({
                         'iteration': self.training_episodes,
                         'lambda_t': lambda_t,
-                        'num_frames': len(frames),
+                        'num_frames': self.frame_sampler.sample_period,
                         'analysis': visual_analysis,
-                        'reward': episode_reward
+                        'reward': cur_anchor["reward"],
                     })
-
-                    # Save to file
-                    visual_log_file = f"{logdir}/vlm_analysis.txt"
-                    with open(visual_log_file, "w", encoding="utf-8") as vf:
+                    with open(f"{logdir}/vlm_analysis.txt", "w", encoding="utf-8") as vf:
                         vf.write(visual_analysis)
-                else:
-                    print("No frames captured for visual analysis")
-                    visual_analysis = None
+                    print(f"[VLM] CURRENT anchor analysis done ({len(visual_analysis)} chars)")
 
-                # ===== STEP 3b: Random pairwise comparison from replay buffer =====
-                if len(self.replay_buffer.buffer) >= 2:
-                    print("\n[ProPS-V] Running random candidate comparison...")
-                    buf_list = list(self.replay_buffer.buffer)
-                    indices = np.random.choice(len(buf_list), size=2, replace=False)
-                    params_a, _ = buf_list[indices[0]]
-                    params_b, _ = buf_list[indices[1]]
+                # --- BEST and WORST anchors from replay buffer ---
+                best_nb_anchor = None
+                best_nb_neighbors = []
+                worst_nb_anchor = None
+                worst_nb_neighbors = []
 
-                    frames_a, reward_a, _ = self._rollout_params_with_frames(world, params_a)
-                    frames_b, reward_b, _ = self._rollout_params_with_frames(world, params_b)
+                if len(self.replay_buffer.buffer) > 0:
+                    rb = self.replay_buffer.buffer
+                    best_rb_params, best_rb_reward = max(rb, key=lambda x: x[1])
+                    worst_rb_params, worst_rb_reward = min(rb, key=lambda x: x[1])
 
-                    if len(frames_a) > 0 and len(frames_b) > 0:
-                        comparison_analysis, cmp_api_time = self.vlm_analyzer.analyze_trajectory_comparison(
-                            frames_current=frames_b,
-                            frames_previous=frames_a,
-                            reward_current=reward_b,
-                            reward_previous=reward_a,
-                            env_description=env_description,
+                    print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
+                    best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
+                        world, np.array(best_rb_params).reshape(-1), "best", logdir, env_description
+                    )
+
+                    if worst_rb_reward != best_rb_reward:
+                        print(f"[Neighborhood] Anchor: WORST (reward={worst_rb_reward:.2f})")
+                        worst_nb_anchor, worst_nb_neighbors = self._rollout_neighbors(
+                            world, np.array(worst_rb_params).reshape(-1), "worst", logdir, env_description
                         )
-                        self.vlm_api_time += cmp_api_time
-                        self.api_call_time += cmp_api_time
 
-                        # Save comparison log
-                        cmp_log_file = f"{logdir}/vlm_comparison.txt"
-                        with open(cmp_log_file, "w", encoding="utf-8") as cf:
-                            cf.write(comparison_analysis)
+                # Restore original Q-table
+                self.q_table.mapping = {i: saved_params[i] for i in range(len(saved_params))}
 
-                        # Append to visual_analysis so LLM sees both
-                        comparison_block = "\n\n=== Candidate Comparison ===\n" + comparison_analysis
-                        visual_analysis = (visual_analysis or "") + comparison_block
-                        print(f"[ProPS-V] Comparison analysis appended ({len(comparison_analysis)} chars)")
-                    else:
-                        print("[ProPS-V] Skipping comparison: insufficient frames from candidates")
-                else:
-                    print("[ProPS-V] Skipping comparison: not enough entries in replay buffer")
+                # ===== STEP 3: Build neighborhood analysis summary =====
+                def _anchor_block(label, anchor_res, neighbors, top_k=2):
+                    lines = [f"### Anchor [{label}]  reward={anchor_res['reward']:.2f}"]
+                    lines.append(f"  Params : {anchor_res['params_str']}")
+                    lines.append(f"  Behavior: {anchor_res['analysis'] if anchor_res['analysis'] else '(no VLM analysis available)'}")
+                    if neighbors:
+                        top_neighbors = neighbors[:top_k]
+                        bottom_neighbors = neighbors[-top_k:] if len(neighbors) > top_k else []
+                        lines.append(f"\n  ---- Top-{top_k} highest-reward neighbors of [{label}] ----")
+                        for rank_i, nb in enumerate(top_neighbors, start=1):
+                            lines.append(f"  Neighbor #{rank_i} (highest)  reward={nb['reward']:.2f}")
+                            lines.append(f"    Params : {nb['params_str']}")
+                            lines.append(f"    Behavior: {nb['analysis'] if nb['analysis'] else '(no VLM analysis available)'}")
+                        if bottom_neighbors:
+                            lines.append(f"\n  ---- Bottom-{top_k} lowest-reward neighbors of [{label}] ----")
+                            for rank_i, nb in enumerate(bottom_neighbors, start=1):
+                                lines.append(f"  Neighbor #{rank_i} (lowest)  reward={nb['reward']:.2f}")
+                                lines.append(f"    Params : {nb['params_str']}")
+                                lines.append(f"    Behavior: {nb['analysis'] if nb['analysis'] else '(no VLM analysis available)'}")
+                    return "\n".join(lines)
+
+                blocks = ["## Neighborhood Behavioral Landscape\n"]
+                blocks.append(_anchor_block("CURRENT", cur_anchor, cur_neighbors))
+                if best_nb_anchor is not None:
+                    blocks.append(_anchor_block("BEST (replay buffer)", best_nb_anchor, best_nb_neighbors))
+                if worst_nb_anchor is not None:
+                    blocks.append(_anchor_block("WORST (replay buffer)", worst_nb_anchor, worst_nb_neighbors))
+                neighborhood_analysis = "\n\n".join(blocks)
+
+                with open(f"{logdir}/neighborhood_analysis.txt", "w", encoding="utf-8") as nf:
+                    nf.write(neighborhood_analysis)
+                print(f"[Neighborhood] Landscape summary saved ({len(neighborhood_analysis)} chars)")
         
         # ===== STEP 4: Update Q-table using LLM with vision context =====
         print("\nUpdating Q-table policy with LLM...")
@@ -429,7 +541,10 @@ class LLMNumOptimQTableVisionAgent:
                 lambda_t,
                 self.actions,
                 self.rank,
-                self.optimum
+                self.optimum,
+                neighborhood_analysis=neighborhood_analysis,
+                poisson_lam=self.poisson_lam,
+                neighbor_step=self.neighbor_step,
             )
         else:
             # Use standard numerical optimization

@@ -42,6 +42,9 @@ def run_training_loop(
     decay_horizon=100,
     frame_sample_period=50,
     enable_vision=True,
+    n_neighbors=5,
+    poisson_lam=2.0,
+    neighbor_step=0.1,
 ):
     """
     Run ProPS-V training loop.
@@ -117,6 +120,9 @@ def run_training_loop(
             frame_sample_period=frame_sample_period,
             enable_vision=enable_vision,
             env_kwargs=env_kwargs,
+            n_neighbors=n_neighbors,
+            poisson_lam=poisson_lam,
+            neighbor_step=neighbor_step,
         )
     else:
         world = ContinualSpaceGeneralWorld(
@@ -142,6 +148,9 @@ def run_training_loop(
             decay_horizon=decay_horizon,
             frame_sample_period=frame_sample_period,
             enable_vision=enable_vision,
+            n_neighbors=n_neighbors,
+            poisson_lam=poisson_lam,
+            neighbor_step=neighbor_step,
         )
     
     print('[ProPS-V] Initialization done')

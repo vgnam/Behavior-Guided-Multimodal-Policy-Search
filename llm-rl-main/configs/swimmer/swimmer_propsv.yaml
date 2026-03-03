@@ -23,4 +23,7 @@ env_desc_file: env_descriptions/swimmer.j2
 vlm_model_name: meta/llama-4-scout-17b-16e-instruct
 decay_horizon: 100
 frame_sample_period: 50
+n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
+poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
+neighbor_step: 0.1   # Base step size multiplied by Poisson sample
 enable_vision: true

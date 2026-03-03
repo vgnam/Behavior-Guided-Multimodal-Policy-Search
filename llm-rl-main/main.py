@@ -25,10 +25,26 @@ def main():
         default="config.yaml",
         help="Path to the config file",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training from existing logs (auto-detects last completed episode)",
+    )
+    parser.add_argument(
+        "--resume_from",
+        type=str,
+        default=None,
+        help="Path to log directory to resume from (defaults to config's logdir)",
+    )
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
+
+    if args.resume:
+        from resume_training import resume_training
+        resume_training(config, resume_logdir=args.resume_from)
+        return
 
     if config["task"] in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj", "dist_state_llm_num_optim"]:
         llm_num_optim_runner.run_training_loop(**config)

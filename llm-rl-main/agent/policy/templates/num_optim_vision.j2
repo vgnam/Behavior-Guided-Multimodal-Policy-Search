@@ -5,7 +5,7 @@ You are good global RL policy optimizer, helping me find the global optimal poli
 
 You will receive:
 1. Numerical feedback: parameters and their rewards
-2. Visual feedback: description of the agent's behavior during the episode — trajectory, instability, failure moments, and overall pattern (when available)
+2. Neighborhood behavioral landscape (when available): a local exploration around key anchor policies (CURRENT, BEST, WORST) — each showing VLM visual analysis of the agent's behavior and how small parameter perturbations affect reward
 
 # Regarding the parameters **params**:
 **params** is an array of {{ rank }} float numbers.
@@ -15,11 +15,11 @@ f(params) is the episodic reward of the policy.
 
 # Here's how we'll interact:
 1. I will first provide MAX_STEPS (400) along with training examples showing past parameters and rewards.
-2. {% if has_visual %}I will provide visual analysis of the most recent rollout, highlighting failure modes, success patterns, and behavioral observations.{% else %}Visual analysis is not available for this iteration - focus on numerical patterns.{% endif %}
+2. {% if has_neighborhood %}I will provide a **Neighborhood Behavioral Landscape** — for each anchor policy (CURRENT, BEST, WORST), I show its behavior and the behavior of its nearby neighbors (obtained by small Poisson-sampled parameter perturbations). Use this to understand which local directions improve or hurt performance.{% else %}Neighborhood behavioral landscape is not available for this iteration — focus on numerical patterns.{% endif %}
 3. You will provide your response in the following exact format:
     * Line 1: a new input 'params[0]: , params[1]: , params[2]: ,..., params[{{ rank - 1 }}]: ', aiming to maximize the function's value f(params). 
     Please propose params values in the range of [-6.0, 6.0], with 1 decimal place.
-    * Line 2: detailed explanation of why you chose that input, **explicitly referencing{% if has_visual %} BOTH visual observations AND{% endif %} numerical trends**.
+    * Line 2: detailed explanation of why you chose that input, **explicitly referencing{% if has_neighborhood %} the neighborhood landscape and{% endif %} numerical trends**.
 4. I will then provide the function's value f(params) at that point, and the current iteration.
 5. We will repeat steps 2-4 until we reach the maximum number of iterations.
 
@@ -31,13 +31,13 @@ f(params) is the episodic reward of the policy.
 Next, you will see examples of params, there episodic reward f(params), and the trajectories the params yield.
 {{ episode_reward_buffer_string }}
 
-{% if has_visual %}
-## Visual Feedback — Current Policy (iter {{ step_number }}){% if visual_params is not none %} with {{ visual_params }}{% endif %}:
-{{ visual_analysis }}
-{% endif %}
-{% if has_best_visual %}
-## Visual Feedback — Best Known Policy (iter {{ best_visual_iter }}, reward={{ best_visual_reward }}{% if best_visual_params is not none %} with {{ best_visual_params }}{% endif %}):
-{{ best_visual_analysis }}
-{% endif %}
+## Neighborhood Behavioral Landscape:
+The following shows 3 **anchor** policies and their nearby **neighbors**.
+- An **Anchor** is a reference policy (CURRENT iteration's policy, BEST known policy, or WORST known policy).
+- A **Neighbor** is a policy obtained by applying small Poisson-sampled perturbations to the anchor's params. Each neighbor differs from its anchor by random step sizes drawn from a Poisson distribution.
+- For each anchor, only the top-K highest-reward and bottom-K lowest-reward neighbors are shown to highlight the most informative contrast.
+- Use this landscape to identify: which parameter directions are beneficial (high-reward neighbors), which are harmful (low-reward neighbors), and how the anchor's behavior compares to its local neighborhood.
+
+{{ neighborhood_analysis }}
 
 Now you are at iteration {{step_number}} out of 400. Please provide the results in the indicated format. Do not provide any additional texts.

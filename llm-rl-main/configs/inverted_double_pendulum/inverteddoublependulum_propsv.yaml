@@ -24,3 +24,6 @@ vlm_model_name: meta/llama-4-scout-17b-16e-instruct
 decay_horizon: 200  # Longer decay for harder balancing task
 frame_sample_period: 30  # Episodes up to 1000 steps
 enable_vision: true
+n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
+poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
+neighbor_step: 0.1   # Base step size multiplied by Poisson sample
