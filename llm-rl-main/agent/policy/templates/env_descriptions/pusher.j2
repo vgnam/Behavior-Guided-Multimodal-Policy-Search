@@ -1,0 +1,39 @@
+Pusher is a MuJoCo environment with a 7-DoF robotic arm that must push an object to a target location. The goal is to move the fingertip to touch the object and push it to the goal position.
+The state is a vector of 23 elements:
+- state[0-6]: joint angles of the 7 arm joints (rad)
+- state[7-13]: joint angular velocities of the 7 arm joints (rad/s)
+- state[14-16]: fingertip position (x, y, z) in meters
+- state[17-19]: target position (x, y, z) in meters
+- state[20-22]: object position (x, y, z) in meters
+The action space is a vector of 7 float numbers representing torques applied to the 7 joints (-2 to 2 N·m).
+The policy is a linear policy with 168 parameters and works as follows:
+action = state @ W + b, where
+state = [state[0], ..., state[22]]
+W is a 23×7 matrix:
+params[0..6]    = W[0,:]  (weights for state[0])
+params[7..13]   = W[1,:]  (weights for state[1])
+params[14..20]  = W[2,:]  (weights for state[2])
+params[21..27]  = W[3,:]  (weights for state[3])
+params[28..34]  = W[4,:]  (weights for state[4])
+params[35..41]  = W[5,:]  (weights for state[5])
+params[42..48]  = W[6,:]  (weights for state[6])
+params[49..55]  = W[7,:]  (weights for state[7])
+params[56..62]  = W[8,:]  (weights for state[8])
+params[63..69]  = W[9,:]  (weights for state[9])
+params[70..76]  = W[10,:] (weights for state[10])
+params[77..83]  = W[11,:] (weights for state[11])
+params[84..90]  = W[12,:] (weights for state[12])
+params[91..97]  = W[13,:] (weights for state[13])
+params[98..104] = W[14,:] (weights for state[14] = fingertip x)
+params[105..111]= W[15,:] (weights for state[15] = fingertip y)
+params[112..118]= W[16,:] (weights for state[16] = fingertip z)
+params[119..125]= W[17,:] (weights for state[17] = target x)
+params[126..132]= W[18,:] (weights for state[18] = target y)
+params[133..139]= W[19,:] (weights for state[19] = target z)
+params[140..146]= W[20,:] (weights for state[20] = object x)
+params[147..153]= W[21,:] (weights for state[21] = object y)
+params[154..160]= W[22,:] (weights for state[22] = object z)
+b = [params[161], params[162], params[163], params[164], params[165], params[166], params[167]]
+The reward function:
+reward = -dist(fingertip, object) - dist(object, target)
+The goal is to minimize both the distance from fingertip to object and from object to target. The best achievable reward is 0 (object at target, fingertip touching object).

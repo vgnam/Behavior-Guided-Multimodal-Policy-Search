@@ -32,14 +32,19 @@ class DiscreteStateGeneralWorld(BaseWorld):
         self.env_kwargs = env_kwargs
 
 
+    def _encode_state(self, state):
+        if self.gym_env_name == "maze-sample-3x3-v0":
+            return state[1] * 3 + state[0]
+        if self.gym_env_name == "Blackjack-v1":
+            # obs = (player_sum_idx, dealer_idx, usable_ace): encode to single int
+            return int(state[0]) * 22 + int(state[1]) * 2 + int(state[2])
+        return state
+
     def reset(self):
         state, _ = self.env.reset()
         self.steps = 0
         self.accu_reward = 0
-
-        if self.gym_env_name == "maze-sample-3x3-v0":
-            state = state[1] * 3 + state[0]
-        return state
+        return self._encode_state(state)
 
     def step(self, action):
         self.steps += 1
@@ -49,9 +54,7 @@ class DiscreteStateGeneralWorld(BaseWorld):
         if self.steps >= self.max_traj_length or truncated:
             done = True
 
-        if self.gym_env_name == "maze-sample-3x3-v0":
-            state = state[1] * 3 + state[0]
-        return state, reward, done
+        return self._encode_state(state), reward, done
 
     def get_accu_reward(self):
         return self.accu_reward

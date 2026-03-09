@@ -1,6 +1,7 @@
 import time
 from jinja2 import Template
 from litellm import completion
+import litellm
 
 
 class LLMBrain:
@@ -43,7 +44,7 @@ class LLMBrain:
     #                 raise RuntimeError("Failed to get LLM response after 5 attempts") from e
     #             time.sleep(10)
     #     return ""  # unreachable
-    #
+    
     # def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
     #     for attempt in range(3):
     #         try:
@@ -74,7 +75,7 @@ class LLMBrain:
                     messages=self.llm_conversation,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+                    api_key="sk-4CTBYtSEtUaLtgO0LykGTKkt8npLHz7t1yVCxh12BWIzDQo3",
                     api_base="https://mkp-api.fptcloud.com/v1",
                     stream=False,  # vì bạn đang lấy full text
                 )
@@ -102,7 +103,7 @@ class LLMBrain:
                     n=num_responses,
                     temperature=temperature,
                     timeout=60,
-                    api_key="sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf",
+                    api_key="sk-4CTBYtSEtUaLtgO0LykGTKkt8npLHz7t1yVCxh12BWIzDQo3",
                     api_base="https://mkp-api.fptcloud.com/v1",
                     stream=False,
                 )
@@ -307,28 +308,27 @@ class LLMBrain:
 
     def llm_update_parameters_num_optim_vision(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
-        visual_analysis, lambda_t,
-        rank=None, optimum=None, search_step_size=0.1, actions=None, visual_params=None,
-        best_visual_analysis=None, best_visual_entry=None, neighborhood_analysis=None,
-        poisson_lam=2.0, neighbor_step=0.1
+        rank=None, optimum=None, search_step_size=0.1, actions=None,
+        neighborhood_analysis=None,
     ):
         """
         Update parameters using vision-guided feedback (ProPS-V).
         
-        Implements Eq. (4): θ ← LLM(Γ, P, Ψ, λ_t)
+        Unified method for both linear policy and Q-table agents.
+        The template distinguishes between them using the `actions` variable:
+        - actions is not None → Q-table (integer params from actions[0])
+        - actions is None → linear policy (float params [-6.0, 6.0])
         
         Args:
-            episode_reward_buffer: String of past parameters and rewards (Γ)
+            episode_reward_buffer: String of past parameters and rewards
             parse_parameters: Function to parse LLM output
             step_number: Current iteration number
-            env_desc_file: Environment description
-            visual_analysis: VLM analysis ψ_t (can be None)
-            lambda_t: Current guidance coefficient
-            guidance_phase: Description of current phase
+            env_desc_file: Environment description template path
             rank: Number of parameters
             optimum: Expected optimal reward
-            search_step_size: Step size for exploration
-            actions: Action space description
+            search_step_size: Step size for exploration (linear policy only)
+            actions: Action space description (Q-table only, None for linear)
+            neighborhood_analysis: Formatted neighborhood landscape string (None if VLM not invoked)
             
         Returns:
             Tuple of (parsed_params, log, api_time)
@@ -342,67 +342,8 @@ class LLMBrain:
             "optimum": str(optimum),
             "step_size": str(search_step_size),
             "actions": actions,
-            "visual_analysis": visual_analysis if visual_analysis else "No visual analysis available for this iteration.",
-            "lambda_t": f"{lambda_t:.3f}",
-            "has_visual": visual_analysis is not None,
-            "visual_params": visual_params,
-            "best_visual_analysis": best_visual_analysis,
-            "best_visual_iter": best_visual_entry['iteration'] if best_visual_entry else None,
-            "best_visual_reward": f"{best_visual_entry['reward']:.2f}" if best_visual_entry else None,
-            "best_visual_params": best_visual_entry['params'] if best_visual_entry else None,
-            "has_best_visual": best_visual_analysis is not None,
             "neighborhood_analysis": neighborhood_analysis,
             "has_neighborhood": neighborhood_analysis is not None,
-            "poisson_lam": poisson_lam,
-            "neighbor_step": neighbor_step,
-        })
-        self.add_llm_conversation(system_prompt, "user")
-        api_start_time = time.time()
-        reasoning = self.query_llm()
-        api_time = time.time() - api_start_time
-        parsed_params = parse_parameters(reasoning)
-        log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log, api_time
-
-    def llm_update_parameters_num_optim_q_table_vision(
-        self, episode_reward_buffer, parse_parameters, step_number,
-        env_desc_file, visual_analysis, lambda_t,
-        actions, num_states, optimum,
-        neighborhood_analysis=None, poisson_lam=2.0, neighbor_step=0.1
-    ):
-        """
-        Update Q-table parameters using vision-guided feedback (ProPS-V for discrete states).
-        
-        Args:
-            episode_reward_buffer: String of past Q-values and rewards
-            parse_parameters: Function to parse LLM output
-            step_number: Current iteration number
-            env_desc_file: Environment description
-            visual_analysis: VLM analysis (can be None)
-            lambda_t: Current guidance coefficient
-            guidance_phase: Visual guidance instruction
-            actions: Action space description
-            num_states: Number of states
-            optimum: Expected optimal reward
-            
-        Returns:
-            Tuple of (parsed_params, log, api_time)
-        """
-        self.reset_llm_conversation()
-        system_prompt = self.llm_si_template.render({
-            "episode_reward_buffer_string": str(episode_reward_buffer),
-            "env_description": env_desc_file,
-            "step_number": str(step_number),
-            "actions": actions,
-            "rank": num_states,
-            "optimum": str(optimum),
-            "visual_analysis": visual_analysis if visual_analysis else "No visual analysis available for this iteration.",
-            "lambda_t": f"{lambda_t:.3f}",
-            "has_visual": visual_analysis is not None,
-            "neighborhood_analysis": neighborhood_analysis,
-            "has_neighborhood": neighborhood_analysis is not None,
-            "poisson_lam": poisson_lam,
-            "neighbor_step": neighbor_step,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()

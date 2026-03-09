@@ -2,8 +2,8 @@ import litellm
 from litellm import completion
 
 # ====== CONFIG ======
-FPT_API_KEY = "sk-uDXg03MCrYREykzUKG0g2kHPZFjDmIvAShRkL1q0dCdohnxf"
-MODEL_NAME = "openai/DeepSeek-V3.2-Speciale"
+FPT_API_KEY = "sk-4CTBYtSEtUaLtgO0LykGTKkt8npLHz7t1yVCxh12BWIzDQo3"
+MODEL_NAME = "openai/gpt-oss-120b"
 API_BASE = "https://mkp-api.fptcloud.com/v1"
 
 # ====== SET GLOBAL CONFIG ======

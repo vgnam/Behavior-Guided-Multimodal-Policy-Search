@@ -1,0 +1,36 @@
+LunarLander (discrete) is a 2D rocket trajectory problem where the goal is to land a spacecraft on a landing pad located at coordinates (0, 0). The lander starts at the top center of the screen with a random initial force applied to its center of mass.
+The state is a vector of 8 elements, representing the following:
+- state[0]: x position (-1.5 to 1.5), 0 is the center of the landing pad
+- state[1]: y position (-1.5 to 1.5), 0 is the landing pad level
+- state[2]: x velocity (-5 to 5 m/s), negative is left, positive is right
+- state[3]: y velocity (-5 to 5 m/s), negative is downward, positive is upward
+- state[4]: angle (-3.14 to 3.14 rad), 0 is upright
+- state[5]: angular velocity (-5 to 5 rad/s)
+- state[6]: left leg ground contact (0 or 1)
+- state[7]: right leg ground contact (0 or 1)
+The action space consists of 4 discrete actions:
+- action 0: do nothing
+- action 1: fire left orientation engine
+- action 2: fire main engine
+- action 3: fire right orientation engine
+The policy is a linear policy with 36 parameters and works as follows:
+action = argmax(state @ W + B), where
+state = [state[0], state[1], state[2], state[3], state[4], state[5], state[6], state[7]]
+W = [[params[0],  params[1],  params[2],  params[3] ],
+    [params[4],  params[5],  params[6],  params[7] ],
+    [params[8],  params[9],  params[10], params[11]],
+    [params[12], params[13], params[14], params[15]],
+    [params[16], params[17], params[18], params[19]],
+    [params[20], params[21], params[22], params[23]],
+    [params[24], params[25], params[26], params[27]],
+    [params[28], params[29], params[30], params[31]]]
+B = [params[32], params[33], params[34], params[35]]
+The reward function:
+- Moving toward the landing pad and slowing down is rewarded
+- Moving away or speeding up is penalized
+- Each leg contact with ground gives +10
+- Firing the main engine costs -0.3 per frame
+- Firing a side engine costs -0.03 per frame
+- Crashing gives -100 penalty
+- Landing safely gives +100 bonus
+A successful soft landing scores around 200 points. Scores above 200 are considered solved.

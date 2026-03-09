@@ -107,42 +107,32 @@ def parse_overall_log(logdir):
 # Helper: load training rollouts into replay buffer
 # ─────────────────────────────────────────────────────────────────────────
 
-def load_training_rollouts_into_buffer(replay_buffer, logdir, max_episode):
+def load_training_rollouts_into_buffer(agent, task, logdir, max_episode):
     """
-    Parse training_rollout.txt files from episode_0 .. episode_{max_episode}
-    and add them to the replay buffer.
-
-    The file format is:
-        <comma-separated parameters>
-        parameter ends
-        <blank line>
-        state | action | reward
-        ...
-        Total reward: <value>
-        ... (may repeat for multiple evaluation rollouts)
+    Parse training_rollout.txt (and parameters.txt) from episode_0..episode_{max_episode}
+    and add them to the agent's replay_buffer (and traj_buffer if present).
     """
+    import ast
+    qtable_tasks = {
+        "dist_state_llm_num_optim",
+        "dist_state_llm_num_optim_semantics",
+        "dist_state_llm_num_optim_vision",
+        "blprops_qtable",
+    }
+    is_qtable = task in qtable_tasks
     loaded = 0
+
     for ep in range(max_episode + 1):
-        rollout_path = os.path.join(logdir, f"episode_{ep}", "training_rollout.txt")
+        ep_dir = os.path.join(logdir, f"episode_{ep}")
+        rollout_path = os.path.join(ep_dir, "training_rollout.txt")
+        params_path = os.path.join(ep_dir, "parameters.txt")
+
         if not os.path.exists(rollout_path):
             continue
 
         try:
             with open(rollout_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-
-            # Parse parameters (first line(s) before "parameter ends")
-            parameters = []
-            for line in lines:
-                if "parameter ends" in line:
-                    break
-                try:
-                    parameters.append([float(x) for x in line.split(",")])
-                except (ValueError, IndexError):
-                    continue
-            if not parameters:
-                continue
-            parameters = np.array(parameters)
 
             # Parse all "Total reward" values
             rewards = []
@@ -152,26 +142,74 @@ def load_training_rollouts_into_buffer(replay_buffer, logdir, max_episode):
                         rewards.append(float(line.split()[-1]))
                     except (ValueError, IndexError):
                         continue
-
             if not rewards:
                 continue
-
             reward_mean = np.mean(rewards)
 
-            # Flatten parameters to 1D
-            params_flat = parameters.reshape(-1)
-            replay_buffer.add(params_flat, reward_mean)
+            params_flat = None
+
+            if is_qtable:
+                # Q-table: read action mapping from parameters.txt
+                if os.path.exists(params_path):
+                    with open(params_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                    try:
+                        mapping = ast.literal_eval(content)
+                        params_flat = np.array(
+                            [mapping[k] for k in sorted(mapping.keys())], dtype=float
+                        )
+                    except Exception as parse_err:
+                        print(f"  Warning: Could not parse parameters.txt for episode_{ep}: {parse_err}")
+            else:
+                # Linear policy: params embedded in rollout before "parameter ends"
+                parameters = []
+                for line in lines:
+                    if "parameter ends" in line:
+                        break
+                    try:
+                        parameters.append([float(x) for x in line.split(",")])
+                    except (ValueError, IndexError):
+                        continue
+                if parameters:
+                    params_flat = np.array(parameters).reshape(-1)
+
+            if params_flat is None:
+                continue
+
+            agent.replay_buffer.add(params_flat, reward_mean)
+
+            # For semantics agents: also populate traj_buffer from first rollout segment
+            if hasattr(agent, "traj_buffer"):
+                agent.traj_buffer.start_new_trajectory()
+                in_traj = False
+                for line in lines:
+                    if "state | action | reward" in line.lower():
+                        in_traj = True
+                        continue
+                    if in_traj and "Total reward" in line:
+                        break
+                    if in_traj:
+                        parts = line.strip().split("|")
+                        if len(parts) == 3:
+                            try:
+                                state = int(parts[0].strip())
+                                action = int(parts[1].strip())
+                                reward = float(parts[2].strip())
+                                agent.traj_buffer.add_step(state, action, reward)
+                            except ValueError:
+                                continue
+
             loaded += 1
 
         except Exception as e:
-            print(f"  Warning: Could not load episode_{ep}/training_rollout.txt: {e}")
+            print(f"  Warning: Could not load episode_{ep}: {e}")
             continue
 
     return loaded
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Helper: parse parameters.txt to restore policy
+# Helper: parse parameters.txt to restore linear policy
 # ─────────────────────────────────────────────────────────────────────────
 
 def parse_linear_policy_parameters(params_path):
@@ -446,16 +484,34 @@ def resume_training(config, resume_logdir=None):
         print("[Resume] WARNING: No warmup directory found — replay buffer starts empty.")
 
     if last_episode >= 0:
-        loaded = load_training_rollouts_into_buffer(agent.replay_buffer, resume_from, last_episode)
+        loaded = load_training_rollouts_into_buffer(agent, task, resume_from, last_episode)
         print(f"[Resume] Loaded {loaded} training episodes into replay buffer")
         print(f"  Replay buffer size: {len(agent.replay_buffer.buffer)}")
 
     # ── Step 4: Restore policy parameters ───────────────────────────────
+    qtable_tasks = {
+        "dist_state_llm_num_optim",
+        "dist_state_llm_num_optim_semantics",
+        "dist_state_llm_num_optim_vision",
+        "blprops_qtable",
+    }
     if last_episode >= 0:
+        import ast
         last_params_path = os.path.join(resume_from, f"episode_{last_episode}", "parameters.txt")
-        if os.path.exists(last_params_path) and task not in ["dist_state_llm_num_optim", "blprops_qtable",
-                                                              "dist_state_llm_num_optim_semantics",
-                                                              "dist_state_llm_num_optim_vision"]:
+        if task in qtable_tasks:
+            # Restore Q-table mapping from parameters.txt (dict string)
+            if os.path.exists(last_params_path):
+                with open(last_params_path, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                try:
+                    mapping = ast.literal_eval(content)
+                    agent.q_table.mapping = mapping
+                    print(f"[Resume] Restored Q-table from episode_{last_episode}")
+                except Exception as e:
+                    print(f"[Resume] WARNING: Could not restore Q-table: {e}")
+            else:
+                print(f"[Resume] WARNING: No parameters.txt found for episode_{last_episode}")
+        elif os.path.exists(last_params_path):
             weights, bias_val = parse_linear_policy_parameters(last_params_path)
             if weights is not None:
                 if bias_val is not None:
@@ -467,7 +523,7 @@ def resume_training(config, resume_logdir=None):
             else:
                 print(f"[Resume] WARNING: Could not parse parameters from episode_{last_episode}")
         else:
-            print(f"[Resume] Note: Skipping parameter restore for {task} (Q-table policies are reconstructed from buffer)")
+            print(f"[Resume] WARNING: No parameters.txt found for episode_{last_episode}")
 
     # ── Step 5: Restore cumulative counters ─────────────────────────────
     if last_row is not None:

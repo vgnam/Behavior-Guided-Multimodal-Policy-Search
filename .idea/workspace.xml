@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="173ad465-e17c-40bc-9f17-fff271cab712" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Prompted-Policy-Search.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_linear_policy_vision.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_linear_policy_vision.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_q_table_semantics.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_q_table_semantics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_q_table_vision.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/agent/llm_num_optim_q_table_vision.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/agent/policy/llm_brain_linear_policy.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/agent/policy/llm_brain_linear_policy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/agent/policy/templates/num_optim_vision.j2" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/agent/policy/templates/num_optim_vision.j2" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/compare_propsp_propsv.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/compare_propsp_propsv.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/cartpole/cartpole_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/cartpole/cartpole_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_blprops_qtable.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_blprops_qtable.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_propsp.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_propsp.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/cliffwalking/cliffwalking_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/frozenlake/frozenlake_blprops_qtable.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/frozenlake/frozenlake_blprops_qtable.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/frozenlake/frozenlake_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/frozenlake/frozenlake_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_linear_policy_propsp.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_linear_policy_propsp.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_linear_policy_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/hopper/hopper_linear_policy_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/inverted_double_pendulum/inverteddoublependulum_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/inverted_double_pendulum/inverteddoublependulum_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/inverted_double_pendulum/inverteddoublependulum_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/inverted_double_pendulum/inverteddoublependulum_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/invertedpendulum/invertedpendulum_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/invertedpendulum/invertedpendulum_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/invertedpendulum/invertedpendulum_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/invertedpendulum/invertedpendulum_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_blprops_qtable.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_blprops_qtable.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_propsp.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_propsp.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/maze/maze_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/mountaincar/mountaincar_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/mountaincar/mountaincar_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/mountaincar/mountaincar_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/mountaincar/mountaincar_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/nim/nim_blprops_qtable.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/nim/nim_blprops_qtable.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/nim/nim_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/nim/nim_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/reacher/reacher_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/reacher/reacher_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/reacher/reacher_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/reacher/reacher_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/walker2d/walker2d_blprops.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/walker2d/walker2d_blprops.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/configs/walker2d/walker2d_propsv.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/configs/walker2d/walker2d_propsv.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/resume_training.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/resume_training.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/vlmcall.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/vlmcall.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/llm-rl-main/world/discrete_state_general_world.py" beforeDir="false" afterPath="$PROJECT_DIR$/llm-rl-main/world/discrete_state_general_world.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="3AiAr2H0WQ1quNLMPZtntySK5ki" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="173ad465-e17c-40bc-9f17-fff271cab712" name="Changes" comment="" />
+      <created>1773065213067</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1773065213067</updated>
+      <workItem from="1773065214446" duration="20000" />
+    </task>
+    <servers />
+  </component>
+</project>

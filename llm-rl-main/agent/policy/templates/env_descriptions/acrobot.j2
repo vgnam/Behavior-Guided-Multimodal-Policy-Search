@@ -1,0 +1,23 @@
+Acrobot is a 2D robot arm problem with two links and two rotary joints. The goal is to swing the free end of the lower link above a target height in as few steps as possible. The joint between the two links is actuated; applying torque to it controls the swing.
+The state is a vector of 6 elements, representing the following:
+- state[0]: cosine of the angle of the first link (-1 to 1)
+- state[1]: sine of the angle of the first link (-1 to 1)
+- state[2]: cosine of the angle of the second link (-1 to 1)
+- state[3]: sine of the angle of the second link (-1 to 1)
+- state[4]: angular velocity of the first link (-12.567 to 12.567 rad/s)
+- state[5]: angular velocity of the second link (-28.274 to 28.274 rad/s)
+The action space consists of 3 discrete actions:
+- action 0: apply -1 torque to the actuated joint
+- action 1: apply 0 torque (do nothing)
+- action 2: apply +1 torque to the actuated joint
+The policy is a linear policy with 21 parameters and works as follows:
+action = argmax(state @ W + B), where
+state = [state[0], state[1], state[2], state[3], state[4], state[5]]
+W = [[params[0],  params[1],  params[2] ],
+    [params[3],  params[4],  params[5] ],
+    [params[6],  params[7],  params[8] ],
+    [params[9],  params[10], params[11]],
+    [params[12], params[13], params[14]],
+    [params[15], params[16], params[17]]]
+B = [params[18], params[19], params[20]]
+The reward is -1 for every time step until the goal is reached. The episode ends when the free end of the lower link reaches the target height or after 500 steps. The goal is to reach the target height in as few steps as possible (best possible score is around -63).

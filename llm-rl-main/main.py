@@ -3,6 +3,8 @@ import argparse
 from runner import (
     llm_num_optim_runner,
 )
+
+import litellm
 from runner import llm_num_optim_runner
 from runner import llm_num_optim_semantics_runner
 from runner import llm_num_optim_vision_runner
@@ -10,13 +12,13 @@ from runner import llm_num_optim_vision_runner
 # import gym_navigation
 from envs import nim, pong
 import os
-os.environ["OPENROUTER_API_KEY"] = "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"
+os.environ["OPENROUTER_API_KEY"] = "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"
 
 os.environ["NVIDIA_NIM_API_KEY"] = "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"
 os.environ["MISTRAL_API_KEY"] = "wjLJ7TRAHtcDNv2VrIgE7dreAhVyYQBD"
 
-os.environ["GEMINI_API_KEY"] = ("AIzaSyDoMFuM881ierGjBmpT4O-"
-                                "tQyIrayjBPcw")
+os.environ["GEMINI_API_KEY"] = "AIzaSyBfAtMMg_Q-G7Sg4JJPYqEKE_K8Xki7bBU"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(

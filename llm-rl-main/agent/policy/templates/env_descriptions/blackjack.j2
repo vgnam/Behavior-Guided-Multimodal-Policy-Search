@@ -1,0 +1,12 @@
+The environment is the Blackjack environment.
+Blackjack-v1 is a card game where the agent plays against a dealer. The goal is to obtain a hand value as close to 21 as possible without exceeding it, and to beat the dealer's hand.
+The state is between 0 and 703, encoding the tuple (player_sum, dealer_showing, usable_ace) as a single integer: state = player_sum * 22 + dealer_showing * 2 + usable_ace.
+- player_sum: the player's current hand value index (0 to 31; meaningful range is 4 to 21).
+- dealer_showing: the dealer's visible face-up card index (0 to 10; actual card values 1 to 10, where 1 is Ace).
+- usable_ace: 1 if the player holds a usable Ace (currently counted as 11 without busting), 0 otherwise.
+The policy is a function that maps the state to the action to take. The policy is represented by an array of 704 numbers. The value of params[i] represents the action to take when the state is i.
+Actions:
+- 0: stick (stop drawing cards and end the player's turn)
+- 1: hit (draw one more card from the deck)
+The reward is +1 for winning the hand, -1 for losing the hand (including busting over 21), and 0 for a draw.
+The agent should generally hit when the hand value is low (below 12) and stick when the hand is strong (17 or above). When a usable ace is held (usable_ace=1), hitting is safer because the ace can be revalued from 11 to 1 to avoid busting. The agent should use trajectory history to infer the best threshold for hitting vs sticking against each dealer card.

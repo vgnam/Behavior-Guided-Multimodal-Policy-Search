@@ -8,8 +8,8 @@ dim_states: [[0, 1, 2, 3, 4, 5, 6, 7, 8]]
 max_traj_count: 1000
 max_traj_length: 100
 template_dir: agent/policy/templates
-llm_si_template_name: num_optim_q_table_vision.j2
-llm_output_conversion_template_name: num_optim_q_table_vision.j2
+llm_si_template_name: num_optim_vision.j2
+llm_output_conversion_template_name: num_optim_vision.j2
 llm_model_name: nvidia_nim/qwen/qwen3-235b-a22b
 num_evaluation_episodes: 20
 warmup_episodes: 20
@@ -20,7 +20,7 @@ env_desc_file: env_descriptions/maze.j2
 # ProPS-V specific parameters
 vlm_model_name: meta/llama-4-scout-17b-16e-instruct
 decay_horizon: 100
-frame_sample_period: 20  # Short episodes (~100 steps)
+frame_sample_period: 50
 enable_vision: true
 n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
 poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes

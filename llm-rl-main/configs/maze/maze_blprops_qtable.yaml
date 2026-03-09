@@ -14,8 +14,8 @@ llm_model_name: gemini/gemini-2.5-flash
 num_evaluation_episodes: 1
 warmup_episodes: 10
 warmup_dir: null
-optimum: 0.9
+optimum: 1.0
 search_step_size: 0.1
 env_desc_file: env_descriptions/maze.j2
 vlm_model_name: gemini-2.5-flash-lite
-frame_sample_period: 5
+frame_sample_period: 50

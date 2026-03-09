@@ -597,17 +597,10 @@ class LLMNumOptimVisionAgent:
             parse_parameters,
             self.training_episodes,
             self.env_desc_file,
-            visual_analysis,
-            lambda_t,
-            self.rank,
-            self.optimum,
-            self.search_step_size,
-            visual_params=params_str_for_llm if visual_analysis else None,
-            best_visual_analysis=best_visual_analysis,
-            best_visual_entry=best_visual_entry,
+            rank=self.rank,
+            optimum=self.optimum,
+            search_step_size=self.search_step_size,
             neighborhood_analysis=neighborhood_analysis,
-            poisson_lam=self.poisson_lam,
-            neighbor_step=self.neighbor_step,
         )
         self.api_call_time += api_time
 

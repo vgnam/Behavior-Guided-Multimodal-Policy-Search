@@ -19,4 +19,4 @@ optimum: -5
 search_step_size: 0.1
 env_desc_file: env_descriptions/reacher.j2
 vlm_model_name: gemini-2.5-flash-lite
-frame_sample_period: 25
+frame_sample_period: 50

@@ -1,8 +1,8 @@
 task: cont_state_llm_num_optim_semantics
 num_episodes: 395
 gym_env_name: Hopper-v5
-render_mode: null
-logdir: logs/hopper_propsp
+render_mode: rgb_array  # Required for frame capture
+logdir: logs/hopper_propsp_gpt-oss
 dim_actions: 3
 dim_states: 11
 max_traj_count: 1000

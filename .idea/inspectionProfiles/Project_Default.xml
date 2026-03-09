@@ -4,7 +4,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="55">
+          <list size="56">
             <item index="0" class="java.lang.String" itemvalue="Pytorch" />
             <item index="1" class="java.lang.String" itemvalue="Torchrl" />
             <item index="2" class="java.lang.String" itemvalue="tqdm" />
@@ -60,6 +60,7 @@
             <item index="52" class="java.lang.String" itemvalue="multidict" />
             <item index="53" class="java.lang.String" itemvalue="yarl" />
             <item index="54" class="java.lang.String" itemvalue="Markdown" />
+            <item index="55" class="java.lang.String" itemvalue="APScheduler" />
           </list>
         </value>
       </option>

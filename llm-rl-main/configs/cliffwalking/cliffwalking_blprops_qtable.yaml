@@ -14,8 +14,10 @@ llm_model_name: gemini/gemini-2.5-flash
 num_evaluation_episodes: 20
 warmup_episodes: 10
 warmup_dir: null
-optimum: -50
+optimum: -15
 search_step_size: 0.1
+env_kwargs:
+  is_slippery: true
 env_desc_file: env_descriptions/cliffwalking3.j2
 vlm_model_name: gemini-2.5-flash-lite
-frame_sample_period: 10
+frame_sample_period: 50

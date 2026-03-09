@@ -530,32 +530,16 @@ class LLMNumOptimQTableVisionAgent:
         # ===== STEP 4: Update Q-table using LLM with vision context =====
         print("\nUpdating Q-table policy with LLM...")
         
-        if self.enable_vision:
-            # Use vision-specific method
-            new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_q_table_vision(
-                str_nd_examples(self.replay_buffer, self.rank),
-                parse_parameters,
-                self.training_episodes,
-                self.env_desc_file if self.env_desc_file else "env_descriptions/default.j2",
-                visual_analysis,
-                lambda_t,
-                self.actions,
-                self.rank,
-                self.optimum,
-                neighborhood_analysis=neighborhood_analysis,
-                poisson_lam=self.poisson_lam,
-                neighbor_step=self.neighbor_step,
-            )
-        else:
-            # Use standard numerical optimization
-            new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim(
-                str_nd_examples(self.replay_buffer, self.rank),
-                parse_parameters,
-                self.training_episodes,
-                self.rank,
-                self.optimum,
-                actions=self.actions,
-            )
+        new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_vision(
+            str_nd_examples(self.replay_buffer, self.rank),
+            parse_parameters,
+            self.training_episodes,
+            self.env_desc_file if self.env_desc_file else "env_descriptions/default.j2",
+            rank=self.rank,
+            optimum=self.optimum,
+            actions=self.actions,
+            neighborhood_analysis=neighborhood_analysis,
+        )
         
         self.api_call_time += api_time
 

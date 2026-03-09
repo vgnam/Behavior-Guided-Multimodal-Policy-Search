@@ -22,7 +22,7 @@ env_desc_file: env_descriptions/walker2d.j2
 # ProPS-V specific parameters
 vlm_model_name: meta/llama-4-scout-17b-16e-instruct
 decay_horizon: 100
-frame_sample_period: 100  # Walker episodes up to 1000 steps
+frame_sample_period: 50
 n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
 poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
 neighbor_step: 0.1   # Base step size multiplied by Poisson sample

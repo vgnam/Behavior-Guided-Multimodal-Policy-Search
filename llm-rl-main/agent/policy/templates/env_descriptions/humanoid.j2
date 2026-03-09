@@ -1,0 +1,20 @@
+Humanoid is a MuJoCo environment with a 3D bipedal humanoid robot. The goal is to walk forward as fast as possible without falling over. This is a high-dimensional control task.
+The state is a vector of 348 elements encoding joint positions, joint velocities, body inertia, center-of-mass velocities, actuator forces, and contact forces for all body parts.
+The action space is a vector of 17 float numbers representing torques applied to the 17 joints (range: -0.4 to 0.4 N).
+- action[0-5]: torso and spine joints
+- action[6-10]: right arm/shoulder joints
+- action[11-15]: left arm/shoulder joints
+- action[16]: hip/pelvis joint
+The policy is a linear policy with 5933 parameters and works as follows:
+action = state @ W + b, where
+state = [state[0], ..., state[347]]
+W is a 348×17 matrix laid out row-major: params[i*17 .. i*17+16] = W[i,:] for i = 0..347
+b = [params[5916], ..., params[5932]]
+The reward function:
+reward = healthy_reward + forward_reward - ctrl_cost
+where:
+- healthy_reward = 5.0 per step when humanoid is upright
+- forward_reward = 1.25 * x-velocity
+- ctrl_cost = 0.1 * sum(action^2)
+The humanoid is healthy if the z-coordinate (height) of the torso is between 1.0 and 2.0 m. Episode ends early if it falls. Good policies achieve rewards of 3000–8000+.
+Note: With 5933 parameters, this is a very high-dimensional optimization problem.

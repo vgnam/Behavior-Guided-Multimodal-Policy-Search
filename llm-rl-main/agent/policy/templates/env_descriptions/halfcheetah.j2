@@ -1,0 +1,45 @@
+HalfCheetah is a MuJoCo environment with a 2D cheetah robot. The goal is to run forward (rightward) as fast as possible. There is no early termination — episodes always run for the full duration.
+The state is a vector of 17 elements:
+- state[0]: z-coordinate (height) of the torso
+- state[1]: angle of the torso
+- state[2]: angle of the front thigh joint
+- state[3]: angle of the front shin joint
+- state[4]: angle of the front foot joint
+- state[5]: angle of the back thigh joint
+- state[6]: angle of the back shin joint
+- state[7]: angle of the back foot joint
+- state[8]: x-velocity of the torso (forward speed)
+- state[9]: z-velocity of the torso
+- state[10]: angular velocity of the torso
+- state[11]: angular velocity of the front thigh
+- state[12]: angular velocity of the front shin
+- state[13]: angular velocity of the front foot
+- state[14]: angular velocity of the back thigh
+- state[15]: angular velocity of the back shin
+- state[16]: angular velocity of the back foot
+The action space is a vector of 6 float numbers representing torques applied to the 6 joints (-1 to 1 N).
+The policy is a linear policy with 108 parameters and works as follows:
+action = state @ W + b, where
+state = [state[0], ..., state[16]]
+W is a 17×6 matrix:
+params[0..5]    = W[0,:]   (weights for state[0])
+params[6..11]   = W[1,:]   (weights for state[1])
+params[12..17]  = W[2,:]   (weights for state[2])
+params[18..23]  = W[3,:]   (weights for state[3])
+params[24..29]  = W[4,:]   (weights for state[4])
+params[30..35]  = W[5,:]   (weights for state[5])
+params[36..41]  = W[6,:]   (weights for state[6])
+params[42..47]  = W[7,:]   (weights for state[7])
+params[48..53]  = W[8,:]   (weights for state[8] = forward speed)
+params[54..59]  = W[9,:]   (weights for state[9])
+params[60..65]  = W[10,:]  (weights for state[10])
+params[66..71]  = W[11,:]  (weights for state[11])
+params[72..77]  = W[12,:]  (weights for state[12])
+params[78..83]  = W[13,:]  (weights for state[13])
+params[84..89]  = W[14,:]  (weights for state[14])
+params[90..95]  = W[15,:]  (weights for state[15])
+params[96..101] = W[16,:]  (weights for state[16])
+b = [params[102], params[103], params[104], params[105], params[106], params[107]]
+The reward function:
+reward = forward_velocity - 0.1 * sum(action^2)
+The goal is to maximize forward speed while minimizing control cost. Good policies achieve rewards of 3000–5000+ per episode.

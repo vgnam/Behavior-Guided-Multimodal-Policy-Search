@@ -1,0 +1,19 @@
+The environment is the Taxi environment.
+The Taxi environment is a 5x5 grid world (5 rows, 5 columns) where a taxi must pick up a passenger from one of 4 fixed locations and drop them off at the correct destination.
+The state is between 0 and 499, encoding (taxi_row, taxi_col, passenger_location, destination) as a single integer: state = ((taxi_row * 5 + taxi_col) * 5 + passenger_location) * 4 + destination.
+- taxi_row: row 0 (top) to row 4 (bottom).
+- taxi_col: column 0 (left) to column 4 (right).
+- passenger_location: 0=R (row 0, col 0), 1=G (row 0, col 4), 2=Y (row 4, col 0), 3=B (row 4, col 3), 4=in taxi.
+- destination: 0=R, 1=G, 2=Y, 3=B.
+The agent always starts at a random taxi position with the passenger at a random pickup location and a random destination.
+The policy is a function that maps the state to the action to take. The policy is represented by an array of 500 numbers. The value of params[i] represents the action to take when the state is i.
+Actions:
+- 0: move south (down)
+- 1: move north (up)
+- 2: move east (right)
+- 3: move west (left)
+- 4: pickup passenger
+- 5: dropoff passenger
+The reward is -1 for each step. A successful dropoff at the correct destination yields +20. An illegal pickup or dropoff (wrong location) yields -10 and the episode continues.
+The agent should navigate to the passenger's current location, use action 4 to pick them up (passenger_location becomes 4), then navigate to the destination and use action 5 to drop them off.
+The agent must only attempt pickup (action 4) when the taxi is at the passenger's pickup location, and only dropoff (action 5) when the taxi is at the correct destination, because illegal attempts are very costly (-10).

@@ -89,7 +89,7 @@ class LLMNumOptimQTableSemanticsAgent:
 
         def parse_parameters(input_text):
             # This regex looks for integers or floating-point numbers (including optional sign)
-            s = input_text.split("\n")[-1]
+            s = input_text.split("\n")[0]
             print("response:", s)
             pattern = re.compile(r"params\[(\d+)\]:\s*([+-]?\d+(?:\.\d+)?)")
             matches = pattern.findall(s)

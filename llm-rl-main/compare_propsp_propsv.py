@@ -164,40 +164,26 @@ def main(logs_dir="logs", problems=None):
         propsp_rows = parse_overall_log(propsp_path)
         propsv_rows = parse_overall_log(propsv_path)
 
-        # Common range: use min of actually LOGGED episodes, not directory count
-        propsp_logged = len(propsp_rows)
-        propsv_logged = len(propsv_rows)
-        min_logged = min(propsp_logged, propsv_logged)
-        # The first min_logged episodes (0 .. min_logged-1) are the common range
-        min_last_ep = min_logged - 1 if min_logged > 0 else 0
-
-        propsp_common = [e for e in propsp_eps if e <= min_last_ep]
-        propsv_common = [e for e in propsv_eps if e <= min_last_ep]
-
-        # Build episode → reward mapping using positional order
-        # (row i = episode propsp_eps[i])
-        def build_reward_map(eps_list, rows, max_ep):
+        # Full range: each variant uses all its own logged episodes
+        def build_reward_map_full(eps_list, rows):
             reward_map = {}
             for idx, ep in enumerate(eps_list):
-                if ep > max_ep:
-                    break
                 if idx < len(rows):
                     reward_map[ep] = rows[idx]["total_reward"]
             return reward_map
 
-        propsp_rmap = build_reward_map(propsp_eps, propsp_rows, min_last_ep)
-        propsv_rmap = build_reward_map(propsv_eps, propsv_rows, min_last_ep)
+        propsp_rmap = build_reward_map_full(propsp_eps, propsp_rows)
+        propsv_rmap = build_reward_map_full(propsv_eps, propsv_rows)
 
-        # Find best episode in common range
-        def find_best(rmap, eps_common):
-            valid = {ep: r for ep, r in rmap.items() if ep in eps_common}
-            if not valid:
+        # Find best episode over full range
+        def find_best(rmap):
+            if not rmap:
                 return None, None
-            best_ep = max(valid, key=valid.get)
-            return best_ep, valid[best_ep]
+            best_ep = max(rmap, key=rmap.get)
+            return best_ep, rmap[best_ep]
 
-        propsp_best_ep, propsp_best_mean = find_best(propsp_rmap, propsp_common)
-        propsv_best_ep, propsv_best_mean = find_best(propsv_rmap, propsv_common)
+        propsp_best_ep, propsp_best_mean = find_best(propsp_rmap)
+        propsv_best_ep, propsv_best_mean = find_best(propsv_rmap)
 
         # Get individual rollout rewards from the best episode
         propsp_rollouts = get_rollout_rewards(propsp_path, propsp_best_ep) if propsp_best_ep is not None else []
@@ -207,10 +193,8 @@ def main(logs_dir="logs", problems=None):
         problem_label = key.replace("_gpt-oss", "").replace("_gemini-2.5-flash-lite", "")
 
         print(f"\nProblem : {problem_label}")
-        print(f"  ProPS+ : {propsp_folder}")
-        print(f"  ProPS-V: {propsv_folder}")
-        print(f"  Common range : episodes 0 – {min_last_ep}  "
-              f"(ProPS+: {len(propsp_common)}, ProPS-V: {len(propsv_common)} eps)")
+        print(f"  ProPS+ : {propsp_folder}  ({len(propsp_eps)} eps)")
+        print(f"  ProPS-V: {propsv_folder}  ({len(propsv_eps)} eps)")
         print()
 
         if propsp_rollouts:

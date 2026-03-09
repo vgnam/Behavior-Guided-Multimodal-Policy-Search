@@ -21,4 +21,4 @@ env_desc_file: env_descriptions/hopper.j2
 
 # BL-ProPS VLM parameters
 vlm_model_name: gemini-2.5-flash-lite
-frame_sample_period: 100       # Hopper episodes ≤ 1000 steps; sample every 100
+frame_sample_period: 50
