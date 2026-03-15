@@ -1,0 +1,24 @@
+task: atari_llm_num_optim_mlp
+num_episodes: 100
+gym_env_name: ALE/Pong-v5
+render_mode: rgb_array
+logdir: logs/pong_mlp_gpt-oss
+dim_actions: 6
+dim_states: 1024   # 32*32 preprocessed obs (informational; actual value from AtariWorld.obs_dim)
+hidden_dims: [32]
+resize_h: 32
+resize_w: 32
+obs_projection_dim: 64   # fixed random project 1024 → 64 before MLP
+intrinsic_rank: 50       # LLM sees 50 params; mapped to ~2200 MLP weights
+max_traj_count: 20
+max_traj_length: 500
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_mlp.j2
+llm_output_conversion_template_name: num_optim_mlp.j2
+llm_model_name: openrouter/openai/gpt-oss-120b:free
+num_evaluation_episodes: 2
+warmup_episodes: 5
+warmup_dir: null
+optimum: 20
+search_step_size: 0.2
+env_desc_file: env_descriptions/pong.j2

@@ -1,0 +1,16 @@
+The LunarLander continuous environment is a 2D rocket trajectory problem where the goal is to land a spacecraft on a landing pad located at coordinates (0, 0). The lander starts at the top center of the screen with a random initial force applied to its center of mass.
+The state is a vector of 8 elements, representing the following:
+- state[0]: x position (-1.5 to 1.5), 0 is the center of the landing pad
+- state[1]: y position (-1.5 to 1.5), 0 is the landing pad level
+- state[2]: x velocity (-5 to 5 m/s), negative is left, positive is right
+- state[3]: y velocity (-5 to 5 m/s), negative is downward, positive is upward
+- state[4]: angle (-3.14 to 3.14 rad), 0 is upright
+- state[5]: angular velocity (-5 to 5 rad/s)
+- state[6]: left leg ground contact (0 or 1)
+- state[7]: right leg ground contact (0 or 1)
+The action space is a vector of 2 float numbers:
+- action[0]: main engine throttle (-1 to 1); values in [-1, 0] turn off the main engine, values in (0, 1] throttle it from 50% to 100% power
+- action[1]: lateral engine: values in [-1, -0.5] fire left engine, values in [0.5, 1] fire right engine, values in (-0.5, 0.5) do nothing
+The policy is a neural network (MLP) that maps the 8-dimensional state to the 2-dimensional action. The parameters are the weights and biases of the network stored as a flat array.
+The goal is to land softly on the landing pad. Reward is shaped as follows: moving toward the pad is rewarded, crashing is penalized -100, landing safely gives +100, each leg on the ground gives +10, firing the main engine costs -0.3 per frame, and firing a side engine costs -0.03 per frame. An episode scores approximately 200 points for a successful soft landing.
+To land well: keep the lander upright (state[4] near 0), reduce angular velocity (state[5] near 0), align x position (state[0] near 0), reduce horizontal velocity (state[2] near 0), and descend slowly (state[3] slightly negative). Both legs should touch the pad simultaneously for the landing bonus. Minimise engine use to reduce fuel penalties.

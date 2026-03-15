@@ -1,0 +1,40 @@
+The OscillatorComplicated environment is a challenging variant of the synthetic oscillatory network. It extends the repressilator by adding a fourth gene, forming a more complex mutually-repressing network. The goal is to control four light intensity signals so that one of the protein concentrations follows a supplied reference signal.
+
+The state is a vector of 10 elements, representing the following:
+- state[0]: LacI mRNA transcripts concentration (0 to inf)
+- state[1]: tetR mRNA transcripts concentration (0 to inf)
+- state[2]: CI mRNA transcripts concentration (0 to inf)
+- state[3]: Extra protein mRNA transcripts concentration (0 to inf)
+- state[4]: lacI repressor protein concentration – inhibits tetR gene transcription (0 to inf)
+- state[5]: tetR repressor protein concentration – inhibits CI gene transcription (0 to inf)
+- state[6]: CI repressor protein concentration – inhibits extra protein gene transcription (0 to inf)
+- state[7]: Extra repressor protein concentration – inhibits lacI gene transcription (0 to inf)
+- state[8]: reference signal the protein should follow (0 to inf)
+- state[9]: error between current protein 1 concentration and the reference (-inf to inf)
+
+The action space is a vector of 4 float numbers representing relative light intensities that induce mRNA gene expression (0 to 1):
+- action[0]: Light intensity inducing LacI mRNA expression (0 to 1)
+- action[1]: Light intensity inducing tetR mRNA expression (0 to 1)
+- action[2]: Light intensity inducing CI mRNA expression (0 to 1)
+- action[3]: Light intensity inducing extra protein mRNA expression (0 to 1)
+
+The policy is a linear policy that works as follows:
+action = clip(state @ W + b, 0, 1), where
+state = [state[0], ..., state[9]]
+W = [[params[0],  params[1],  params[2],  params[3]],
+     [params[4],  params[5],  params[6],  params[7]],
+     [params[8],  params[9],  params[10], params[11]],
+     [params[12], params[13], params[14], params[15]],
+     [params[16], params[17], params[18], params[19]],
+     [params[20], params[21], params[22], params[23]],
+     [params[24], params[25], params[26], params[27]],
+     [params[28], params[29], params[30], params[31]],
+     [params[32], params[33], params[34], params[35]],
+     [params[36], params[37], params[38], params[39]]]
+b = [params[40], params[41], params[42], params[43]]
+
+The goal is to minimise the tracking error between protein 1 (lacI) and the reference signal.
+reward = -(tracking_cost + control_cost)
+where:
+- tracking_cost = squared error between protein 1 and the reference
+- control_cost = small penalty on the magnitude of actions

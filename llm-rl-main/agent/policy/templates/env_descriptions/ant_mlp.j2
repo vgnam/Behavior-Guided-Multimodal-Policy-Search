@@ -1,0 +1,18 @@
+Ant is a MuJoCo environment with a 3D four-legged robot. The goal is to walk forward (in the x-direction) as fast as possible while staying healthy (not falling over).
+The state is a vector of 27 elements:
+- state[0]: z-coordinate (height) of the torso (healthy range: 0.2 to 1.0 m)
+- state[1]: w-component of the torso quaternion orientation
+- state[2]: x-component of the torso quaternion orientation
+- state[3]: y-component of the torso quaternion orientation
+- state[4]: z-component of the torso quaternion orientation
+- state[5] to state[12]: angles of the 8 hip and ankle joints
+- state[13]: x-velocity of the torso (forward speed — the main signal to maximize)
+- state[14]: y-velocity of the torso (lateral drift — should stay near 0)
+- state[15]: z-velocity of the torso
+- state[16] to state[18]: roll, pitch, and yaw angular velocities of the torso
+- state[19] to state[26]: angular velocities of the 8 joints
+The action space is a vector of 8 float numbers representing torques applied to the 8 joints (-1 to 1 N).
+The policy is a neural network (MLP) that maps the 27-dimensional state to the 8-dimensional action. Due to the high dimensionality, the parameters are optimized via an intrinsic random projection: the LLM proposes a low-dimensional vector which is projected back to the full parameter space.
+The reward function is: reward = healthy_reward + forward_reward - ctrl_cost - contact_cost, where healthy_reward = 1.0 per step, forward_reward = x-velocity (state[13]), ctrl_cost = 0.5 * sum(action^2), and contact_cost = 0.5e-3 * sum(contact_forces^2). 
+The ant is healthy if the z-coordinate (height) of the torso is between 0.2 and 1.0. The episode ends early if the ant falls over. Good policies achieve rewards of 3000–6000+ per episode.
+

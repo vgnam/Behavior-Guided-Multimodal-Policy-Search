@@ -1,10 +1,28 @@
 Humanoid is a MuJoCo environment with a 3D bipedal humanoid robot. The goal is to walk forward as fast as possible without falling over. This is a high-dimensional control task.
-The state is a vector of 348 elements encoding joint positions, joint velocities, body inertia, center-of-mass velocities, actuator forces, and contact forces for all body parts.
-The action space is a vector of 17 float numbers representing torques applied to the 17 joints (range: -0.4 to 0.4 N).
-- action[0-5]: torso and spine joints
-- action[6-10]: right arm/shoulder joints
-- action[11-15]: left arm/shoulder joints
-- action[16]: hip/pelvis joint
+The state is a vector of 348 elements. The first 45 are the kinematic state (positions 0–21 and velocities 22–44); the remainder encode body inertia tensors, centre-of-mass velocities, actuator forces, and contact forces.
+Kinematic state layout:
+- state[0]: z-position of torso (height, m) — healthy range 1.0–2.0 m
+- state[1–4]: quaternion orientation of torso (w, x, y, z)
+- state[5]: abdomen z-angle (rad)  state[6]: abdomen y-angle  state[7]: abdomen x-angle
+- state[8–10]: right hip angles (x, z, y)  state[11]: right knee angle
+- state[12–14]: left hip angles (x, z, y)  state[15]: left knee angle
+- state[16–17]: right shoulder angles  state[18]: right elbow angle
+- state[19–20]: left shoulder angles  state[21]: left elbow angle
+- state[22]: x-velocity of torso (forward speed, m/s) — maximize this
+- state[23]: y-velocity of torso (lateral drift, m/s) — keep near 0
+- state[24]: z-velocity of torso (m/s)
+- state[25–27]: angular velocity of torso (x, y, z, rad/s)
+- state[28–30]: abdomen angular velocities (z, y, x)
+- state[31–34]: right hip/knee angular velocities
+- state[35–38]: left hip/knee angular velocities
+- state[39–41]: right shoulder/elbow angular velocities
+- state[42–44]: left shoulder/elbow angular velocities
+The action space is a vector of 17 float numbers representing torques applied to joints (range: -0.4 to 0.4 N):
+- action[0]: abdomen_z  action[1]: abdomen_y  action[2]: abdomen_x
+- action[3]: right_hip_x  action[4]: right_hip_z  action[5]: right_hip_y  action[6]: right_knee
+- action[7]: left_hip_x  action[8]: left_hip_z  action[9]: left_hip_y  action[10]: left_knee
+- action[11]: right_shoulder1  action[12]: right_shoulder2  action[13]: right_elbow
+- action[14]: left_shoulder1  action[15]: left_shoulder2  action[16]: left_elbow
 The policy is a linear policy with 5933 parameters and works as follows:
 action = state @ W + b, where
 state = [state[0], ..., state[347]]
@@ -13,8 +31,8 @@ b = [params[5916], ..., params[5932]]
 The reward function:
 reward = healthy_reward + forward_reward - ctrl_cost
 where:
-- healthy_reward = 5.0 per step when humanoid is upright
+- healthy_reward = 5.0 per step when humanoid is upright (torso height 1.0–2.0 m)
 - forward_reward = 1.25 * x-velocity
 - ctrl_cost = 0.1 * sum(action^2)
-The humanoid is healthy if the z-coordinate (height) of the torso is between 1.0 and 2.0 m. Episode ends early if it falls. Good policies achieve rewards of 3000–8000+.
+Episode ends early if the humanoid falls. Good policies achieve rewards of 3000–8000+.
 Note: With 5933 parameters, this is a very high-dimensional optimization problem.

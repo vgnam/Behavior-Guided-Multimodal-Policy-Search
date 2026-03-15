@@ -23,9 +23,12 @@ class LLMNumOptimRndmPrjAgent:
         rank,
         bias,
         optimum,
+        search_step_size=0.1,
     ):
         self.start_time = time.process_time()
         self.api_call_time = 0
+        self.total_steps = 0
+        self.total_episodes = 0
         self.dim_action = dim_action
         self.dim_state = dim_state
         self.bias = bias
@@ -53,6 +56,7 @@ class LLMNumOptimRndmPrjAgent:
         self.logdir = logdir
         self.num_evaluation_episodes = num_evaluation_episodes
         self.training_episodes = 0
+        self.search_step_size = search_step_size
 
         if self.bias:
             self.dim_state += 1
@@ -81,7 +85,9 @@ class LLMNumOptimRndmPrjAgent:
             logging_file.write(f"{state.T[0]} | {action[0]} | {reward}\n")
             state = next_state
             step_idx += 1
+            self.total_steps += 1
         logging_file.write(f"Total reward: {world.get_accu_reward()}\n")
+        self.total_episodes += 1
         if record:
             self.replay_buffer.add(
                 self.parameters_high_to_low(self.policy.get_parameters()), world.get_accu_reward()
@@ -98,7 +104,7 @@ class LLMNumOptimRndmPrjAgent:
             result = self.rollout_episode(world, logging_file)
             print(f"Result: {result}")
 
-    def train_policy(self, world: BaseWorld, logdir, search_std):
+    def train_policy(self, world: BaseWorld, logdir):
 
         def parse_parameters(input_text):
             # This regex looks for integers or floating-point numbers (including optional sign)
@@ -141,7 +147,7 @@ class LLMNumOptimRndmPrjAgent:
             str_nd_examples(self.replay_buffer, self.rank),
             parse_parameters,
             self.training_episodes,
-            search_std,
+            self.search_step_size,
             self.rank,
             self.optimum,
         )
@@ -178,6 +184,13 @@ class LLMNumOptimRndmPrjAgent:
         self.replay_buffer.add(new_parameter_list, result)
 
         self.training_episodes += 1
+
+        _cpu_time = time.process_time() - self.start_time
+        _api_time = self.api_call_time
+        _total_episodes = self.total_episodes
+        _total_steps = self.total_steps
+        _total_reward = result
+        return _cpu_time, _api_time, _total_episodes, _total_steps, _total_reward
 
     def evaluate_policy(self, world: BaseWorld, logdir):
         results = []

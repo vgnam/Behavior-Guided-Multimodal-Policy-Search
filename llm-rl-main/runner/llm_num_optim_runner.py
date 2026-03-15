@@ -77,6 +77,7 @@ def run_training_loop(
                 rank,
                 bias,
                 optimum,
+                search_step_size,
             )
 
 

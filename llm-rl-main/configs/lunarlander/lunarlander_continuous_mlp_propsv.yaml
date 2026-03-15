@@ -1,0 +1,31 @@
+task: cont_space_llm_num_optim_mlp_vision
+num_episodes: 400
+gym_env_name: LunarLanderContinuous-v2
+render_mode: rgb_array
+logdir: logs/lunarlander_continuous_mlp_propsv_gpt-oss
+dim_actions: 2
+dim_states: 8
+hidden_dims: [16, 8]
+max_traj_count: 30
+max_traj_length: 1000
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_mlp_vision.j2
+llm_output_conversion_template_name: num_optim_mlp_vision.j2
+llm_model_name: openrouter/openai/gpt-oss-120b:free
+num_evaluation_episodes: 3
+warmup_episodes: 10
+warmup_dir: null
+optimum: 200
+search_step_size: 0.1
+intrinsic_rank: 30
+obs_projection_dim: null
+env_desc_file: env_descriptions/lunarlander_mlp.j2
+
+# ProPS-V vision parameters
+vlm_model_name: gpt-4o
+decay_horizon: 100
+frame_sample_period: 50
+n_neighbors: 5
+poisson_lam: 2.0
+neighbor_step: 0.1
+enable_vision: true

@@ -34,6 +34,7 @@ from agent.llm_num_optim_linear_policy_semantics import LLMNumOptimSemanticAgent
 from agent.llm_num_optim_q_table_semantics import LLMNumOptimQTableSemanticsAgent
 from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
 from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
+from agent.llm_num_optim_linear_policy_vision_oneshot import LLMNumOptimVisionOneshotAgent
 
 from envs import nim, pong
 
@@ -334,7 +335,7 @@ def resume_training(config, resume_logdir=None):
             agent = LLMNumOptimRndmPrjAgent(
                 logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
                 llm_si_template, llm_output_template, llm_model_name,
-                num_evaluation_episodes, rank, bias, optimum,
+                num_evaluation_episodes, rank, bias, optimum, search_step_size,
             )
 
     elif task == "dist_state_llm_num_optim":
@@ -405,6 +406,47 @@ def resume_training(config, resume_logdir=None):
         else:
             world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
             agent = LLMNumOptimVisionAgent(
+                logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
+                llm_si_template, llm_output_template, llm_model_name,
+                num_evaluation_episodes, bias, optimum, search_step_size,
+                env_desc_file=env_desc_file, vlm_model_name=vlm_model_name,
+                decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
+                enable_vision=enable_vision, n_neighbors=n_neighbors,
+                poisson_lam=poisson_lam, neighbor_step=neighbor_step,
+            )
+
+    elif task in ["cont_state_llm_num_optim_vision_oneshot", "dist_state_llm_num_optim_vision_oneshot"]:
+        llm_si_template = jinja2_env.get_template(config["llm_si_template_name"])
+        llm_output_template = jinja2_env.get_template(config["llm_output_conversion_template_name"])
+
+        vlm_model_name = config.get("vlm_model_name", "gpt-4o")
+        decay_horizon = config.get("decay_horizon", 100)
+        frame_sample_period = config.get("frame_sample_period", 50)
+        enable_vision = config.get("enable_vision", True)
+        n_neighbors = config.get("n_neighbors", 5)
+        poisson_lam = config.get("poisson_lam", 2.0)
+        neighbor_step = config.get("neighbor_step", 0.1)
+
+        if enable_vision and render_mode is None:
+            render_mode = "rgb_array"
+
+        if task == "dist_state_llm_num_optim_vision_oneshot":
+            world = DiscreteStateGeneralWorld(
+                gym_env_name, render_mode, max_traj_length, env_kwargs=env_kwargs,
+            )
+            agent = LLMNumOptimQTableVisionAgent(
+                logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
+                llm_si_template, llm_output_template, llm_model_name,
+                num_evaluation_episodes, optimum,
+                env_desc_file=env_desc_file, vlm_model_name=vlm_model_name,
+                decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
+                enable_vision=enable_vision, env_kwargs=env_kwargs,
+                n_neighbors=n_neighbors, poisson_lam=poisson_lam,
+                neighbor_step=neighbor_step,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+            agent = LLMNumOptimVisionOneshotAgent(
                 logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
                 llm_si_template, llm_output_template, llm_model_name,
                 num_evaluation_episodes, bias, optimum, search_step_size,
@@ -543,7 +585,8 @@ def resume_training(config, resume_logdir=None):
         print(f"  api_call_time:     {agent.api_call_time:.2f}s")
 
     # ── Step 6: Vision-specific counter restore ─────────────────────────
-    if task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"]:
+    if task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision",
+                "cont_state_llm_num_optim_vision_oneshot", "dist_state_llm_num_optim_vision_oneshot"]:
         if hasattr(agent, "visual_guidance") and hasattr(agent.visual_guidance, "iteration"):
             agent.visual_guidance.iteration = start_episode
             print(f"[Resume] Restored visual guidance iteration to {start_episode}")
@@ -570,7 +613,8 @@ def resume_training(config, resume_logdir=None):
     # Vision stats file (if applicable)
     vision_stats_file = None
     enable_vision = config.get("enable_vision", False)
-    if task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"]:
+    if task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision",
+                "cont_state_llm_num_optim_vision_oneshot", "dist_state_llm_num_optim_vision_oneshot"]:
         vision_stats_path = os.path.join(logdir, "vision_statistics.txt")
         if start_episode == 0:
             vision_stats_file = open(vision_stats_path, "w", encoding="utf-8")

@@ -135,8 +135,56 @@ def main(logs_dir="logs", problems=None):
         print(f"  propsv keys: {sorted(propsv_map)}")
         return
 
-    print(f"Found {len(matched_keys)} matched pair(s)\n")
+    # When filtering by problems, also include unmatched folders that match
+    solo_propsp = []
+    solo_propsv = []
+    if problems:
+        for k in sorted(set(propsp_map) - set(propsv_map)):
+            if any(p.lower() in k.lower() for p in problems):
+                solo_propsp.append(k)
+        for k in sorted(set(propsv_map) - set(propsp_map)):
+            if any(p.lower() in k.lower() for p in problems):
+                solo_propsv.append(k)
+
+    print(f"Found {len(matched_keys)} matched pair(s), "
+          f"{len(solo_propsp)} solo ProPS+, {len(solo_propsv)} solo ProPS-V\n")
     print("=" * 70)
+
+    def print_single(folder, path, variant_label):
+        eps = completed_episode_indices(path)
+        if not eps:
+            print(f"  {variant_label}: {folder} — no completed episodes yet")
+            print("=" * 70)
+            return
+        rows = parse_overall_log(path)
+        rmap = {}
+        for idx, ep in enumerate(eps):
+            if idx < len(rows):
+                rmap[ep] = rows[idx]["total_reward"]
+        if not rmap:
+            print(f"  {variant_label}: {folder} — no reward data")
+            print("=" * 70)
+            return
+        best_ep = max(rmap, key=rmap.get)
+        rollouts = get_rollout_rewards(path, best_ep)
+        print(f"\nProblem : {folder}")
+        print(f"  {variant_label}: {folder}  ({len(eps)} eps)")
+        if rollouts:
+            arr = np.array(rollouts)
+            print(f"  {variant_label} best ep={best_ep:4d}  "
+                  f"mean reward = {arr.mean():.3f} ± {arr.std():.3f}  "
+                  f"(n={len(arr)} rollouts)")
+        else:
+            print(f"  {variant_label} best ep={best_ep}  — no rollout data found")
+        print("=" * 70)
+
+    for key in solo_propsp:
+        folder, path = propsp_map[key][0]
+        print_single(folder, path, "ProPS+")
+
+    for key in solo_propsv:
+        folder, path = propsv_map[key][0]
+        print_single(folder, path, "ProPS-V")
 
     for key in matched_keys:
         # If multiple candidates, pick the one with the most episodes
@@ -155,8 +203,8 @@ def main(logs_dir="logs", problems=None):
         propsp_eps = completed_episode_indices(propsp_path)
         propsv_eps = completed_episode_indices(propsv_path)
 
-        if not propsp_eps or not propsv_eps:
-            print(f"[{key}] Skipped – one or both variants have no completed episodes.")
+        if not propsp_eps and not propsv_eps:
+            print(f"[{key}] Skipped – both variants have no completed episodes.")
             print("=" * 70)
             continue
 
@@ -202,16 +250,20 @@ def main(logs_dir="logs", problems=None):
             print(f"  ProPS+  best ep={propsp_best_ep:4d}  "
                   f"mean reward = {arr.mean():.3f} ± {arr.std():.3f}  "
                   f"(n={len(arr)} rollouts)")
+        elif propsp_eps:
+            print(f"  ProPS+  ({len(propsp_eps)} eps completed) — no rollout data found")
         else:
-            print(f"  ProPS+  best ep={propsp_best_ep}  — no rollout data found")
+            print(f"  ProPS+  — not yet started")
 
         if propsv_rollouts:
             arr = np.array(propsv_rollouts)
             print(f"  ProPS-V best ep={propsv_best_ep:4d}  "
                   f"mean reward = {arr.mean():.3f} ± {arr.std():.3f}  "
                   f"(n={len(arr)} rollouts)")
+        elif propsv_eps:
+            print(f"  ProPS-V ({len(propsv_eps)} eps completed) — no rollout data found")
         else:
-            print(f"  ProPS-V best ep={propsv_best_ep}  — no rollout data found")
+            print(f"  ProPS-V — not yet started")
 
         # Summary comparison
         if propsp_rollouts and propsv_rollouts:

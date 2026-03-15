@@ -1,8 +1,8 @@
 task: cont_state_llm_num_optim_semantics
-num_episodes: 100
+num_episodes: 400
 gym_env_name: MountainCar-v0
 render_mode: null
-logdir: logs/mountaincar_propsp
+logdir: logs/mountaincar_propsp_gpt-oss
 dim_actions: 3
 dim_states: 2
 max_traj_count: 1000

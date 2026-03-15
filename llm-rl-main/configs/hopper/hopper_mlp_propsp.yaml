@@ -1,0 +1,22 @@
+task: cont_space_llm_num_optim_mlp
+num_episodes: 200
+gym_env_name: Hopper-v5
+render_mode: rgb_array
+logdir: logs/hopper_mlp_gpt-oss
+dim_actions: 3
+dim_states: 11
+hidden_dims: [32, 16]
+max_traj_count: 30
+max_traj_length: 1000
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_mlp.j2
+llm_output_conversion_template_name: num_optim_mlp.j2
+llm_model_name: openrouter/openai/gpt-oss-120b:free
+num_evaluation_episodes: 3
+warmup_episodes: 10
+warmup_dir: null
+optimum: 1000
+search_step_size: 0.1
+intrinsic_rank: 50        # LLM sees 50 params; mapped to ~600 MLP weights
+obs_projection_dim: null  # No obs projection for 11-dim state
+env_desc_file: env_descriptions/hopper.j2

@@ -82,11 +82,13 @@ class EpisodeRewardBuffer:
         self.buffer.append((weights, bias, reward))
     
     def __str__(self):
-        buffer_table = "Parameters | Reward\n"
+        lines = []
         for weights, bias, reward in self.buffer:
-            parameters = np.concatenate((weights, bias))
-            buffer_table += f"{parameters.reshape(1, -1)} | {reward}\n"
-        return buffer_table
+            parameters = np.concatenate((weights, bias)).reshape(-1)
+            n = len(parameters)
+            vals = ', '.join(f'{x:.1f}' for x in parameters)
+            lines.append(f"params[0:{n}] = [{vals}], f(params) = {reward}")
+        return '\n'.join(lines)
 
     def load(self, folder):
         # Find all episode files
@@ -132,10 +134,13 @@ class EpisodeRewardBufferNoBias:
         self.buffer = deque(sorted(self.buffer, key=lambda x: x[1], reverse=False), maxlen=self.buffer.maxlen)
     
     def __str__(self):
-        buffer_table = "Parameters | Reward\n"
+        lines = []
         for weights, reward in self.buffer:
-            buffer_table += f"{weights.reshape(1, -1)} | {reward}\n"
-        return buffer_table
+            parameters = weights.reshape(-1)
+            n = len(parameters)
+            vals = ', '.join(f'{x:.1f}' for x in parameters)
+            lines.append(f"params[0:{n}] = [{vals}], f(params) = {reward}")
+        return '\n'.join(lines)
 
     def load(self, folder):
         # Find all episode files
