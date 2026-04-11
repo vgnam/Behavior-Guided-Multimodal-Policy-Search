@@ -35,8 +35,27 @@ from agent.llm_num_optim_q_table_semantics import LLMNumOptimQTableSemanticsAgen
 from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
 from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
 from agent.llm_num_optim_linear_policy_vision_oneshot import LLMNumOptimVisionOneshotAgent
+from agent.openai_es_linear_policy import OpenAIESLinearPolicyAgent
 
 from envs import nim, pong
+
+
+def _infer_dimension(value, name):
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, list):
+        if len(value) == 0:
+            raise ValueError(f"{name} cannot be an empty list")
+        if len(value) == 1 and isinstance(value[0], list):
+            return len(value[0])
+        return len(value)
+    raise ValueError(f"Unsupported type for {name}: {type(value)}")
+
+
+def _is_discrete_problem(dim_actions, dim_states):
+    return isinstance(dim_actions, list) or isinstance(dim_states, list)
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -307,7 +326,7 @@ def resume_training(config, resume_logdir=None):
     max_traj_length = config.get("max_traj_length", 1000)
     gym_env_name = config["gym_env_name"]
     render_mode = config.get("render_mode")
-    llm_model_name = config["llm_model_name"]
+    llm_model_name = config.get("llm_model_name")
     num_evaluation_episodes = config.get("num_evaluation_episodes", 20)
     bias = config.get("bias", True)
     optimum = config.get("optimum", 1000)
@@ -318,7 +337,48 @@ def resume_training(config, resume_logdir=None):
     world = None
     agent = None
 
-    if task in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj"]:
+    if task in ["cont_space_openai_es", "dist_state_openai_es", "openai_es_baseline"]:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        inferred_actions = _infer_dimension(dim_actions, "dim_actions")
+        inferred_states = _infer_dimension(dim_states, "dim_states")
+
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+
+        agent = OpenAIESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=inferred_actions,
+            dim_state=inferred_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            population_size=config.get("population_size", 32),
+            sigma=config.get("sigma", 0.1),
+            noise_stdev=config.get("noise_stdev", None),
+            learning_rate=config.get("learning_rate", 0.03),
+            candidate_evaluation_episodes=config.get("candidate_evaluation_episodes", 1),
+            return_proc_mode=config.get("return_proc_mode", "centered_rank"),
+            optimizer_type=config.get("optimizer_type", "adam"),
+            use_centered_ranks=config.get("use_centered_ranks", True),
+            use_adam=config.get("use_adam", True),
+            adam_beta1=config.get("adam_beta1", 0.9),
+            adam_beta2=config.get("adam_beta2", 0.999),
+            adam_epsilon=config.get("adam_epsilon", 1e-8),
+            weight_decay=config.get("weight_decay", 0.0),
+            l2coeff=config.get("l2coeff", None),
+            grad_batch_size=config.get("grad_batch_size", 500),
+            sgd_momentum=config.get("sgd_momentum", 0.9),
+            seed=config.get("seed", None),
+        )
+
+    elif task in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj"]:
         llm_si_template = jinja2_env.get_template(config["llm_si_template_name"])
         llm_output_template = jinja2_env.get_template(config["llm_output_conversion_template_name"])
 
@@ -517,18 +577,21 @@ def resume_training(config, resume_logdir=None):
     print(f"[Resume] Agent and world initialized for task: {task}")
 
     # ── Step 3: Restore replay buffer ───────────────────────────────────
-    warmup_dir = os.path.join(resume_from, "warmup")
-    if os.path.exists(warmup_dir):
-        print(f"[Resume] Loading warmup data from {warmup_dir}")
-        agent.replay_buffer.load(warmup_dir)
-        print(f"  Replay buffer size after warmup: {len(agent.replay_buffer.buffer)}")
-    else:
-        print("[Resume] WARNING: No warmup directory found — replay buffer starts empty.")
+    if hasattr(agent, "replay_buffer"):
+        warmup_dir = os.path.join(resume_from, "warmup")
+        if os.path.exists(warmup_dir):
+            print(f"[Resume] Loading warmup data from {warmup_dir}")
+            agent.replay_buffer.load(warmup_dir)
+            print(f"  Replay buffer size after warmup: {len(agent.replay_buffer.buffer)}")
+        else:
+            print("[Resume] WARNING: No warmup directory found — replay buffer starts empty.")
 
-    if last_episode >= 0:
-        loaded = load_training_rollouts_into_buffer(agent, task, resume_from, last_episode)
-        print(f"[Resume] Loaded {loaded} training episodes into replay buffer")
-        print(f"  Replay buffer size: {len(agent.replay_buffer.buffer)}")
+        if last_episode >= 0:
+            loaded = load_training_rollouts_into_buffer(agent, task, resume_from, last_episode)
+            print(f"[Resume] Loaded {loaded} training episodes into replay buffer")
+            print(f"  Replay buffer size: {len(agent.replay_buffer.buffer)}")
+    else:
+        print("[Resume] Task does not use a replay buffer — skipping replay restore.")
 
     # ── Step 4: Restore policy parameters ───────────────────────────────
     qtable_tasks = {
@@ -561,6 +624,8 @@ def resume_training(config, resume_logdir=None):
                 else:
                     params = weights.reshape(-1)
                 agent.policy.update_policy(params)
+                if hasattr(agent, "theta"):
+                    agent.theta = agent.policy.get_parameters().reshape(-1).copy()
                 print(f"[Resume] Restored policy parameters from episode_{last_episode}")
             else:
                 print(f"[Resume] WARNING: Could not parse parameters from episode_{last_episode}")

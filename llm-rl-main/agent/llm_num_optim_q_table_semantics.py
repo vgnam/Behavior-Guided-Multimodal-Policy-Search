@@ -1,6 +1,7 @@
 from agent.policy.q_table import QTable
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias
 from agent.policy.llm_brain_linear_policy import LLMBrain
+from agent.policy.reward_summary import print_reward_summary
 from world.base_world import BaseWorld
 import traceback
 import numpy as np
@@ -165,8 +166,7 @@ class LLMNumOptimQTableSemanticsAgent:
             else:
                 result = self.rollout_episode(world, logging_file, record=False)
             results.append(result)
-        print(f"Results: {results}")
-        result = np.mean(results)
+        result, _ = print_reward_summary(results)
         self.replay_buffer.add(
             np.array(
                 [self.q_table.mapping[i] for i in range(len(self.q_table.mapping))]

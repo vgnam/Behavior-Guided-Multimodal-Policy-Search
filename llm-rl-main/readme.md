@@ -10,6 +10,26 @@ All the configuration files for each experiments are in the ./configs folder. Th
 
 In order to run an experiment, please run `python main.py --config <configuration_file>`.
 
+## OpenAI-ES Baseline
+
+An OpenAI-ES baseline (linear policy, antithetic sampling, rank-normalized
+updates) is available via:
+
+- task: `cont_space_openai_es`
+- example config: `configs/acrobot/acrobot_openai_es.yaml`
+
+Implementation note:
+
+- The ES update flow follows the core equations/patterns from the OpenAI
+	evolution-strategies-starter repository (centered-rank return processing,
+	weighted perturbation aggregation, optimizer update step).
+- OpenAI-ES configs are aligned to the same `num_episodes` values as the
+	corresponding ProPS+ (`*_propsp.yaml`) configs for each problem.
+
+Run it with:
+
+`python main.py --config configs/acrobot/acrobot_openai_es.yaml`
+
 # Install the requirements
 
 ## RL Tasks

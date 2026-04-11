@@ -1,0 +1,26 @@
+﻿task: cont_space_openai_es
+num_episodes: 395
+gym_env_name: Hopper-v5
+render_mode: null
+logdir: logs/hopper_openai_es
+dim_actions: 3
+dim_states: 11
+max_traj_count: 1000
+max_traj_length: 1000
+num_evaluation_episodes: 20
+warmup_episodes: 20
+warmup_dir: null
+bias: true
+
+# OpenAI-ES baseline hyperparameters
+population_size: 32
+sigma: 0.1
+learning_rate: 0.03
+candidate_evaluation_episodes: 1
+use_centered_ranks: true
+use_adam: true
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_epsilon: 1.0e-8
+weight_decay: 0.0
+seed: 42

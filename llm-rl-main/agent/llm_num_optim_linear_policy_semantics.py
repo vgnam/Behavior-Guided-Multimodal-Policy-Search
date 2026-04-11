@@ -3,6 +3,7 @@ from agent.policy.linear_policy import LinearPolicy
 from agent.policy.replay_buffer import EpisodeRewardBufferNoBias
 from agent.policy.replay_buffer import ReplayBuffer
 from agent.policy.llm_brain_linear_policy import LLMBrain
+from agent.policy.reward_summary import print_reward_summary
 from world.base_world import BaseWorld
 import numpy as np
 import re
@@ -180,8 +181,7 @@ class LLMNumOptimSemanticAgent:
             else:
                 result = self.rollout_episode(world, logging_file, record=False)
             results.append(result)
-        print(f"Results: {results}")
-        result = np.mean(results)
+        result, _ = print_reward_summary(results)
         self.replay_buffer.add(new_parameter_list, result)
         # self.replay_buffer.sort()
 

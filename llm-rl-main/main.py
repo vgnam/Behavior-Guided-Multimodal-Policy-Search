@@ -1,24 +1,25 @@
-import yaml
 import argparse
-from runner import (
-    llm_num_optim_runner,
-)
+import importlib
+import os
 
-import litellm
-from runner import llm_num_optim_runner
-from runner import llm_num_optim_semantics_runner
-from runner import llm_num_optim_vision_runner
-from runner import llm_num_optim_mlp_runner
-from runner import llm_num_optim_mlp_semantic_runner
-from runner import llm_num_optim_mlp_vision_runner
-from runner import llm_num_optim_vision_oneshot_runner
+import yaml
+
 # import gym_maze
 # import gym_navigation
-from envs import nim, pong
+try:
+    from envs import nim  # noqa: F401
+except ModuleNotFoundError:
+    nim = None
+
+try:
+    from envs import pong  # noqa: F401
+except ModuleNotFoundError:
+    pong = None
 
 # Register stable_gym oscillator environments manually to avoid the
 # apply_api_compatibility incompatibility in stable_gym's __init__.py
 from gymnasium.envs.registration import register as _gym_register
+
 _gym_register(
     id="stable_gym/Oscillator-v1",
     entry_point="stable_gym.envs.biological.oscillator.oscillator:Oscillator",
@@ -29,13 +30,44 @@ _gym_register(
     entry_point="stable_gym.envs.biological.oscillator_complicated.oscillator_complicated:OscillatorComplicated",
     max_episode_steps=400,
 )
-import os
+
 os.environ["OPENROUTER_API_KEY"] = "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"
 
 os.environ["NVIDIA_NIM_API_KEY"] = "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"
 os.environ["MISTRAL_API_KEY"] = "wjLJ7TRAHtcDNv2VrIgE7dreAhVyYQBD"
 
 os.environ["GEMINI_API_KEY"] = "AIzaSyBLtoejOAWxIkV5R1hV369pDopvdNqRkQk"
+
+
+TASK_TO_RUNNER = {
+    "cont_space_llm_num_optim": "runner.llm_num_optim_runner",
+    "cont_space_llm_num_optim_rndm_proj": "runner.llm_num_optim_runner",
+    "dist_state_llm_num_optim": "runner.llm_num_optim_runner",
+    "dist_state_llm_num_optim_semantics": "runner.llm_num_optim_semantics_runner",
+    "cont_state_llm_num_optim_semantics": "runner.llm_num_optim_semantics_runner",
+    "cont_state_llm_num_optim_vision": "runner.llm_num_optim_vision_runner",
+    "dist_state_llm_num_optim_vision": "runner.llm_num_optim_vision_runner",
+    "cont_space_llm_num_optim_mlp": "runner.llm_num_optim_mlp_runner",
+    "atari_llm_num_optim_mlp": "runner.llm_num_optim_mlp_runner",
+    "cont_space_llm_num_optim_mlp_semantics": "runner.llm_num_optim_mlp_semantic_runner",
+    "atari_llm_num_optim_mlp_semantics": "runner.llm_num_optim_mlp_semantic_runner",
+    "cont_space_llm_num_optim_mlp_vision": "runner.llm_num_optim_mlp_vision_runner",
+    "atari_llm_num_optim_mlp_vision": "runner.llm_num_optim_mlp_vision_runner",
+    "cont_state_llm_num_optim_vision_oneshot": "runner.llm_num_optim_vision_oneshot_runner",
+    "dist_state_llm_num_optim_vision_oneshot": "runner.llm_num_optim_vision_oneshot_runner",
+    "cont_space_openai_es": "runner.openai_es_runner",
+    "dist_state_openai_es": "runner.openai_es_runner",
+    "openai_es_baseline": "runner.openai_es_runner",
+}
+
+
+def _load_runner(task):
+    try:
+        module_path = TASK_TO_RUNNER[task]
+    except KeyError as exc:
+        raise ValueError(f"Task {task} not recognized.") from exc
+    return importlib.import_module(module_path)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -66,25 +98,8 @@ def main():
         resume_training(config, resume_logdir=args.resume_from)
         return
 
-    if config["task"] in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj", "dist_state_llm_num_optim"]:
-        llm_num_optim_runner.run_training_loop(**config)
-    elif config["task"] in ["dist_state_llm_num_optim_semantics", "cont_state_llm_num_optim_semantics"]:
-        llm_num_optim_semantics_runner.run_training_loop(**config)
-    elif config["task"] in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"]:
-        llm_num_optim_vision_runner.run_training_loop(**config)
-    elif config["task"] in ["cont_space_llm_num_optim_mlp", "atari_llm_num_optim_mlp"]:
-        llm_num_optim_mlp_runner.run_training_loop(**config)
-    elif config["task"] in ["cont_space_llm_num_optim_mlp_semantics", "atari_llm_num_optim_mlp_semantics"]:
-        llm_num_optim_mlp_semantic_runner.run_training_loop(**config)
-    elif config["task"] in ["cont_space_llm_num_optim_mlp_vision", "atari_llm_num_optim_mlp_vision"]:
-        llm_num_optim_mlp_vision_runner.run_training_loop(**config)
-    elif config["task"] in [
-        "cont_state_llm_num_optim_vision_oneshot",
-        "dist_state_llm_num_optim_vision_oneshot",
-    ]:
-        llm_num_optim_vision_oneshot_runner.run_training_loop(**config)
-    else:
-        raise ValueError(f"Task {config['task']} not recognized.")
+    runner_module = _load_runner(config["task"])
+    runner_module.run_training_loop(**config)
 
 
 if __name__ == "__main__":
