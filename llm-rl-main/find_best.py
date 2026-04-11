@@ -5,6 +5,7 @@ Usage:
     python find_best.py                          # scan all folders under logs/
     python find_best.py --logs_dir logs
     python find_best.py --folder logs/cartpole_propsp_gpt-oss
+    python find_best.py --start_ep 1 --end_ep 100
     python find_best.py --problems cartpole ant  # filter by name substring
     python find_best.py --sort reward            # sort output by best reward (desc)
 """
@@ -32,10 +33,11 @@ def parse_overall_log(path):
     return rows
 
 
-def best_in_folder(folder_path):
-    """Return (best_iteration, best_reward, total_rows) for a log folder."""
+def best_in_folder(folder_path, start_ep=1, end_ep=100):
+    """Return (best_iteration, best_reward, in_range_rows) for a log folder."""
     log_path = os.path.join(folder_path, "overall_log.txt")
     rows = parse_overall_log(log_path)
+    rows = [r for r in rows if start_ep <= r[0] <= end_ep]
     if not rows:
         return None, None, 0
     best_iter, best_reward = max(rows, key=lambda r: r[1])
@@ -52,20 +54,29 @@ def main():
                         help="Filter folders by substring (e.g. cartpole ant)")
     parser.add_argument("--sort", choices=["name", "reward"], default="name",
                         help="Sort output by name or reward (desc)")
+    parser.add_argument("--start_ep", type=int, default=1,
+                        help="Start episode/iteration to include (default: 1)")
+    parser.add_argument("--end_ep", type=int, default=100,
+                        help="End episode/iteration to include (default: 100)")
     args = parser.parse_args()
+
+    if args.start_ep > args.end_ep:
+        print("[Error] --start_ep must be <= --end_ep")
+        return
 
     # ── Single folder mode ────────────────────────────────────────────────
     if args.folder:
         folder_path = args.folder.rstrip("/\\")
-        best_iter, best_reward, n_rows = best_in_folder(folder_path)
+        best_iter, best_reward, n_rows = best_in_folder(folder_path, args.start_ep, args.end_ep)
         folder_name = os.path.basename(folder_path)
         if best_reward is None:
-            print(f"[{folder_name}]  no overall_log.txt or no data found")
+            print(f"[{folder_name}]  no overall_log.txt or no data found in range [{args.start_ep}, {args.end_ep}]")
         else:
             print(f"[{folder_name}]")
             print(f"  Best reward   : {best_reward}")
             print(f"  At iteration  : {best_iter}")
-            print(f"  Total rows    : {n_rows}")
+            print(f"  Rows in range : {n_rows}")
+            print(f"  Range         : [{args.start_ep}, {args.end_ep}]")
         return
 
     # ── Multi-folder mode ─────────────────────────────────────────────────
@@ -91,7 +102,7 @@ def main():
     results = []
     for folder in folders:
         folder_path = os.path.join(args.logs_dir, folder)
-        best_iter, best_reward, n_rows = best_in_folder(folder_path)
+        best_iter, best_reward, n_rows = best_in_folder(folder_path, args.start_ep, args.end_ep)
         results.append({
             "folder":      folder,
             "best_reward": best_reward,
@@ -109,6 +120,7 @@ def main():
     header = f"{'Folder':<{col_w}}  {'Best Reward':>14}  {'@ Iter':>7}  {'Rows':>5}"
     print(header)
     print("-" * len(header))
+    print(f"Episode range: [{args.start_ep}, {args.end_ep}]")
 
     for r in results:
         if r["best_reward"] is None:

@@ -4,9 +4,10 @@ Vision-Language Model Analyzer for ProPS-V
 This module provides VLM integration for analyzing episode frames
 and generating diagnostic feedback for policy optimization.
 Prompts are loaded from Jinja2 .j2 template files.
-Uses Google Gen AI SDK (gemini-2.5-flash-lite).
+Uses LiteLLM for multi-provider model access.
 """
 
+import base64
 import io
 import time
 import os
@@ -14,43 +15,39 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
-from google import genai
-from google.genai import types
+import litellm
 
 
 class VLMAnalyzer:
     """
     Analyzes episode frames using Vision-Language Models to provide
     visual diagnostic feedback for policy search.
-    Uses Google Gen AI SDK (gemini-2.5-flash-lite).
+    Uses LiteLLM for multi-provider model access (model read from config).
     """
-
-    GEMINI_MODEL = "gemini-2.5-flash-lite"
 
     def __init__(
         self,
-        vlm_model_name: str = "gemini-2.5-flash-lite",
+        vlm_model_name: str = "gemini/gemini-2.5-flash-lite",
         max_retries: int = 3,
         timeout: int = 60,
         template_dir: str = "agent/policy/templates",
         enable_reasoning: bool = False,
     ):
         """
-        Initialize VLM analyzer using Google Gen AI SDK.
+        Initialize VLM analyzer using LiteLLM.
 
         Args:
-            vlm_model_name: Name of the VLM model (ignored, uses GEMINI_MODEL)
+            vlm_model_name: LiteLLM model identifier (e.g. "gemini/gemini-2.5-flash-lite",
+                            "openai/gpt-4o", "nvidia_nim/meta/llama-4-scout-17b-16e-instruct")
             max_retries: Maximum number of retry attempts on failure
             timeout: Timeout in seconds for API calls
             template_dir: Directory containing Jinja2 .j2 prompt templates
             enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
         """
-        self.vlm_model_name = self.GEMINI_MODEL
+        self.vlm_model_name = vlm_model_name
         self.max_retries = max_retries
         self.timeout = timeout
         self.enable_reasoning = enable_reasoning
-
-        self._client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         self._jinja_env = Environment(
             loader=FileSystemLoader(template_dir),
@@ -74,37 +71,43 @@ class VLMAnalyzer:
         img.save(buffered, format="PNG")
         return buffered.getvalue()
 
-    def _build_parts(
+    def _build_messages(
         self,
         text_prompt: str,
         image_frames: List[np.ndarray],
-    ) -> List[types.Part]:
+    ) -> List[Dict[str, Any]]:
         """
-        Build a list of SDK Part objects from a text prompt and image frames.
+        Build OpenAI-compatible message list from a text prompt and image frames.
 
         Args:
             text_prompt: The text portion of the message
             image_frames: List of RGB numpy arrays
 
         Returns:
-            List of types.Part (text first, then images)
+            List of messages in OpenAI chat format with vision content
         """
-        parts: List[types.Part] = [types.Part.from_text(text=text_prompt)]
+        content: List[Dict[str, Any]] = [{"type": "text", "text": text_prompt}]
         for frame in image_frames:
             png_bytes = self.frame_to_png_bytes(frame)
-            parts.append(types.Part.from_bytes(data=png_bytes, mime_type="image/png"))
-        return parts
+            b64 = base64.b64encode(png_bytes).decode("utf-8")
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{b64}",
+                },
+            })
+        return [{"role": "user", "content": content}]
 
-    def _call_gemini_api(
+    def _call_vlm_api(
         self,
-        parts: List[types.Part],
+        messages: List[Dict[str, Any]],
         temperature: float = 0.7,
     ) -> tuple[str, float]:
         """
-        Call Gemini via Google Gen AI SDK.
+        Call VLM via LiteLLM.
 
         Args:
-            parts: List of types.Part (text + images)
+            messages: OpenAI-compatible message list
             temperature: Sampling temperature
 
         Returns:
@@ -112,19 +115,15 @@ class VLMAnalyzer:
         """
         api_start_time = time.time()
 
-        config = types.GenerateContentConfig(
+        response = litellm.completion(
+            model=self.vlm_model_name,
+            messages=messages,
             temperature=temperature,
-            max_output_tokens=1024,
-        )
-
-        response = self._client.models.generate_content(
-            model=self.GEMINI_MODEL,
-            contents=parts,
-            config=config,
+            timeout=self.timeout,
         )
 
         api_time = time.time() - api_start_time
-        return response.text.strip(), api_time
+        return response.choices[0].message.content.strip(), api_time
 
     def create_analysis_prompt(
         self,
@@ -189,11 +188,11 @@ class VLMAnalyzer:
             for fd in frames
             if "frame" in fd and fd["frame"] is not None
         ]
-        parts = self._build_parts(text_prompt, image_frames)
+        messages = self._build_messages(text_prompt, image_frames)
 
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
+                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
                 return analysis, api_time
             except Exception as e:
                 print(f"[VLM ERROR] Attempt {attempt + 1}/{self.max_retries}: {e}")
@@ -247,7 +246,7 @@ class VLMAnalyzer:
             f"Previous trajectory ({len(prev_image_frames)} frames below):\n"
             f"Current trajectory ({len(curr_image_frames)} frames below):"
         )
-        parts = self._build_parts(full_prompt, prev_image_frames + curr_image_frames)
+        messages = self._build_messages(full_prompt, prev_image_frames + curr_image_frames)
 
         num_prev = len(prev_image_frames)
         num_curr = len(curr_image_frames)
@@ -257,7 +256,7 @@ class VLMAnalyzer:
         )
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
+                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
                 print(f"[VLM] Comparison response received in {api_time:.1f}s ({len(analysis)} chars)")
                 return analysis, api_time
             except Exception as e:
@@ -323,7 +322,7 @@ class VLMAnalyzer:
             label_lines.append(f"  [C{idx}] reward={c['reward']:.2f}, {count} frame(s)")
 
         full_prompt = prompt + "\n\nCandidate frames order:\n" + "\n".join(label_lines)
-        parts = self._build_parts(full_prompt, all_image_frames)
+        messages = self._build_messages(full_prompt, all_image_frames)
 
         n_candidates = len(candidates)
         rewards_str = ", ".join(f"{c['reward']:.2f}" for c in candidates)
@@ -331,7 +330,7 @@ class VLMAnalyzer:
 
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_gemini_api(parts, temperature=0.7)
+                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
                 print(
                     f"[VLM] Diversity response received in {api_time:.1f}s "
                     f"({len(analysis)} chars)"
