@@ -1,6 +1,8 @@
-gymnasium
+gymnasium[box2d,mujoco]
 numpy
 matplotlib
 pyyaml
 jinja2
 litellm
+pillow
+pygame
