@@ -1,2 +1,3 @@
 llm-rl-main/logs/
 .venv
+generated_*.png
