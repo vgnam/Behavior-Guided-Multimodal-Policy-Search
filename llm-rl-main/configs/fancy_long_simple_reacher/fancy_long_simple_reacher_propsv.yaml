@@ -1,0 +1,29 @@
+task: cont_state_llm_num_optim_vision
+num_episodes: 300
+gym_env_name: fancy/LongSimpleReacher-v0
+render_mode: rgb_array
+logdir: logs/fancy_long_simple_reacher_propsv
+dim_actions: 5
+dim_states: 18
+max_traj_count: 1000
+max_traj_length: 200
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_vision.j2
+llm_output_conversion_template_name: num_optim_vision.j2
+llm_model_name: gpt-4o
+num_evaluation_episodes: 20
+warmup_episodes: 20
+warmup_dir: null
+bias: true
+optimum: 0
+search_step_size: 0.1
+env_desc_file: env_descriptions/fancy_long_simple_reacher.j2
+
+# ProPS-V specific parameters
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+decay_horizon: 100
+frame_sample_period: 50
+n_neighbors: 5
+poisson_lam: 2.0
+neighbor_step: 0.1
+enable_vision: true

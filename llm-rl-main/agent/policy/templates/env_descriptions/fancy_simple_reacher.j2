@@ -1,0 +1,19 @@
+fancy/SimpleReacher-v0 is a 2-link continuous-control reaching problem from Fancy Gym.
+
+Episode setup and objective:
+- Horizon is 200 steps.
+- The task is mostly delayed-reward: it provides little or no reward for early exploration, then rewards accurate reaching later in the episode.
+- The policy should keep exploration early, then become precise near the end.
+
+State and action:
+- State is a 9-dimensional continuous feature vector.
+- Action is 2-dimensional continuous control, each component in [-1, 1].
+
+Linear policy used by this project:
+- action = clip(state @ W + b, -1, 1)
+- state shape: (9,)
+- W shape: (9, 2)
+- b shape: (2,)
+
+Optimization goal:
+- Maximize episode return by learning coordinated 2-joint motion that reaches the target reliably at the end of the trajectory.

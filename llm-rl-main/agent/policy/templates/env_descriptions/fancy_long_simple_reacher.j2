@@ -1,0 +1,19 @@
+fancy/LongSimpleReacher-v0 is a 5-link continuous-control reaching problem from Fancy Gym.
+
+Episode setup and objective:
+- Horizon is 200 steps.
+- Rewards are mostly delayed, so successful policies balance early exploration and late-stage precise control.
+- Compared with SimpleReacher, the longer arm introduces stronger coordination challenges across joints.
+
+State and action:
+- State is an 18-dimensional continuous feature vector.
+- Action is 5-dimensional continuous control, each component in [-1, 1].
+
+Linear policy used by this project:
+- action = clip(state @ W + b, -1, 1)
+- state shape: (18,)
+- W shape: (18, 5)
+- b shape: (5,)
+
+Optimization goal:
+- Maximize episode return by learning smooth multi-joint trajectories that reach the target with high precision near the end of the episode.

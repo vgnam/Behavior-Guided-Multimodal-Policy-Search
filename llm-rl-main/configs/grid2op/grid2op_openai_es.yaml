@@ -1,0 +1,33 @@
+task: cont_space_openai_es
+num_episodes: 100
+gym_env_name: Grid2OpCase14-v0
+render_mode: null
+logdir: logs/grid2op_case14_openai_es
+dim_actions: 41
+dim_states: 40
+max_traj_count: 1
+max_traj_length: 100
+num_evaluation_episodes: 5
+warmup_episodes: 0
+warmup_dir: null
+bias: true
+
+env_kwargs:
+  grid2op_env_name: l2rpn_case14_sandbox
+  reward_class_name: L2RPNReward
+  observation_features:
+    - rho
+    - line_status
+
+# OpenAI-ES baseline hyperparameters
+population_size: 16
+sigma: 0.1
+learning_rate: 0.03
+candidate_evaluation_episodes: 1
+use_centered_ranks: true
+use_adam: true
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_epsilon: 1.0e-8
+weight_decay: 0.0
+seed: 42

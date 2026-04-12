@@ -19,7 +19,7 @@ env_desc_file: env_descriptions/blackjack.j2
 
 # ProPS-V: vision disabled (Blackjack has no meaningful visual state)
 enable_vision: false
-vlm_model_name: meta/llama-4-scout-17b-16e-instruct
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5

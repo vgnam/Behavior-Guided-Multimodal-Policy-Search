@@ -3,6 +3,9 @@ import importlib
 import os
 
 import yaml
+from gymnasium.envs.registration import WrapperSpec as _WrapperSpec
+from gymnasium.envs.registration import register as _gym_register
+from gymnasium.error import Error as _GymError
 
 # import gym_maze
 # import gym_navigation
@@ -16,19 +19,59 @@ try:
 except ModuleNotFoundError:
     pong = None
 
-# Register stable_gym oscillator environments manually to avoid the
-# apply_api_compatibility incompatibility in stable_gym's __init__.py
-from gymnasium.envs.registration import register as _gym_register
+try:
+    from envs import grid2op_env  # noqa: F401
+except ModuleNotFoundError:
+    grid2op_env = None
 
-_gym_register(
+# try:
+#     from envs import robosuite_env  # noqa: F401
+# except ModuleNotFoundError:
+#     robosuite_env = None
+
+try:
+    importlib.import_module("fancy_gym")
+except ModuleNotFoundError:
+    fancy_gym = None
+
+def _safe_register_stable_gym(**kwargs):
+    try:
+        _gym_register(**kwargs)
+    except _GymError as exc:
+        if "Cannot re-register id" not in str(exc):
+            raise
+
+
+# Register selected stable_gym environments manually to avoid importing
+# stable_gym.__init__ (which can trigger compatibility issues in some setups).
+_safe_register_stable_gym(
     id="stable_gym/Oscillator-v1",
     entry_point="stable_gym.envs.biological.oscillator.oscillator:Oscillator",
     max_episode_steps=400,
 )
-_gym_register(
+_safe_register_stable_gym(
     id="stable_gym/OscillatorComplicated-v1",
     entry_point="stable_gym.envs.biological.oscillator_complicated.oscillator_complicated:OscillatorComplicated",
     max_episode_steps=400,
+)
+_safe_register_stable_gym(
+    id="stable_gym/FetchReachCost-v1",
+    entry_point="stable_gym.envs.robotics.fetch.fetch_reach_cost.fetch_reach_cost:FetchReachCost",
+    max_episode_steps=50,
+)
+_safe_register_stable_gym(
+    id="stable_gym/MinitaurBulletCost-v1",
+    entry_point="stable_gym.envs.robotics.minitaur.minitaur_bullet_cost.minitaur_bullet_cost:MinitaurBulletCost",
+    max_episode_steps=500,
+    disable_env_checker=True,
+    apply_api_compatibility=True,
+    additional_wrappers=(
+        _WrapperSpec(
+            name="MaxEpisodeStepsInjectionWrapper",
+            entry_point="stable_gym.common.max_episode_steps_injection_wrapper:MaxEpisodeStepsInjectionWrapper",
+            kwargs={},
+        ),
+    ),
 )
 
 os.environ["OPENROUTER_API_KEY"] = "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"

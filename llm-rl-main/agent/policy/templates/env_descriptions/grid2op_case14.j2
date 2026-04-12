@@ -1,0 +1,44 @@
+This benchmark wraps Grid2Op's `l2rpn_case14_sandbox` power-grid control task as a small discrete-action problem that matches the linear-policy code in this repo.
+
+Objective:
+- Keep the transmission grid secure for as long as possible while avoiding overloads and cascading failures.
+- The key safety signal is `rho`, the line loading ratio. `rho > 1.0` means a line is overloaded and the grid is at risk.
+- A good policy usually reduces high-`rho` lines, reconnects useful lines when it is safe, and avoids unnecessary switching.
+
+State:
+- The state is a 40-dimensional vector.
+- `state[0]` to `state[19]` are `rho` values for lines 0 to 19.
+- `state[20]` to `state[39]` are `line_status` values for lines 0 to 19.
+- `line_status = 1` means the line is connected.
+- `line_status = 0` means the line is disconnected.
+
+Action space:
+- There are 41 discrete actions.
+- `action 0`: do nothing.
+- `action 1` to `action 20`: disconnect line 0 to line 19 respectively.
+- `action 21` to `action 40`: reconnect line 0 to line 19 respectively.
+- Reconnecting a line can still be a bad idea if the grid is stressed or if the simulator treats it as illegal in the current state.
+
+Policy:
+- The policy is a linear classifier over the 40-D state vector.
+- It computes `scores = state @ W + B` and takes `argmax(scores)` as the action.
+- `W` has shape `(40, 41)` and `B` has shape `(41,)`.
+- The full policy therefore has `40 * 41 + 41 = 1681` parameters.
+
+Reward:
+- This wrapper uses Grid2Op's `L2RPNReward`.
+- At each step, higher reward means the grid is farther from thermal limits and therefore healthier.
+- The episodic reward is the sum of those step rewards over the rollout.
+- With `max_traj_length = 100`, the theoretical best episodic reward is around `2000`, because case14 has 20 lines and the per-step reward is maximized when all lines have large safety margins.
+
+Practical strategy hints:
+- Large `rho` on a connected line often means that disconnecting that line or rerouting flows through other lines may help.
+- A disconnected line with low surrounding stress can sometimes be reconnected to restore capacity.
+- If many lines already have low `rho`, the do-nothing action can be reasonable.
+- Repeatedly disconnecting too many lines can fragment the grid and cause failure, so aggressive switching is risky.
+
+For ProPS-V specifically:
+- The rendered frame is a diagnostic dashboard, not a natural image.
+- Each tile corresponds to one line.
+- Bar height and color encode `rho`; red bars indicate overload (`rho > 1.0`).
+- Gray tiles indicate disconnected lines.

@@ -1,0 +1,30 @@
+task: cont_state_llm_num_optim_semantics
+num_episodes: 100
+gym_env_name: Grid2OpCase14-v0
+render_mode: null
+logdir: logs/grid2op_case14_propsp
+dim_actions: 41
+dim_states: 40
+max_traj_count: 256
+max_traj_length: 100
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_semantics.j2
+llm_output_conversion_template_name: num_optim_semantics.j2
+llm_model_name: gpt-4o
+num_evaluation_episodes: 5
+warmup_episodes: 10
+warmup_dir: null
+bias: true
+optimum: 2000
+search_step_size: 0.2
+env_desc_file: env_descriptions/grid2op_case14.j2
+
+# These dimensions assume the default case14 sandbox benchmark:
+# - observation_features = [rho, line_status] over 20 lines => 40 states
+# - action space = do nothing + disconnect/reconnect each line => 41 actions
+env_kwargs:
+  grid2op_env_name: l2rpn_case14_sandbox
+  reward_class_name: L2RPNReward
+  observation_features:
+    - rho
+    - line_status

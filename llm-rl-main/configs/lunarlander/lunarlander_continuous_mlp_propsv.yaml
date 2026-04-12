@@ -22,7 +22,7 @@ obs_projection_dim: null
 env_desc_file: env_descriptions/lunarlander_mlp.j2
 
 # ProPS-V vision parameters
-vlm_model_name: gpt-4o
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5

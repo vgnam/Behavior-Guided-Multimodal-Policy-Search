@@ -8,25 +8,14 @@ class ContinualSpaceGeneralWorld(BaseWorld):
         gym_env_name,
         render_mode,
         max_traj_length=1000,
+        env_kwargs=None,
     ):
         super().__init__(gym_env_name)
         assert render_mode in ["human", "rgb_array", None]
-
-        if gym_env_name == "gym_navigation:NavigationTrack-v0":
-            self.env = gym.make(
-                gym_env_name,
-                render_mode=render_mode,
-                track_id=1,
-            )
-        elif gym_env_name == "maze-sample-3x3-v0":
-            self.env = gym.make(
-                gym_env_name,
-                enable_render=render_mode,
-            )
-        else:
-            self.env = gym.make(gym_env_name, render_mode=render_mode)
         self.gym_env_name = gym_env_name
         self.render_mode = render_mode
+        self.env_kwargs = dict(env_kwargs or {})
+        self.env = self._make_env()
         self.steps = 0
         self.accu_reward = 0
         self.max_traj_length = max_traj_length
@@ -35,12 +24,53 @@ class ContinualSpaceGeneralWorld(BaseWorld):
         else:
             self.discretize = False
 
+    def _make_env(self, new_reward=False):
+        env_kwargs = dict(self.env_kwargs)
+        flatten_observation = bool(env_kwargs.pop("flatten_observation", False))
+        pass_render_mode = bool(env_kwargs.pop("pass_render_mode", True))
+
+        make_kwargs = dict(env_kwargs)
+        if pass_render_mode:
+            make_kwargs["render_mode"] = self.render_mode
+
+        if self.gym_env_name == "gym_navigation:NavigationTrack-v0":
+            make_kwargs.setdefault("track_id", 1)
+            env = gym.make(
+                self.gym_env_name,
+                **make_kwargs,
+            )
+            if flatten_observation:
+                env = gym.wrappers.FlattenObservation(env)
+            return env
+
+        if self.gym_env_name == "maze-sample-3x3-v0":
+            make_kwargs.pop("render_mode", None)
+            env = gym.make(
+                self.gym_env_name,
+                enable_render=self.render_mode,
+                **make_kwargs,
+            )
+            if flatten_observation:
+                env = gym.wrappers.FlattenObservation(env)
+            return env
+
+        if new_reward:
+            make_kwargs.setdefault("healthy_reward", 0)
+
+        env = gym.make(
+            self.gym_env_name,
+            **make_kwargs,
+        )
+        if flatten_observation:
+            env = gym.wrappers.FlattenObservation(env)
+        return env
+
     def reset(self, new_reward=False):
-        del self.env
-        if not new_reward:
-            self.env = gym.make(self.gym_env_name, render_mode=self.render_mode)
-        else:
-            self.env = gym.make(self.gym_env_name, render_mode=self.render_mode, healthy_reward=0)
+        if hasattr(self, "env") and self.env is not None:
+            close = getattr(self.env, "close", None)
+            if callable(close):
+                close()
+        self.env = self._make_env(new_reward=new_reward)
 
         state, _ = self.env.reset()
         self.steps = 0

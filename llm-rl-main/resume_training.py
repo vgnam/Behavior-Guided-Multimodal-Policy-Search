@@ -18,6 +18,7 @@ If --resume_from is not specified, the logdir from the config is used.
 
 import yaml
 import argparse
+import importlib
 import os
 import re
 import traceback
@@ -38,6 +39,21 @@ from agent.llm_num_optim_linear_policy_vision_oneshot import LLMNumOptimVisionOn
 from agent.openai_es_linear_policy import OpenAIESLinearPolicyAgent
 
 from envs import nim, pong
+
+try:
+    from envs import grid2op_env  # noqa: F401
+except ModuleNotFoundError:
+    grid2op_env = None
+
+try:
+    from envs import robosuite_env  # noqa: F401
+except ModuleNotFoundError:
+    robosuite_env = None
+
+try:
+    importlib.import_module("fancy_gym")
+except ModuleNotFoundError:
+    fancy_gym = None
 
 
 def _infer_dimension(value, name):
@@ -350,7 +366,12 @@ def resume_training(config, resume_logdir=None):
                 env_kwargs=env_kwargs,
             )
         else:
-            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
 
         agent = OpenAIESLinearPolicyAgent(
             logdir=logdir,
@@ -382,7 +403,12 @@ def resume_training(config, resume_logdir=None):
         llm_si_template = jinja2_env.get_template(config["llm_si_template_name"])
         llm_output_template = jinja2_env.get_template(config["llm_output_conversion_template_name"])
 
-        world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+        world = ContinualSpaceGeneralWorld(
+            gym_env_name,
+            render_mode,
+            max_traj_length,
+            env_kwargs=env_kwargs,
+        )
 
         if task == "cont_space_llm_num_optim":
             agent = LLMNumOptimAgent(
@@ -426,7 +452,12 @@ def resume_training(config, resume_logdir=None):
                 env_kwargs=env_kwargs, env_desc_file=env_desc_file,
             )
         else:
-            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
             agent = LLMNumOptimSemanticAgent(
                 logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
                 llm_si_template, llm_output_template, llm_model_name,
@@ -464,7 +495,12 @@ def resume_training(config, resume_logdir=None):
                 neighbor_step=neighbor_step,
             )
         else:
-            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
             agent = LLMNumOptimVisionAgent(
                 logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
                 llm_si_template, llm_output_template, llm_model_name,
@@ -505,7 +541,12 @@ def resume_training(config, resume_logdir=None):
                 neighbor_step=neighbor_step,
             )
         else:
-            world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
             agent = LLMNumOptimVisionOneshotAgent(
                 logdir, dim_actions, dim_states, max_traj_count, max_traj_length,
                 llm_si_template, llm_output_template, llm_model_name,
@@ -527,7 +568,12 @@ def resume_training(config, resume_logdir=None):
         if render_mode != "rgb_array":
             render_mode = "rgb_array"
 
-        world = ContinualSpaceGeneralWorld(gym_env_name, render_mode, max_traj_length)
+        world = ContinualSpaceGeneralWorld(
+            gym_env_name,
+            render_mode,
+            max_traj_length,
+            env_kwargs=env_kwargs,
+        )
         agent = BLProPSAgent(
             logdir=logdir, dim_action=dim_actions, dim_state=dim_states,
             max_traj_count=max_traj_count, max_traj_length=max_traj_length,

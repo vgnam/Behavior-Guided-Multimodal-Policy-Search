@@ -19,5 +19,5 @@ search_step_size: 0.1
 env_desc_file: env_descriptions/frozenlake.j2
 env_kwargs:
   is_slippery: true
-vlm_model_name: gemini-2.5-flash-lite
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
 frame_sample_period: 50

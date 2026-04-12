@@ -1,0 +1,18 @@
+fancy/Reacher5d-v0 is a 5-link MuJoCo-style reacher environment from Fancy Gym.
+
+Episode setup and objective:
+- Horizon is 200 steps.
+- This is a step-based continuous-control task where the arm should move its end effector toward a target while avoiding unnecessarily large control inputs.
+
+State and action:
+- State is a 20-dimensional continuous feature vector.
+- Action is 5-dimensional continuous control, each component in [-1, 1].
+
+Linear policy used by this project:
+- action = clip(state @ W + b, -1, 1)
+- state shape: (20,)
+- W shape: (20, 5)
+- b shape: (5,)
+
+Optimization goal:
+- Maximize episode return by reducing end-effector distance to target and using stable, efficient control across all 5 joints.

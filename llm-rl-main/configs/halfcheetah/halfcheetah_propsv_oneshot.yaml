@@ -20,7 +20,7 @@ search_step_size: 0.1
 env_desc_file: env_descriptions/halfcheetah.j2
 
 # ProPS-V OneShot specific parameters
-vlm_model_name: meta/llama-4-scout-17b-16e-instruct
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5

@@ -1,4 +1,8 @@
 gymnasium[box2d,mujoco]
+stable-gym
+fancy_gym
+grid2op
+robosuite
 numpy
 matplotlib
 pyyaml

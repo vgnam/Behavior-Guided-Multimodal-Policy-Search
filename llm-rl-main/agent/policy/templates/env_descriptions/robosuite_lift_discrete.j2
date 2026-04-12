@@ -1,0 +1,48 @@
+This benchmark wraps robosuite's `Lift` task with a Panda arm as a small discrete-action control problem compatible with the linear-policy code in this repo.
+
+Objective:
+- Grasp the cube on the table and lift it upward.
+- The benchmark uses robosuite's dense `reward_shaping=True` reward, so partial progress such as reaching, grasping, and lifting is rewarded.
+
+State:
+- The wrapper builds a 64-dimensional state vector.
+- It concatenates robosuite low-dimensional features from:
+  - `robot0_proprio-state`
+  - `object-state`
+- If the raw concatenated vector is shorter than 64, the remaining entries are padded with zeros.
+- If it is longer than 64, it is truncated to the first 64 values.
+- In practice this state contains end-effector / joint proprioception plus cube-relative object information.
+
+Action space:
+- There are 9 discrete actions.
+- `action 0`: do nothing
+- `action 1`: move end effector in +x
+- `action 2`: move end effector in -x
+- `action 3`: move end effector in +y
+- `action 4`: move end effector in -y
+- `action 5`: move end effector in +z
+- `action 6`: move end effector in -z
+- `action 7`: close gripper
+- `action 8`: open gripper
+- Internally these are mapped to robosuite controller commands. The first three coordinates control Cartesian translation, and the last controller dimension controls the gripper.
+
+Policy:
+- The policy is a linear classifier over the 64-D state vector.
+- It computes `scores = state @ W + B` and selects `argmax(scores)` as the action.
+- `W` has shape `(64, 9)` and `B` has shape `(9,)`.
+- The full policy therefore has `64 * 9 + 9 = 585` parameters.
+
+Reward:
+- The wrapper uses robosuite dense reward shaping.
+- Higher reward generally means the arm is better aligned with the cube, has grasped it more successfully, or has lifted it higher.
+- Because this is a shaped reward, useful intermediate behaviors matter; a policy does not need to solve the task completely to improve.
+- With a horizon of 200, a strong policy should produce clearly positive episodic reward and visibly lift the cube.
+
+Practical strategy hints:
+- A good policy usually approaches the cube horizontally, lowers the gripper, closes the gripper near contact, then moves upward.
+- Repeated random gripper toggling without positioning tends to waste reward.
+- The no-op action can be useful when the arm is already in a favorable pose and should maintain the current controller target for a moment.
+
+For ProPS-V specifically:
+- The rendered image is the robosuite `agentview` camera.
+- Good visual progress means the gripper is centered over the cube, contacts it, and then raises it off the table.
