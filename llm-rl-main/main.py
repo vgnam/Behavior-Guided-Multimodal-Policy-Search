@@ -34,6 +34,16 @@ try:
 except ModuleNotFoundError:
     fancy_gym = None
 
+try:
+    import highway_env  # noqa: F401
+except ModuleNotFoundError:
+    highway_env = None
+
+try:
+    import gymnasium_robotics  # noqa: F401
+except ModuleNotFoundError:
+    gymnasium_robotics = None
+
 def _safe_register_stable_gym(**kwargs):
     try:
         _gym_register(**kwargs)

@@ -55,6 +55,16 @@ try:
 except ModuleNotFoundError:
     fancy_gym = None
 
+try:
+    import highway_env  # noqa: F401
+except ModuleNotFoundError:
+    highway_env = None
+
+try:
+    import gymnasium_robotics  # noqa: F401
+except ModuleNotFoundError:
+    gymnasium_robotics = None
+
 
 def _infer_dimension(value, name):
     if isinstance(value, int):

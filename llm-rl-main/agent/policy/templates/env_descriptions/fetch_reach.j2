@@ -1,0 +1,37 @@
+FetchReach-v4 is a goal-conditioned robotic manipulation task. A 7-DoF Fetch arm must move its gripper (end-effector) to a desired 3D target position.
+
+The native observation is a dict with keys:
+- observation: robot proprioceptive state (10 dims)
+- achieved_goal: current gripper position in 3D (3 dims)
+- desired_goal: target gripper position in 3D (3 dims)
+
+In this project, flatten_observation is enabled, so the policy input is a 16-dimensional vector:
+- state[0:10] = observation
+- state[10:13] = achieved_goal
+- state[13:16] = desired_goal
+
+The action space is Box(-1, 1, (4,), float32):
+- action[0]: x-axis Cartesian control of the end-effector
+- action[1]: y-axis Cartesian control of the end-effector
+- action[2]: z-axis Cartesian control of the end-effector
+- action[3]: gripper open/close command
+
+The policy is a linear policy with 68 parameters and works as follows:
+action = state @ W + b, where
+- state has shape (16,)
+- W has shape (16, 4)
+- b has shape (4,)
+
+Parameter mapping:
+- W[i, j] = params[4 * i + j], for i in [0..15], j in [0..3]
+- b[j] = params[64 + j], for j in [0..3]
+
+Equivalent grouped view:
+- params[0..3]   = weights from state[0] to 4 actions
+- params[4..7]   = weights from state[1] to 4 actions
+- ...
+- params[60..63] = weights from state[15] to 4 actions
+- params[64..67] = action biases
+
+With reward_type=dense, reward is shaped by goal distance and is highest near 0 when the gripper reaches the target.
+The objective is to maximize cumulative episodic reward by minimizing end-effector distance to the desired goal quickly and stably.

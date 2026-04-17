@@ -1,0 +1,52 @@
+Highway-v0 is a multi-lane driving environment where the ego vehicle must drive safely and efficiently in dense traffic.
+
+The observation (before flattening) is a 5x5 kinematics matrix:
+- 5 rows: ego vehicle + up to 4 nearby vehicles
+- 5 columns per vehicle: [presence, x, y, vx, vy]
+
+Feature meanings:
+- presence: 1 if a vehicle occupies this row, 0 otherwise
+- x: longitudinal position relative to ego (normalized)
+- y: lateral position / lane offset (normalized)
+- vx: longitudinal velocity component (normalized)
+- vy: lateral velocity component (normalized)
+
+In this project, flatten_observation is enabled, so the policy input is a 25-dimensional vector:
+- state[0:5] = [presence, x, y, vx, vy] for vehicle row 0
+- state[5:10] = features for vehicle row 1
+- state[10:15] = features for vehicle row 2
+- state[15:20] = features for vehicle row 3
+- state[20:25] = features for vehicle row 4
+
+The action space is Discrete(5):
+- action 0: lane change to the left
+- action 1: keep lane / no-op
+- action 2: lane change to the right
+- action 3: accelerate (increase target speed)
+- action 4: decelerate (decrease target speed)
+
+The policy is a linear policy with 130 parameters:
+action = argmax(state @ W + B), where
+- state has shape (25,)
+- W has shape (25, 5)
+- B has shape (5,)
+
+Parameter mapping:
+- W[i, j] = params[5 * i + j], for i in [0..24], j in [0..4]
+- B[j] = params[125 + j], for j in [0..4]
+
+Equivalent grouped view:
+- params[0..24]    control action logits from vehicle row 0 features
+- params[25..49]   control action logits from vehicle row 1 features
+- params[50..74]   control action logits from vehicle row 2 features
+- params[75..99]   control action logits from vehicle row 3 features
+- params[100..124] control action logits from vehicle row 4 features
+- params[125..129] are action biases
+
+Reward is shaped to favor:
+- collision-free driving (collisions strongly penalized)
+- higher forward speed when safe
+- good lane usage while staying on road
+
+Episodes typically terminate on collision, going off-road, or reaching the time limit.
+The objective is to maximize cumulative episodic reward by balancing speed, stability, and safety.

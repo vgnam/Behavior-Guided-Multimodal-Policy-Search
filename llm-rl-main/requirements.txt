@@ -10,3 +10,6 @@ jinja2
 litellm
 pillow
 pygame
+highway-env
+gymnasium-robotics
+

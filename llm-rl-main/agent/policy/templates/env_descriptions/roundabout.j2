@@ -1,0 +1,52 @@
+Roundabout-v0 is a dense-interaction driving scenario where the ego vehicle must enter, circulate, and exit a roundabout without collisions.
+
+The observation (before flattening) is a 5x5 kinematics matrix:
+- 5 rows: ego vehicle + up to 4 nearby vehicles
+- 5 columns per vehicle: [presence, x, y, vx, vy]
+
+Feature meanings:
+- presence: binary indicator (1 means a valid nearby vehicle in this row)
+- x: relative longitudinal position (normalized)
+- y: relative lateral position (normalized)
+- vx: relative longitudinal velocity component (normalized)
+- vy: relative lateral velocity component (normalized)
+
+In this project, flatten_observation is enabled, so the policy receives a 25-dimensional state vector:
+- state[0:5] = row 0 vehicle features
+- state[5:10] = row 1 vehicle features
+- state[10:15] = row 2 vehicle features
+- state[15:20] = row 3 vehicle features
+- state[20:25] = row 4 vehicle features
+
+The action space is Discrete(5):
+- action 0: lane change left
+- action 1: keep lane / maintain current command
+- action 2: lane change right
+- action 3: accelerate
+- action 4: decelerate
+
+The policy is a linear policy with 130 parameters:
+action = argmax(state @ W + B), where
+- state has shape (25,)
+- W has shape (25, 5)
+- B has shape (5,)
+
+Parameter mapping:
+- W[i, j] = params[5 * i + j], for i in [0..24], j in [0..4]
+- B[j] = params[125 + j], for j in [0..4]
+
+Equivalent grouped view:
+- params[0..24]    contribute from row 0 features
+- params[25..49]   contribute from row 1 features
+- params[50..74]   contribute from row 2 features
+- params[75..99]   contribute from row 3 features
+- params[100..124] contribute from row 4 features
+- params[125..129] are per-action biases
+
+Reward shaping generally favors:
+- collision avoidance and on-road safety
+- smooth navigation with useful forward progress
+- maintaining traffic-compatible speed through the roundabout
+
+Episodes terminate on critical failures (for example collision/off-road) or horizon timeout.
+The objective is to maximize cumulative reward by safely passing roundabout interactions while preserving progress.

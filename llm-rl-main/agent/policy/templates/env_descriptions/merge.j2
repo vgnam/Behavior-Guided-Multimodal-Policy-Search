@@ -1,0 +1,53 @@
+Merge-v0 is a highway scenario with an on-ramp where the ego vehicle must drive safely while interacting with vehicles that need to merge.
+
+The observation (before flattening) is a 5x5 kinematics matrix:
+- 5 rows: ego vehicle + up to 4 nearby vehicles
+- 5 columns per vehicle: [presence, x, y, vx, vy]
+
+Feature meanings:
+- presence: 1 if that row contains a valid vehicle, 0 otherwise
+- x: longitudinal position relative to ego (normalized)
+- y: lateral position / lane offset (normalized)
+- vx: longitudinal speed component (normalized)
+- vy: lateral speed component (normalized)
+
+In this project, flatten_observation is enabled, so input becomes a 25-dimensional vector:
+- state[0:5] = vehicle row 0 features
+- state[5:10] = vehicle row 1 features
+- state[10:15] = vehicle row 2 features
+- state[15:20] = vehicle row 3 features
+- state[20:25] = vehicle row 4 features
+
+The action space is Discrete(5):
+- action 0: lane change left
+- action 1: keep lane / no-op
+- action 2: lane change right
+- action 3: accelerate
+- action 4: decelerate
+
+The policy is a linear policy with 130 parameters:
+action = argmax(state @ W + B), where
+- state has shape (25,)
+- W has shape (25, 5)
+- B has shape (5,)
+
+Parameter mapping:
+- W[i, j] = params[5 * i + j], for i in [0..24], j in [0..4]
+- B[j] = params[125 + j], for j in [0..4]
+
+Equivalent grouped view:
+- params[0..24]    map row 0 (ego-centric kinematics) to action logits
+- params[25..49]   map row 1 to action logits
+- params[50..74]   map row 2 to action logits
+- params[75..99]   map row 3 to action logits
+- params[100..124] map row 4 to action logits
+- params[125..129] are action biases
+
+Reward shaping encourages:
+- avoiding collisions (large negative signal)
+- maintaining useful speed when safe
+- cooperative behavior in merge zones (not blocking ramp vehicles)
+- staying on-road and stable through lane interactions
+
+Episodes terminate on severe failure conditions (for example collision/off-road) or the horizon limit.
+The objective is to maximize cumulative reward by safely balancing progress and merge cooperation.
