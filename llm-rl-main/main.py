@@ -84,7 +84,7 @@ _safe_register_stable_gym(
     ),
 )
 
-os.environ["OPENROUTER_API_KEY"] = "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"
+os.environ["OPENROUTER_API_KEY"] = "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"
 
 os.environ["NVIDIA_NIM_API_KEY"] = "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"
 os.environ["MISTRAL_API_KEY"] = "wjLJ7TRAHtcDNv2VrIgE7dreAhVyYQBD"

@@ -10,6 +10,16 @@ All the configuration files for each experiments are in the ./configs folder. Th
 
 In order to run an experiment, please run `python main.py --config <configuration_file>`.
 
+For a concrete ProPS-V walkthrough on the maze task used by the default `config.yaml`, see `PROPSV_README.md`. The shortest path is:
+
+`cd llm-rl-main`
+
+`python -m pip install -r requirements.txt`
+
+`python -m pip install -e .\envs\gym-maze-master`
+
+`python main.py --config configs/maze/maze_propsv.yaml`
+
 ## OpenAI-ES Baseline
 
 An OpenAI-ES baseline (linear policy, antithetic sampling, rank-normalized

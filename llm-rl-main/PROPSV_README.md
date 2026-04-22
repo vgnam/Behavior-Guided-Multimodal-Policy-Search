@@ -37,6 +37,51 @@ configs/
 
 ## Usage
 
+### Maze Quick Start
+
+The current `config.yaml` is set up to run **ProPS-V on `maze-sample-3x3-v0`**:
+
+```yaml
+task: dist_state_llm_num_optim_vision
+gym_env_name: maze-sample-3x3-v0
+logdir: logs/maze_propsv
+```
+
+Run it from `llm-rl-main`:
+
+```powershell
+cd llm-rl-main
+python -m pip install -r requirements.txt
+python -m pip install -e .\envs\gym-maze-master
+python main.py --config configs/maze/maze_propsv.yaml
+```
+
+Because `main.py` defaults to `config.yaml`, this also works if you keep the current default config:
+
+```powershell
+cd llm-rl-main
+python main.py
+```
+
+Before launching training, set the API key(s) required by the models in your config. For the checked-in maze ProPS-V config, that means the provider(s) behind:
+
+- `llm_model_name: nvidia_nim/qwen/qwen3-235b-a22b`
+- `vlm_model_name: nvidia_nim/google/gemma-3-27b-it`
+
+Example PowerShell session:
+
+```powershell
+$env:NVIDIA_NIM_API_KEY = "your-key"
+python main.py --config configs/maze/maze_propsv.yaml
+```
+
+Outputs for this run are written to `logs/maze_propsv`.
+
+If you want the same maze task without vision, use:
+
+- `configs/maze/maze_props.yaml` for ProPS
+- `configs/maze/maze_propsp.yaml` for ProPS+
+
 ### Running ProPS-V
 
 ```bash
