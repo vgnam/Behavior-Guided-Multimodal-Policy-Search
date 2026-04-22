@@ -1,0 +1,37 @@
+task: cont_space_cma_es
+num_episodes: 100
+gym_env_name: RoboSuiteLiftDiscrete-v0
+render_mode: null
+logdir: logs/robosuite_lift_cma_es
+dim_actions: 9
+dim_states: 64
+max_traj_count: 1
+max_traj_length: 200
+num_evaluation_episodes: 5
+warmup_episodes: 0
+warmup_dir: null
+bias: true
+env_kwargs:
+  env_name: Lift
+  robot: Panda
+  camera_name: agentview
+  horizon: 200
+  reward_shaping: true
+  state_dim: 64
+  translation_delta: 1.0
+  gripper_open_value: -1.0
+  gripper_close_value: 1.0
+  state_keys:
+    - robot0_proprio-state
+    - object-state
+
+# CMA-ES baseline hyperparameters
+population_size: 16
+sigma: 0.1
+elite_count: null
+candidate_evaluation_episodes: 1
+covariance_type: auto
+full_covariance_max_dim: 256
+decomposition_frequency: null
+min_sigma: 1.0e-12
+seed: 42

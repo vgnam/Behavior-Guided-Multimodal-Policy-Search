@@ -37,6 +37,13 @@ from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
 from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
 from agent.llm_num_optim_linear_policy_vision_oneshot import LLMNumOptimVisionOneshotAgent
 from agent.openai_es_linear_policy import OpenAIESLinearPolicyAgent
+try:
+    from agent.cma_es_linear_policy import CMAESLinearPolicyAgent
+except ModuleNotFoundError as exc:
+    if exc.name == "cma":
+        CMAESLinearPolicyAgent = None
+    else:
+        raise
 
 from envs import nim, pong
 
@@ -409,6 +416,49 @@ def resume_training(config, resume_logdir=None):
             seed=config.get("seed", None),
         )
 
+    elif task in ["cont_space_cma_es", "dist_state_cma_es", "cma_es_baseline"]:
+        if CMAESLinearPolicyAgent is None:
+            raise ModuleNotFoundError(
+                "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
+            )
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        inferred_actions = _infer_dimension(dim_actions, "dim_actions")
+        inferred_states = _infer_dimension(dim_states, "dim_states")
+
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = CMAESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=inferred_actions,
+            dim_state=inferred_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            population_size=config.get("population_size", 32),
+            sigma=config.get("sigma", 0.1),
+            elite_count=config.get("elite_count", None),
+            candidate_evaluation_episodes=config.get("candidate_evaluation_episodes", 1),
+            covariance_type=config.get("covariance_type", "auto"),
+            full_covariance_max_dim=config.get("full_covariance_max_dim", 256),
+            decomposition_frequency=config.get("decomposition_frequency", None),
+            min_sigma=config.get("min_sigma", 1e-12),
+            max_sigma=config.get("max_sigma", None),
+            seed=config.get("seed", None),
+        )
+
     elif task in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj"]:
         llm_si_template = jinja2_env.get_template(config["llm_si_template_name"])
         llm_output_template = jinja2_env.get_template(config["llm_output_conversion_template_name"])
@@ -672,6 +722,29 @@ def resume_training(config, resume_logdir=None):
                     print(f"[Resume] WARNING: Could not restore Q-table: {e}")
             else:
                 print(f"[Resume] WARNING: No parameters.txt found for episode_{last_episode}")
+        elif task in ["cont_space_cma_es", "dist_state_cma_es", "cma_es_baseline"]:
+            cma_state_path = os.path.join(resume_from, "cma_state_latest.pkl")
+            if os.path.exists(cma_state_path):
+                try:
+                    agent.load_state(cma_state_path)
+                    print(f"[Resume] Restored CMA-ES strategy state from {cma_state_path}")
+                except Exception as e:
+                    print(f"[Resume] WARNING: Could not restore CMA-ES state: {e}")
+            elif os.path.exists(last_params_path):
+                weights, bias_val = parse_linear_policy_parameters(last_params_path)
+                if weights is not None:
+                    if bias_val is not None:
+                        params = np.concatenate([weights.reshape(-1), bias_val.reshape(-1)])
+                    else:
+                        params = weights.reshape(-1)
+                    agent.policy.update_policy(params)
+                    agent.theta = agent.policy.get_parameters().reshape(-1).copy()
+                    agent.strategy.mean = agent.theta.astype(np.float64)
+                    print(f"[Resume] Restored CMA-ES mean policy from episode_{last_episode}")
+                else:
+                    print(f"[Resume] WARNING: Could not parse parameters from episode_{last_episode}")
+            else:
+                print(f"[Resume] WARNING: No CMA-ES state or parameters.txt found for episode_{last_episode}")
         elif os.path.exists(last_params_path):
             weights, bias_val = parse_linear_policy_parameters(last_params_path)
             if weights is not None:
@@ -771,6 +844,8 @@ def resume_training(config, resume_logdir=None):
                     f"{total_episodes}, {total_steps}, {total_reward}\n"
                 )
                 overall_log_file.flush()
+                if task in ["cont_space_cma_es", "dist_state_cma_es", "cma_es_baseline"]:
+                    agent.save_state(os.path.join(logdir, "cma_state_latest.pkl"))
 
                 # Vision statistics (if applicable)
                 if vision_stats_file and enable_vision:

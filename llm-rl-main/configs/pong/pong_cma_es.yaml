@@ -1,14 +1,14 @@
 task: cont_space_cma_es
 num_episodes: 400
-gym_env_name: Acrobot-v1
+gym_env_name: Pong-v0
 render_mode: null
-logdir: logs/acrobot_cma_es
+logdir: logs/pong_cma_es
 dim_actions: 3
-dim_states: 6
+dim_states: 5
 max_traj_count: 1000
 max_traj_length: 1000
 num_evaluation_episodes: 20
-warmup_episodes: 20
+warmup_episodes: 0
 warmup_dir: null
 bias: true
 

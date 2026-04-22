@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import importlib
 import os
 
@@ -44,9 +45,14 @@ try:
 except ModuleNotFoundError:
     gymnasium_robotics = None
 
+_GYM_REGISTER_PARAMS = set(inspect.signature(_gym_register).parameters)
+
 def _safe_register_stable_gym(**kwargs):
     try:
-        _gym_register(**kwargs)
+        filtered_kwargs = {
+            key: value for key, value in kwargs.items() if key in _GYM_REGISTER_PARAMS
+        }
+        _gym_register(**filtered_kwargs)
     except _GymError as exc:
         if "Cannot re-register id" not in str(exc):
             raise
@@ -111,6 +117,9 @@ TASK_TO_RUNNER = {
     "cont_space_openai_es": "runner.openai_es_runner",
     "dist_state_openai_es": "runner.openai_es_runner",
     "openai_es_baseline": "runner.openai_es_runner",
+    "cont_space_cma_es": "runner.cma_es_runner",
+    "dist_state_cma_es": "runner.cma_es_runner",
+    "cma_es_baseline": "runner.cma_es_runner",
 }
 
 

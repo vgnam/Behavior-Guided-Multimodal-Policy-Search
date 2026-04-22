@@ -40,6 +40,35 @@ Run it with:
 
 `python main.py --config configs/acrobot/acrobot_openai_es.yaml`
 
+## CMA-ES Baseline
+
+A CMA-ES baseline for the same linear-policy setup is also available via:
+
+- task: `cont_space_cma_es`
+- task: `dist_state_cma_es`
+- example config: `configs/acrobot/acrobot_cma_es.yaml`
+
+Implementation note:
+
+- CMA-ES uses the external Python package `cma` (`pycma`).
+- `covariance_type: auto` uses full covariance on smaller policy vectors and falls back to diagonal covariance on larger ones to keep memory and runtime reasonable.
+- CMA-ES prints the current flattened policy parameters after each update and also writes them to `episode_x/parameters_flat.txt`.
+- Warmup is disabled for CMA-ES; keep `warmup_episodes: 0` in the provided configs.
+- Resume support saves the latest strategy state to `logdir/cma_state_latest.pkl`.
+- Matching `*_cma_es.yaml` configs are provided for every environment that already has an `*_openai_es.yaml` config.
+
+Run it with:
+
+`python main.py --config configs/acrobot/acrobot_cma_es.yaml`
+
+Maze example:
+
+`python main.py --config configs/maze/maze_cma_es.yaml`
+
+Install dependency:
+
+`python -m pip install -r requirements.txt`
+
 # Install the requirements
 
 ## RL Tasks
