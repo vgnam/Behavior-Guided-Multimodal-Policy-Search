@@ -27,3 +27,7 @@ enable_vision: true
 n_neighbors: 5
 poisson_lam: 2.0
 neighbor_step: 0.05
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null

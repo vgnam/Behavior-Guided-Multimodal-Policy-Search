@@ -60,6 +60,7 @@ class LLMNumOptimVisionAgent:
         n_neighbors=3,
         poisson_lam=2.0,
         neighbor_step=0.1,
+        ablate_anchor=None,
     ):
         """
         Initialize ProPS-V agent.
@@ -104,6 +105,7 @@ class LLMNumOptimVisionAgent:
         self.n_neighbors = n_neighbors
         self.poisson_lam = poisson_lam
         self.neighbor_step = neighbor_step
+        self.ablate_anchor = ablate_anchor
         
         # Compute parameter count
         if not self.bias:
@@ -539,13 +541,14 @@ class LLMNumOptimVisionAgent:
                 best_rb_params, best_rb_reward = max(rb, key=lambda x: x[1])
                 worst_rb_params, worst_rb_reward = min(rb, key=lambda x: x[1])
 
-                print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
-                best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
-                    world, np.array(best_rb_params).reshape(-1), "best", logdir
-                )
+                if self.ablate_anchor != "best":
+                    print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
+                    best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
+                        world, np.array(best_rb_params).reshape(-1), "best", logdir
+                    )
 
                 # Only run WORST if it differs meaningfully from BEST
-                if worst_rb_reward != best_rb_reward:
+                if self.ablate_anchor != "worst" and worst_rb_reward != best_rb_reward:
                     print(f"[Neighborhood] Anchor: WORST (reward={worst_rb_reward:.2f})")
                     worst_nb_anchor, worst_nb_neighbors = self._rollout_neighbors(
                         world, np.array(worst_rb_params).reshape(-1), "worst", logdir
@@ -576,10 +579,11 @@ class LLMNumOptimVisionAgent:
                 return "\n".join(lines)
 
             blocks = ["## Neighborhood Behavioral Landscape\n"]
-            blocks.append(_anchor_block("CURRENT", cur_anchor, cur_neighbors))
-            if best_nb_anchor is not None:
+            if self.ablate_anchor != "current":
+                blocks.append(_anchor_block("CURRENT", cur_anchor, cur_neighbors))
+            if self.ablate_anchor != "best" and best_nb_anchor is not None:
                 blocks.append(_anchor_block("BEST (replay buffer)", best_nb_anchor, best_nb_neighbors))
-            if worst_nb_anchor is not None:
+            if self.ablate_anchor != "worst" and worst_nb_anchor is not None:
                 blocks.append(_anchor_block("WORST (replay buffer)", worst_nb_anchor, worst_nb_neighbors))
             neighborhood_analysis = "\n\n".join(blocks)
 

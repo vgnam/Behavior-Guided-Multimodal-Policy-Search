@@ -54,6 +54,7 @@ def run_training_loop(
     n_neighbors=5,
     poisson_lam=2.0,
     neighbor_step=0.1,
+    ablate_anchor=None,
     **kwargs,
 ):
     assert task in _ALL_TASKS, (
@@ -107,6 +108,7 @@ def run_training_loop(
         n_neighbors=n_neighbors,
         poisson_lam=poisson_lam,
         neighbor_step=neighbor_step,
+        ablate_anchor=ablate_anchor,
     )
 
     print("[MLP Vision Runner] Init done")

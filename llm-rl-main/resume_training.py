@@ -622,6 +622,7 @@ def resume_training(config, resume_logdir=None):
         n_neighbors = config.get("n_neighbors", 5)
         poisson_lam = config.get("poisson_lam", 2.0)
         neighbor_step = config.get("neighbor_step", 0.1)
+        ablate_anchor = config.get("ablate_anchor", None)
 
         if enable_vision and render_mode is None:
             render_mode = "rgb_array"
@@ -638,7 +639,7 @@ def resume_training(config, resume_logdir=None):
                 decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
                 enable_vision=enable_vision, env_kwargs=env_kwargs,
                 n_neighbors=n_neighbors, poisson_lam=poisson_lam,
-                neighbor_step=neighbor_step,
+                neighbor_step=neighbor_step, ablate_anchor=ablate_anchor,
             )
         else:
             world = ContinualSpaceGeneralWorld(
@@ -655,6 +656,7 @@ def resume_training(config, resume_logdir=None):
                 decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
                 enable_vision=enable_vision, n_neighbors=n_neighbors,
                 poisson_lam=poisson_lam, neighbor_step=neighbor_step,
+                ablate_anchor=ablate_anchor,
             )
 
     elif task in ["cont_state_llm_num_optim_vision_oneshot", "dist_state_llm_num_optim_vision_oneshot"]:
@@ -668,6 +670,7 @@ def resume_training(config, resume_logdir=None):
         n_neighbors = config.get("n_neighbors", 5)
         poisson_lam = config.get("poisson_lam", 2.0)
         neighbor_step = config.get("neighbor_step", 0.1)
+        ablate_anchor = config.get("ablate_anchor", None)
 
         if enable_vision and render_mode is None:
             render_mode = "rgb_array"
@@ -684,7 +687,7 @@ def resume_training(config, resume_logdir=None):
                 decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
                 enable_vision=enable_vision, env_kwargs=env_kwargs,
                 n_neighbors=n_neighbors, poisson_lam=poisson_lam,
-                neighbor_step=neighbor_step,
+                neighbor_step=neighbor_step, ablate_anchor=ablate_anchor,
             )
         else:
             world = ContinualSpaceGeneralWorld(
@@ -701,6 +704,7 @@ def resume_training(config, resume_logdir=None):
                 decay_horizon=decay_horizon, frame_sample_period=frame_sample_period,
                 enable_vision=enable_vision, n_neighbors=n_neighbors,
                 poisson_lam=poisson_lam, neighbor_step=neighbor_step,
+                ablate_anchor=ablate_anchor,
             )
 
     elif task == "blprops":

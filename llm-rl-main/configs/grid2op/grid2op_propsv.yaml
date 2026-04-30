@@ -34,3 +34,7 @@ env_kwargs:
   observation_features:
     - rho
     - line_status
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null

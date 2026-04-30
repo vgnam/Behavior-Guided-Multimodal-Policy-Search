@@ -50,6 +50,7 @@ class LLMNumOptimMLPAgent:
         n_neighbors=5,
         poisson_lam=2.0,
         neighbor_step=0.1,
+        ablate_anchor=None,
     ):
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -71,6 +72,7 @@ class LLMNumOptimMLPAgent:
         self.n_neighbors = n_neighbors
         self.poisson_lam = poisson_lam
         self.neighbor_step = neighbor_step
+        self.ablate_anchor = ablate_anchor
         self.visual_analysis_history = []
 
         self.policy = MLPPolicy(
@@ -360,11 +362,12 @@ class LLMNumOptimMLPAgent:
                     rb = self.replay_buffer.buffer
                     best_rb_params, best_rb_reward = max(rb, key=lambda x: x[1])
                     worst_rb_params, worst_rb_reward = min(rb, key=lambda x: x[1])
-                    print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
-                    best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
-                        world, np.array(best_rb_params), "best", logdir
-                    )
-                    if worst_rb_reward != best_rb_reward:
+                    if self.ablate_anchor != "best":
+                        print(f"[Neighborhood] Anchor: BEST (reward={best_rb_reward:.2f})")
+                        best_nb_anchor, best_nb_neighbors = self._rollout_neighbors(
+                            world, np.array(best_rb_params), "best", logdir
+                        )
+                    if self.ablate_anchor != "worst" and worst_rb_reward != best_rb_reward:
                         print(f"[Neighborhood] Anchor: WORST (reward={worst_rb_reward:.2f})")
                         worst_nb_anchor, worst_nb_neighbors = self._rollout_neighbors(
                             world, np.array(worst_rb_params), "worst", logdir
@@ -385,11 +388,12 @@ class LLMNumOptimMLPAgent:
                                       f"    Behavior: {nb['analysis'] or '(no VLM analysis)'}"]
                     return "\n".join(lines)
 
-                blocks = ["## Neighborhood Behavioral Landscape\n",
-                          _anchor_block("CURRENT", cur_anchor, cur_neighbors)]
-                if best_nb_anchor:
+                blocks = ["## Neighborhood Behavioral Landscape\n"]
+                if self.ablate_anchor != "current":
+                    blocks.append(_anchor_block("CURRENT", cur_anchor, cur_neighbors))
+                if self.ablate_anchor != "best" and best_nb_anchor:
                     blocks.append(_anchor_block("BEST (replay buffer)", best_nb_anchor, best_nb_neighbors))
-                if worst_nb_anchor:
+                if self.ablate_anchor != "worst" and worst_nb_anchor:
                     blocks.append(_anchor_block("WORST (replay buffer)", worst_nb_anchor, worst_nb_neighbors))
                 neighborhood_analysis = "\n\n".join(blocks)
                 with open(f"{logdir}/neighborhood_analysis.txt", "w", encoding="utf-8") as nf:

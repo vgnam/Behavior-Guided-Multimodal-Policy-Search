@@ -41,3 +41,7 @@ env_kwargs:
   state_keys:
     - robot0_proprio-state
     - object-state
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null

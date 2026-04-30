@@ -25,3 +25,7 @@ enable_vision: true
 n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
 poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
 neighbor_step: 0.1   # Base step size multiplied by Poisson sample
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null

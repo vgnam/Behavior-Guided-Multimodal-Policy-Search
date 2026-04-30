@@ -54,6 +54,7 @@ def run_training_loop(
     n_neighbors=5,
     poisson_lam=2.0,
     neighbor_step=0.1,
+    ablate_anchor=None,
 ):
     """
     Run ProPS-V OneShot training loop.
@@ -118,6 +119,7 @@ def run_training_loop(
             n_neighbors=n_neighbors,
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
+            ablate_anchor=ablate_anchor,
         )
     else:
         world = ContinualSpaceGeneralWorld(
@@ -146,6 +148,7 @@ def run_training_loop(
             n_neighbors=n_neighbors,
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
+            ablate_anchor=ablate_anchor,
         )
 
     print("[ProPS-V OneShot] Initialization done")
