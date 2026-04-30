@@ -69,6 +69,26 @@ Install dependency:
 
 `python -m pip install -r requirements.txt`
 
+## (mu, lambda)-ES Baseline (Optional)
+
+A `(mu, lambda)-ES` baseline is available via:
+
+- task: `cont_space_mu_lambda_es`
+- task: `dist_state_mu_lambda_es`
+- example config: `configs/acrobot/acrobot_mu_lambda_es.yaml`
+
+Dependency note:
+
+- This baseline now supports `EvoLib` (`evolib`) as the preferred backend.
+- `evolib` currently requires Python 3.12+, so it is installed conditionally in `requirements.txt`.
+- On Python versions below 3.12 (for example, Python 3.11), the agent automatically falls back to the built-in NumPy backend.
+- A legacy `neorl` backend is still supported when installed, but it is not recommended because upstream `neorl` pins `tensorflow==1.14.0`.
+
+Backend selection:
+
+- Set `es_backend: evolib` in your `(mu, lambda)-ES` config to request EvoLib.
+- Supported values: `auto`, `evolib`, `neorl`, `numpy`.
+
 # Install the requirements
 
 ## RL Tasks

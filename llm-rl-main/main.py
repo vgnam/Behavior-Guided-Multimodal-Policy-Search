@@ -32,7 +32,7 @@ except ModuleNotFoundError:
 
 try:
     importlib.import_module("fancy_gym")
-except ModuleNotFoundError:
+except Exception:
     fancy_gym = None
 
 try:
@@ -117,8 +117,15 @@ TASK_TO_RUNNER = {
     "cont_space_openai_es": "runner.openai_es_runner",
     "dist_state_openai_es": "runner.openai_es_runner",
     "openai_es_baseline": "runner.openai_es_runner",
+    "cont_space_ars": "runner.ars_runner",
+    "dist_state_ars": "runner.ars_runner",
+    "ars_baseline": "runner.ars_runner",
+    "cont_space_mu_lambda_es": "runner.mu_lambda_es_runner",
+    "dist_state_mu_lambda_es": "runner.mu_lambda_es_runner",
+    "mu_lambda_es_baseline": "runner.mu_lambda_es_runner",
     "cont_space_cma_es": "runner.cma_es_runner",
     "dist_state_cma_es": "runner.cma_es_runner",
+    "dist_state_cma_es_qtable": "runner.cma_es_runner",
     "cma_es_baseline": "runner.cma_es_runner",
 }
 

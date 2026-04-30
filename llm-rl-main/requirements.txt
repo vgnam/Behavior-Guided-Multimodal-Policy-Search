@@ -13,3 +13,6 @@ pygame
 highway-env
 gymnasium-robotics
 cma
+# Optional: EvoLib backend for the (mu, lambda)-ES baseline (Python >= 3.12).
+evolib==0.2.0; python_version >= "3.12"
+# Optional legacy backend: neorl currently depends on tensorflow==1.14.0.

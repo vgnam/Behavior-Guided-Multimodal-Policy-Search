@@ -24,6 +24,7 @@ class DiscreteStateGeneralWorld(BaseWorld):
             self.env = gym.make(
                 gym_env_name, render_mode=render_mode, **(env_kwargs if env_kwargs else {})
             )
+        self.discretize = isinstance(self.env.action_space, spaces.Discrete)
         self.steps = 0
         self.accu_reward = 0
         self.max_traj_length = max_traj_length
@@ -48,6 +49,10 @@ class DiscreteStateGeneralWorld(BaseWorld):
 
     def step(self, action):
         self.steps += 1
+
+        if self.discretize:
+            action = int(np.asarray(action).reshape(-1)[0])
+
         state, reward, done, truncated, _ = self.env.step(action)
         self.accu_reward += reward
 

@@ -23,7 +23,6 @@ adam_beta1: 0.9
 adam_beta2: 0.999
 adam_epsilon: 1.0e-8
 weight_decay: 0.0
-seed: 42
 
 env_kwargs:
   # FetchReachCost returns goal-dict observations; flatten for linear policies.

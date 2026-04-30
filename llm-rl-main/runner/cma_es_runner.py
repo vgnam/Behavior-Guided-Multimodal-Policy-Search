@@ -1,4 +1,4 @@
-"""Runner for the CMA-ES baseline (linear policy)."""
+"""Runner for CMA-ES baselines (linear policy and Q-table)."""
 
 import os
 import shutil
@@ -11,6 +11,14 @@ try:
 except ModuleNotFoundError as exc:
     if exc.name == "cma":
         CMAESLinearPolicyAgent = None
+    else:
+        raise
+
+try:
+    from agent.cma_es_q_table import CMAESQTableAgent
+except ModuleNotFoundError as exc:
+    if exc.name == "cma":
+        CMAESQTableAgent = None
     else:
         raise
 
@@ -63,51 +71,93 @@ def run_training_loop(
     del max_traj_count
     del kwargs
 
-    assert task in ["cont_space_cma_es", "cma_es_baseline", "dist_state_cma_es"], (
-        "CMA-ES runner supports task in ['cont_space_cma_es', 'cma_es_baseline', 'dist_state_cma_es']"
+    assert task in [
+        "cont_space_cma_es",
+        "cma_es_baseline",
+        "dist_state_cma_es",
+        "dist_state_cma_es_qtable",
+    ], (
+        "CMA-ES runner supports task in "
+        "['cont_space_cma_es', 'cma_es_baseline', 'dist_state_cma_es', 'dist_state_cma_es_qtable']"
     )
-    if CMAESLinearPolicyAgent is None:
-        raise ModuleNotFoundError(
-            "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
-        )
 
-    discrete_problem = _is_discrete_problem(dim_actions, dim_states)
-    dim_actions = _infer_dimension(dim_actions, "dim_actions")
-    dim_states = _infer_dimension(dim_states, "dim_states")
+    if task == "dist_state_cma_es_qtable":
+        if CMAESQTableAgent is None:
+            raise ModuleNotFoundError(
+                "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
+            )
+        if not isinstance(dim_actions, list) or not isinstance(dim_states, list):
+            raise ValueError(
+                "dist_state_cma_es_qtable expects list-form action/state spaces, for example [[0,1,2,3]]."
+            )
 
-    if discrete_problem:
         world = DiscreteStateGeneralWorld(
             gym_env_name,
             render_mode,
             max_traj_length,
             env_kwargs=env_kwargs,
         )
-    else:
-        world = ContinualSpaceGeneralWorld(
-            gym_env_name,
-            render_mode,
-            max_traj_length,
-            env_kwargs=env_kwargs,
-        )
 
-    agent = CMAESLinearPolicyAgent(
-        logdir=logdir,
-        dim_action=dim_actions,
-        dim_state=dim_states,
-        max_traj_length=max_traj_length,
-        num_evaluation_episodes=num_evaluation_episodes,
-        bias=bias,
-        population_size=population_size,
-        sigma=sigma,
-        elite_count=elite_count,
-        candidate_evaluation_episodes=candidate_evaluation_episodes,
-        covariance_type=covariance_type,
-        full_covariance_max_dim=full_covariance_max_dim,
-        decomposition_frequency=decomposition_frequency,
-        min_sigma=min_sigma,
-        max_sigma=max_sigma,
-        seed=seed,
-    )
+        agent = CMAESQTableAgent(
+            logdir=logdir,
+            actions=dim_actions,
+            states=dim_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            population_size=population_size,
+            sigma=sigma,
+            elite_count=elite_count,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            covariance_type=covariance_type,
+            full_covariance_max_dim=full_covariance_max_dim,
+            decomposition_frequency=decomposition_frequency,
+            min_sigma=min_sigma,
+            max_sigma=max_sigma,
+            seed=seed,
+        )
+    else:
+        if CMAESLinearPolicyAgent is None:
+            raise ModuleNotFoundError(
+                "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
+            )
+
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        dim_actions = _infer_dimension(dim_actions, "dim_actions")
+        dim_states = _infer_dimension(dim_states, "dim_states")
+
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = CMAESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=dim_actions,
+            dim_state=dim_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            population_size=population_size,
+            sigma=sigma,
+            elite_count=elite_count,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            covariance_type=covariance_type,
+            full_covariance_max_dim=full_covariance_max_dim,
+            decomposition_frequency=decomposition_frequency,
+            min_sigma=min_sigma,
+            max_sigma=max_sigma,
+            seed=seed,
+        )
 
     os.makedirs(logdir, exist_ok=True)
 

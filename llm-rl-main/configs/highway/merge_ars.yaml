@@ -1,0 +1,23 @@
+task: cont_space_ars
+num_episodes: 300
+gym_env_name: merge-v0
+render_mode: rgb_array
+dim_actions: 5
+dim_states: 25
+max_traj_count: 1000
+max_traj_length: 100
+num_evaluation_episodes: 20
+warmup_episodes: 0
+warmup_dir: null
+bias: true
+env_kwargs:
+  flatten_observation: true
+logdir: logs/merge_ars
+n_directions: 32
+deltas_used: 16
+step_size: 0.03
+delta_std: 0.1
+shift: 0.0
+candidate_evaluation_episodes: 1
+reward_normalization_epsilon: 1.0e-08
+grad_batch_size: 500

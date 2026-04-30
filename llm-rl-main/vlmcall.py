@@ -1,50 +1,63 @@
-"""Quick test: call VLM via LiteLLM with 20 images at once."""
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
+import pandas as pd
 
-import litellm
-import base64
-import time
-import os
-import glob
+neighbors = ['3 neighbor', '5 neighbor', '7 neighbor']
 
-os.environ["NVIDIA_NIM_API_KEY"] = "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"
+data = {
+    'Swimmer': {
+        'means': [215.35, 309.36, 275.64],
+        'stds':  [90.08,  51.83,  87.53],
+    },
+    'Mountain Car (discrete)': {
+        'means': [-140.93, -112.01, -119.71],
+        'stds':  [36.88,   2.85,    20.23],
+    },
+}
 
-# Collect up to 20 image files from current directory
-image_extensions = ("*.png", "*.jpg", "*.jpeg")
-image_files = []
-for ext in image_extensions:
-    image_files.extend(glob.glob(ext))
-image_files = sorted(image_files)[:20]
+palette = ['#1D9E75', '#D85A30', '#7F77DD']
 
-if not image_files:
-    print("ERROR: No image files found in the current directory.")
-    exit(1)
+sns.set_theme(style='whitegrid', font_scale=1.0)
 
-print(f"Found {len(image_files)} image(s): {image_files}")
-
-# Build content list: one text prompt + all images
-content = [
-    {"type": "text", "text": f"I am sending you {len(image_files)} images. Describe each image in one sentence."},
-]
-
-for img_path in image_files:
-    with open(img_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
-    # Detect mime type
-    ext = os.path.splitext(img_path)[1].lower()
-    mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}.get(ext, "image/png")
-    content.append({
-        "type": "image_url",
-        "image_url": {"url": f"data:{mime};base64,{b64}"},
+for title, vals in data.items():
+    df = pd.DataFrame({
+        'neighbor': neighbors,
+        'mean':     vals['means'],
+        'std':      vals['stds'],
     })
 
-messages = [{"role": "user", "content": content}]
+    fig, ax = plt.subplots(figsize=(5, 4))
 
-model = "nvidia_nim/google/gemma-3-27b-it"
-print(f"Calling {model} with {len(image_files)} images ...")
-t0 = time.time()
-try:
-    resp = litellm.completion(model=model, messages=messages, temperature=0.7)
-    elapsed = time.time() - t0
-    print(f"Response ({elapsed:.1f}s):\n{resp.choices[0].message.content}")
-except Exception as e:
-    print(f"ERROR: {e}")
+    sns.barplot(
+        data=df,
+        x='neighbor',
+        y='mean',
+        hue='neighbor',
+        palette=palette,
+        legend=False,
+        ax=ax,
+    )
+
+    ax.errorbar(
+        x=np.arange(len(neighbors)),
+        y=vals['means'],
+        yerr=vals['stds'],
+        fmt='none',
+        color='#444441',
+        capsize=5,
+        elinewidth=1.2,
+        capthick=1.2,
+    )
+
+    ax.set_title(title, fontsize=11, style='italic', fontweight='normal')
+    ax.set_xlabel('')
+    ax.set_ylabel('Return', fontsize=10)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.yaxis.set_major_locator(ticker.AutoLocator())
+
+    filename = title.lower().replace(' ', '_').replace('(', '').replace(')', '') + '.png'
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches='tight', dpi=300)
+    plt.show()

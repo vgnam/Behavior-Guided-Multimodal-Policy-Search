@@ -1,6 +1,7 @@
 """Runner for the OpenAI-ES baseline (linear policy)."""
 
 import os
+import shutil
 import traceback
 
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
@@ -125,6 +126,9 @@ def run_training_loop(
         "Iteration, CPU Time, API Time, Total Episodes, Total Steps, Total Reward\n"
     )
     overall_log_file.flush()
+    best_reward = float("-inf")
+    best_episode = None
+    best_episode_dir = None
 
     for episode in range(num_episodes):
         print(f"Episode: {episode}")
@@ -140,6 +144,14 @@ def run_training_loop(
                     f"{episode}, {cpu_time}, {api_time}, {total_episodes}, {total_steps}, {total_reward}\n"
                 )
                 overall_log_file.flush()
+                if total_reward > best_reward:
+                    best_reward = float(total_reward)
+                    best_episode = int(episode)
+                    best_episode_dir = curr_episode_dir
+                    print(
+                        f"[OpenAI-ES best] episode={best_episode} "
+                        f"mean_reward_{num_evaluation_episodes}_rollouts={best_reward:.6f}"
+                    )
                 print(f"{trial_idx + 1}th trial attempt succeeded in training")
                 break
             except Exception as e:
@@ -153,3 +165,25 @@ def run_training_loop(
                 continue
 
     overall_log_file.close()
+    if best_episode_dir is not None:
+        best_summary_path = os.path.join(logdir, "best_summary.txt")
+        with open(best_summary_path, "w", encoding="utf-8") as f:
+            f.write(f"best_episode: {best_episode}\n")
+            f.write(
+                f"best_mean_reward_{num_evaluation_episodes}_rollouts: {best_reward:.6f}\n"
+            )
+
+        files_to_copy = {
+            "parameters.txt": "best_parameters.txt",
+            "training_rollout.txt": "best_training_rollout.txt",
+            "es_diagnostics.txt": "best_es_diagnostics.txt",
+        }
+        for src_name, dst_name in files_to_copy.items():
+            src_path = os.path.join(best_episode_dir, src_name)
+            if os.path.exists(src_path):
+                shutil.copyfile(src_path, os.path.join(logdir, dst_name))
+
+        print("\n[OpenAI-ES final best]")
+        print(f"  Best episode      : {best_episode}")
+        print(f"  Best mean reward  : {best_reward:.6f}")
+        print(f"  Eval rollouts     : {num_evaluation_episodes}")

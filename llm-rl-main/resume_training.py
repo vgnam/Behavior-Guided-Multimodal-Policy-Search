@@ -37,6 +37,8 @@ from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
 from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
 from agent.llm_num_optim_linear_policy_vision_oneshot import LLMNumOptimVisionOneshotAgent
 from agent.openai_es_linear_policy import OpenAIESLinearPolicyAgent
+from agent.ars_linear_policy import ARSLinearPolicyAgent
+from agent.mu_lambda_es_linear_policy import MuLambdaESLinearPolicyAgent
 try:
     from agent.cma_es_linear_policy import CMAESLinearPolicyAgent
 except ModuleNotFoundError as exc:
@@ -413,6 +415,90 @@ def resume_training(config, resume_logdir=None):
             l2coeff=config.get("l2coeff", None),
             grad_batch_size=config.get("grad_batch_size", 500),
             sgd_momentum=config.get("sgd_momentum", 0.9),
+            seed=config.get("seed", None),
+        )
+
+    elif task in ["cont_space_ars", "dist_state_ars", "ars_baseline"]:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        inferred_actions = _infer_dimension(dim_actions, "dim_actions")
+        inferred_states = _infer_dimension(dim_states, "dim_states")
+
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = ARSLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=inferred_actions,
+            dim_state=inferred_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            n_directions=config.get("n_directions", 16),
+            deltas_used=config.get("deltas_used", 16),
+            step_size=config.get("step_size", 0.02),
+            delta_std=config.get("delta_std", 0.03),
+            shift=config.get("shift", 0.0),
+            candidate_evaluation_episodes=config.get("candidate_evaluation_episodes", 1),
+            reward_normalization_epsilon=config.get("reward_normalization_epsilon", 1e-8),
+            grad_batch_size=config.get("grad_batch_size", 500),
+            seed=config.get("seed", None),
+        )
+
+    elif task in ["cont_space_mu_lambda_es", "dist_state_mu_lambda_es", "mu_lambda_es_baseline"]:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        inferred_actions = _infer_dimension(dim_actions, "dim_actions")
+        inferred_states = _infer_dimension(dim_states, "dim_states")
+
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = MuLambdaESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=inferred_actions,
+            dim_state=inferred_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            mu=config.get("mu", 8),
+            lam=config.get("lam", 32),
+            sigma=config.get("sigma", 0.1),
+            sigma_decay=config.get("sigma_decay", 1.0),
+            min_sigma=config.get("min_sigma", 1e-12),
+            max_sigma=config.get("max_sigma", None),
+            param_bound=config.get("param_bound", 10.0),
+            cxmode=config.get("cxmode", "blend"),
+            alpha=config.get("alpha", 0.5),
+            cxpb=config.get("cxpb", 0.6),
+            mutpb=config.get("mutpb", 0.3),
+            smin=config.get("smin", 0.01),
+            smax=config.get("smax", 0.5),
+            clip=config.get("clip", True),
+            ncores=config.get("ncores", 1),
+            candidate_evaluation_episodes=config.get("candidate_evaluation_episodes", 1),
             seed=config.get("seed", None),
         )
 
