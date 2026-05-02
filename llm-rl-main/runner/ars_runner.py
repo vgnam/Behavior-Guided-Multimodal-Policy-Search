@@ -7,6 +7,14 @@ import traceback
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
 from agent.ars_linear_policy import ARSLinearPolicyAgent
+from agent.ars_value_based import ARSValueBasedAgent
+
+
+def _count_discrete(space_list):
+    total = 1
+    for sub in space_list:
+        total *= len(sub)
+    return total
 
 
 def _infer_dimension(value, name):
@@ -56,46 +64,80 @@ def run_training_loop(
     del max_traj_count
     del kwargs
 
-    assert task in ["cont_space_ars", "ars_baseline", "dist_state_ars"], (
-        "ARS runner supports task in ['cont_space_ars', 'ars_baseline', 'dist_state_ars']"
+    assert task in [
+        "cont_space_ars",
+        "ars_baseline",
+        "dist_state_ars",
+        "dist_state_ars_qvalue",
+    ], (
+        "ARS runner supports task in "
+        "['cont_space_ars', 'ars_baseline', 'dist_state_ars', 'dist_state_ars_qvalue']"
     )
 
-    discrete_problem = _is_discrete_problem(dim_actions, dim_states)
-    dim_actions = _infer_dimension(dim_actions, "dim_actions")
-    dim_states = _infer_dimension(dim_states, "dim_states")
-
-    if discrete_problem:
+    if task == "dist_state_ars_qvalue":
+        if not isinstance(dim_actions, list) or not isinstance(dim_states, list):
+            raise ValueError(
+                "dist_state_ars_qvalue expects list-form action/state spaces, for example [[0,1,2,3]]."
+            )
         world = DiscreteStateGeneralWorld(
             gym_env_name,
             render_mode,
             max_traj_length,
             env_kwargs=env_kwargs,
         )
-    else:
-        world = ContinualSpaceGeneralWorld(
-            gym_env_name,
-            render_mode,
-            max_traj_length,
-            env_kwargs=env_kwargs,
+        agent = ARSValueBasedAgent(
+            logdir=logdir,
+            n_states=_count_discrete(dim_states),
+            n_actions=_count_discrete(dim_actions),
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            n_directions=n_directions,
+            deltas_used=deltas_used,
+            step_size=step_size,
+            delta_std=delta_std,
+            shift=shift,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            reward_normalization_epsilon=reward_normalization_epsilon,
+            grad_batch_size=grad_batch_size,
+            seed=seed,
         )
+    else:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        dim_actions = _infer_dimension(dim_actions, "dim_actions")
+        dim_states = _infer_dimension(dim_states, "dim_states")
 
-    agent = ARSLinearPolicyAgent(
-        logdir=logdir,
-        dim_action=dim_actions,
-        dim_state=dim_states,
-        max_traj_length=max_traj_length,
-        num_evaluation_episodes=num_evaluation_episodes,
-        bias=bias,
-        n_directions=n_directions,
-        deltas_used=deltas_used,
-        step_size=step_size,
-        delta_std=delta_std,
-        shift=shift,
-        candidate_evaluation_episodes=candidate_evaluation_episodes,
-        reward_normalization_epsilon=reward_normalization_epsilon,
-        grad_batch_size=grad_batch_size,
-        seed=seed,
-    )
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = ARSLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=dim_actions,
+            dim_state=dim_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            n_directions=n_directions,
+            deltas_used=deltas_used,
+            step_size=step_size,
+            delta_std=delta_std,
+            shift=shift,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            reward_normalization_epsilon=reward_normalization_epsilon,
+            grad_batch_size=grad_batch_size,
+            seed=seed,
+        )
 
     os.makedirs(logdir, exist_ok=True)
 

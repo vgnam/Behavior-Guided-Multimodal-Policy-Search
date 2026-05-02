@@ -7,6 +7,14 @@ import traceback
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
 from agent.openai_es_linear_policy import OpenAIESLinearPolicyAgent
+from agent.openai_es_value_based import OpenAIESValueBasedAgent
+
+
+def _count_discrete(space_list):
+    total = 1
+    for sub in space_list:
+        total *= len(sub)
+    return total
 
 
 def _infer_dimension(value, name):
@@ -63,54 +71,96 @@ def run_training_loop(
 ):
     del max_traj_count
 
-    assert task in ["cont_space_openai_es", "openai_es_baseline", "dist_state_openai_es"], (
-        "OpenAI-ES runner supports task in ['cont_space_openai_es', 'openai_es_baseline', 'dist_state_openai_es']"
+    assert task in [
+        "cont_space_openai_es",
+        "openai_es_baseline",
+        "dist_state_openai_es",
+        "dist_state_openai_es_qvalue",
+    ], (
+        "OpenAI-ES runner supports task in "
+        "['cont_space_openai_es', 'openai_es_baseline', 'dist_state_openai_es', 'dist_state_openai_es_qvalue']"
     )
 
-    discrete_problem = _is_discrete_problem(dim_actions, dim_states)
-    dim_actions = _infer_dimension(dim_actions, "dim_actions")
-    dim_states = _infer_dimension(dim_states, "dim_states")
-
-    if discrete_problem:
+    if task == "dist_state_openai_es_qvalue":
+        if not isinstance(dim_actions, list) or not isinstance(dim_states, list):
+            raise ValueError(
+                "dist_state_openai_es_qvalue expects list-form action/state spaces, for example [[0,1,2,3]]."
+            )
         world = DiscreteStateGeneralWorld(
             gym_env_name,
             render_mode,
             max_traj_length,
             env_kwargs=env_kwargs,
         )
-    else:
-        world = ContinualSpaceGeneralWorld(
-            gym_env_name,
-            render_mode,
-            max_traj_length,
-            env_kwargs=env_kwargs,
+        agent = OpenAIESValueBasedAgent(
+            logdir=logdir,
+            n_states=_count_discrete(dim_states),
+            n_actions=_count_discrete(dim_actions),
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            population_size=population_size,
+            sigma=sigma,
+            noise_stdev=noise_stdev,
+            learning_rate=learning_rate,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            return_proc_mode=return_proc_mode,
+            optimizer_type=optimizer_type,
+            use_centered_ranks=use_centered_ranks,
+            use_adam=use_adam,
+            adam_beta1=adam_beta1,
+            adam_beta2=adam_beta2,
+            adam_epsilon=adam_epsilon,
+            weight_decay=weight_decay,
+            l2coeff=l2coeff,
+            grad_batch_size=grad_batch_size,
+            sgd_momentum=sgd_momentum,
+            seed=seed,
         )
+    else:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        dim_actions = _infer_dimension(dim_actions, "dim_actions")
+        dim_states = _infer_dimension(dim_states, "dim_states")
 
-    agent = OpenAIESLinearPolicyAgent(
-        logdir=logdir,
-        dim_action=dim_actions,
-        dim_state=dim_states,
-        max_traj_length=max_traj_length,
-        num_evaluation_episodes=num_evaluation_episodes,
-        bias=bias,
-        population_size=population_size,
-        sigma=sigma,
-        noise_stdev=noise_stdev,
-        learning_rate=learning_rate,
-        candidate_evaluation_episodes=candidate_evaluation_episodes,
-        return_proc_mode=return_proc_mode,
-        optimizer_type=optimizer_type,
-        use_centered_ranks=use_centered_ranks,
-        use_adam=use_adam,
-        adam_beta1=adam_beta1,
-        adam_beta2=adam_beta2,
-        adam_epsilon=adam_epsilon,
-        weight_decay=weight_decay,
-        l2coeff=l2coeff,
-        grad_batch_size=grad_batch_size,
-        sgd_momentum=sgd_momentum,
-        seed=seed,
-    )
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = OpenAIESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=dim_actions,
+            dim_state=dim_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            population_size=population_size,
+            sigma=sigma,
+            noise_stdev=noise_stdev,
+            learning_rate=learning_rate,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            return_proc_mode=return_proc_mode,
+            optimizer_type=optimizer_type,
+            use_centered_ranks=use_centered_ranks,
+            use_adam=use_adam,
+            adam_beta1=adam_beta1,
+            adam_beta2=adam_beta2,
+            adam_epsilon=adam_epsilon,
+            weight_decay=weight_decay,
+            l2coeff=l2coeff,
+            grad_batch_size=grad_batch_size,
+            sgd_momentum=sgd_momentum,
+            seed=seed,
+        )
 
     os.makedirs(logdir, exist_ok=True)
 

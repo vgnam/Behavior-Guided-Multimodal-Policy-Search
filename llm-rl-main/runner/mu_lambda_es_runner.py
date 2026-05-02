@@ -7,6 +7,14 @@ import traceback
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
 from agent.mu_lambda_es_linear_policy import MuLambdaESLinearPolicyAgent
+from agent.mu_lambda_es_value_based import MuLambdaESValueBasedAgent
+
+
+def _count_discrete(space_list):
+    total = 1
+    for sub in space_list:
+        total *= len(sub)
+    return total
 
 
 def _infer_dimension(value, name):
@@ -25,6 +33,38 @@ def _infer_dimension(value, name):
 
 def _is_discrete_problem(dim_actions, dim_states):
     return isinstance(dim_actions, list) or isinstance(dim_states, list)
+
+
+def _maybe_infer_from_env(value, name, gym_env_name, env_kwargs):
+    """Auto-infer dimension from the gym environment when value is None."""
+    if value is not None:
+        return value
+    import gymnasium as gym
+
+    kwargs = dict(env_kwargs or {})
+    kwargs.pop("render_mode", None)
+
+    if gym_env_name == "maze-sample-3x3-v0":
+        env = gym.make(gym_env_name, enable_render=None, **kwargs)
+    else:
+        env = gym.make(gym_env_name, **kwargs)
+
+    if name == "dim_states":
+        space = env.observation_space
+    elif name == "dim_actions":
+        space = env.action_space
+    else:
+        env.close()
+        raise ValueError(f"Unknown dimension name: {name}")
+
+    env.close()
+
+    if isinstance(space, gym.spaces.Discrete):
+        return [list(range(space.n))]
+    if isinstance(space, gym.spaces.Box):
+        dim = int(space.shape[0]) if space.shape else 1
+        return dim
+    raise ValueError(f"Cannot auto-infer {name} from environment space: {type(space)}")
 
 
 def run_training_loop(
@@ -65,56 +105,101 @@ def run_training_loop(
     del max_traj_count
     del kwargs
 
-    assert task in ["cont_space_mu_lambda_es", "mu_lambda_es_baseline", "dist_state_mu_lambda_es"], (
+    assert task in [
+        "cont_space_mu_lambda_es",
+        "mu_lambda_es_baseline",
+        "dist_state_mu_lambda_es",
+        "dist_state_mu_lambda_es_qvalue",
+    ], (
         "(mu, lambda)-ES runner supports task in "
-        "['cont_space_mu_lambda_es', 'mu_lambda_es_baseline', 'dist_state_mu_lambda_es']"
+        "['cont_space_mu_lambda_es', 'mu_lambda_es_baseline', 'dist_state_mu_lambda_es', 'dist_state_mu_lambda_es_qvalue']"
     )
 
-    discrete_problem = _is_discrete_problem(dim_actions, dim_states)
-    dim_actions = _infer_dimension(dim_actions, "dim_actions")
-    dim_states = _infer_dimension(dim_states, "dim_states")
+    dim_actions = _maybe_infer_from_env(dim_actions, "dim_actions", gym_env_name, env_kwargs)
+    dim_states = _maybe_infer_from_env(dim_states, "dim_states", gym_env_name, env_kwargs)
 
-    if discrete_problem:
+    if task == "dist_state_mu_lambda_es_qvalue":
+        if not isinstance(dim_actions, list) or not isinstance(dim_states, list):
+            raise ValueError(
+                "dist_state_mu_lambda_es_qvalue expects list-form action/state spaces, for example [[0,1,2,3]]."
+            )
         world = DiscreteStateGeneralWorld(
             gym_env_name,
             render_mode,
             max_traj_length,
             env_kwargs=env_kwargs,
         )
-    else:
-        world = ContinualSpaceGeneralWorld(
-            gym_env_name,
-            render_mode,
-            max_traj_length,
-            env_kwargs=env_kwargs,
+        agent = MuLambdaESValueBasedAgent(
+            logdir=logdir,
+            n_states=_count_discrete(dim_states),
+            n_actions=_count_discrete(dim_actions),
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            mu=mu,
+            lam=lam,
+            sigma=sigma,
+            sigma_decay=sigma_decay,
+            min_sigma=min_sigma,
+            max_sigma=max_sigma,
+            param_bound=param_bound,
+            cxmode=cxmode,
+            alpha=alpha,
+            cxpb=cxpb,
+            mutpb=mutpb,
+            smin=smin,
+            smax=smax,
+            clip=clip,
+            ncores=ncores,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            es_backend=es_backend,
+            seed=seed,
         )
+    else:
+        discrete_problem = _is_discrete_problem(dim_actions, dim_states)
+        dim_actions = _infer_dimension(dim_actions, "dim_actions")
+        dim_states = _infer_dimension(dim_states, "dim_states")
 
-    agent = MuLambdaESLinearPolicyAgent(
-        logdir=logdir,
-        dim_action=dim_actions,
-        dim_state=dim_states,
-        max_traj_length=max_traj_length,
-        num_evaluation_episodes=num_evaluation_episodes,
-        bias=bias,
-        mu=mu,
-        lam=lam,
-        sigma=sigma,
-        sigma_decay=sigma_decay,
-        min_sigma=min_sigma,
-        max_sigma=max_sigma,
-        param_bound=param_bound,
-        cxmode=cxmode,
-        alpha=alpha,
-        cxpb=cxpb,
-        mutpb=mutpb,
-        smin=smin,
-        smax=smax,
-        clip=clip,
-        ncores=ncores,
-        candidate_evaluation_episodes=candidate_evaluation_episodes,
-        es_backend=es_backend,
-        seed=seed,
-    )
+        if discrete_problem:
+            world = DiscreteStateGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+        else:
+            world = ContinualSpaceGeneralWorld(
+                gym_env_name,
+                render_mode,
+                max_traj_length,
+                env_kwargs=env_kwargs,
+            )
+
+        agent = MuLambdaESLinearPolicyAgent(
+            logdir=logdir,
+            dim_action=dim_actions,
+            dim_state=dim_states,
+            max_traj_length=max_traj_length,
+            num_evaluation_episodes=num_evaluation_episodes,
+            bias=bias,
+            mu=mu,
+            lam=lam,
+            sigma=sigma,
+            sigma_decay=sigma_decay,
+            min_sigma=min_sigma,
+            max_sigma=max_sigma,
+            param_bound=param_bound,
+            cxmode=cxmode,
+            alpha=alpha,
+            cxpb=cxpb,
+            mutpb=mutpb,
+            smin=smin,
+            smax=smax,
+            clip=clip,
+            ncores=ncores,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            es_backend=es_backend,
+            seed=seed,
+        )
 
     os.makedirs(logdir, exist_ok=True)
 

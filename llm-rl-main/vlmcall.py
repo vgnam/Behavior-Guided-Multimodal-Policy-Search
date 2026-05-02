@@ -7,14 +7,10 @@ import pandas as pd
 neighbors = ['3 neighbor', '5 neighbor', '7 neighbor']
 
 data = {
-    'Swimmer': {
-        'means': [215.35, 309.36, 275.64],
-        'stds':  [90.08,  51.83,  87.53],
-    },
-    'Mountain Car (discrete)': {
-        'means': [-140.93, -112.01, -119.71],
-        'stds':  [36.88,   2.85,    20.23],
-    },
+    'FrozenLake': {
+        'means': [0.9350, 0.9550, 0.9600],
+        'stds':  [0.0324,  0.0381, 0.0283],
+    }
 }
 
 palette = ['#1D9E75', '#D85A30', '#7F77DD']

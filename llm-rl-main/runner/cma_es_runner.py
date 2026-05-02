@@ -22,6 +22,21 @@ except ModuleNotFoundError as exc:
     else:
         raise
 
+try:
+    from agent.cma_es_value_based import CMAESValueBasedAgent
+except ModuleNotFoundError as exc:
+    if exc.name == "cma":
+        CMAESValueBasedAgent = None
+    else:
+        raise
+
+
+def _count_discrete(space_list):
+    total = 1
+    for sub in space_list:
+        total *= len(sub)
+    return total
+
 
 def _infer_dimension(value, name):
     if isinstance(value, int):
@@ -76,19 +91,16 @@ def run_training_loop(
         "cma_es_baseline",
         "dist_state_cma_es",
         "dist_state_cma_es_qtable",
+        "dist_state_cma_es_qvalue",
     ], (
         "CMA-ES runner supports task in "
-        "['cont_space_cma_es', 'cma_es_baseline', 'dist_state_cma_es', 'dist_state_cma_es_qtable']"
+        "['cont_space_cma_es', 'cma_es_baseline', 'dist_state_cma_es', 'dist_state_cma_es_qtable', 'dist_state_cma_es_qvalue']"
     )
 
-    if task == "dist_state_cma_es_qtable":
-        if CMAESQTableAgent is None:
-            raise ModuleNotFoundError(
-                "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
-            )
+    if task in ("dist_state_cma_es_qtable", "dist_state_cma_es_qvalue"):
         if not isinstance(dim_actions, list) or not isinstance(dim_states, list):
             raise ValueError(
-                "dist_state_cma_es_qtable expects list-form action/state spaces, for example [[0,1,2,3]]."
+                "dist_state_cma_es_qtable/qvalue expects list-form action/state spaces, for example [[0,1,2,3]]."
             )
 
         world = DiscreteStateGeneralWorld(
@@ -98,23 +110,50 @@ def run_training_loop(
             env_kwargs=env_kwargs,
         )
 
-        agent = CMAESQTableAgent(
-            logdir=logdir,
-            actions=dim_actions,
-            states=dim_states,
-            max_traj_length=max_traj_length,
-            num_evaluation_episodes=num_evaluation_episodes,
-            population_size=population_size,
-            sigma=sigma,
-            elite_count=elite_count,
-            candidate_evaluation_episodes=candidate_evaluation_episodes,
-            covariance_type=covariance_type,
-            full_covariance_max_dim=full_covariance_max_dim,
-            decomposition_frequency=decomposition_frequency,
-            min_sigma=min_sigma,
-            max_sigma=max_sigma,
-            seed=seed,
-        )
+        if task == "dist_state_cma_es_qtable":
+            if CMAESQTableAgent is None:
+                raise ModuleNotFoundError(
+                    "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
+                )
+            agent = CMAESQTableAgent(
+                logdir=logdir,
+                actions=dim_actions,
+                states=dim_states,
+                max_traj_length=max_traj_length,
+                num_evaluation_episodes=num_evaluation_episodes,
+                population_size=population_size,
+                sigma=sigma,
+                elite_count=elite_count,
+                candidate_evaluation_episodes=candidate_evaluation_episodes,
+                covariance_type=covariance_type,
+                full_covariance_max_dim=full_covariance_max_dim,
+                decomposition_frequency=decomposition_frequency,
+                min_sigma=min_sigma,
+                max_sigma=max_sigma,
+                seed=seed,
+            )
+        else:
+            if CMAESValueBasedAgent is None:
+                raise ModuleNotFoundError(
+                    "CMA-ES requires the `cma` package. Install dependencies from requirements.txt."
+                )
+            agent = CMAESValueBasedAgent(
+                logdir=logdir,
+                n_states=_count_discrete(dim_states),
+                n_actions=_count_discrete(dim_actions),
+                max_traj_length=max_traj_length,
+                num_evaluation_episodes=num_evaluation_episodes,
+                population_size=population_size,
+                sigma=sigma,
+                elite_count=elite_count,
+                candidate_evaluation_episodes=candidate_evaluation_episodes,
+                covariance_type=covariance_type,
+                full_covariance_max_dim=full_covariance_max_dim,
+                decomposition_frequency=decomposition_frequency,
+                min_sigma=min_sigma,
+                max_sigma=max_sigma,
+                seed=seed,
+            )
     else:
         if CMAESLinearPolicyAgent is None:
             raise ModuleNotFoundError(
