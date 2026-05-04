@@ -1,18 +1,12 @@
 """
-Plot ProPS+ vs ProPS-V mean reward by iteration from overall_log.txt.
+Plot ProPS+, ProPS, and BMPS mean reward by iteration from overall_log.txt.
 
-This script aggregates up to N runs for each variant, computes the mean reward
-curve across runs, and draws a variance shade (mean +/- std).
+This script recursively searches for overall_log.txt under logs/, groups them
+by problem and variant, and plots mean reward curves.
 
-Important:
-- It uses row order in overall_log.txt as the iteration axis, not the logged
-  iteration number. This avoids off-by-one mismatches between runners that log
-  iterations starting from 0 and runners that log starting from 1.
-- It only reads overall_log.txt, as requested.
-
-Examples:
+Usage:
     python plot_propsp_propsv_overall_log.py --problem acrobot
-    python plot_propsp_propsv_overall_log.py --problem acrobot --max_runs 10 --save acrobot_compare.png
+    python plot_propsp_propsv_overall_log.py --problem acrobot --save acrobot_compare.png
 """
 
 import argparse
@@ -70,8 +64,10 @@ def classify_variant(folder_name):
     lower = folder_name.lower()
     if "_propsp" in lower:
         return "propsp"
-    if "_propsv" in lower and "_oneshot" not in lower and "_rndm_proj" not in lower:
+    if "_propsv" in lower:
         return "propsv"
+    if "_props" in lower and "_propsp" not in lower and "_propsv" not in lower:
+        return "props"
     return None
 
 
@@ -99,93 +95,78 @@ def parse_overall_log_rewards(log_path):
     return np.asarray(rewards, dtype=float)
 
 
-def collect_runs(logs_dir, problem, variant, max_runs):
-    candidates = []
-    normalized_problem = problem.lower().strip()
-
-    for folder in sorted((path for path in logs_dir.iterdir() if path.is_dir()), key=lambda p: natural_key(p.name)):
-        folder_variant = classify_variant(folder.name)
-        if folder_variant != variant:
+def discover_logs(logs_dir):
+    """Recursively find all overall_log.txt files and classify them."""
+    entries = []
+    for log_path in logs_dir.rglob("overall_log.txt"):
+        run_folder = log_path.parent.name
+        variant = classify_variant(run_folder)
+        if variant is None:
             continue
-
-        if normalize_problem_name(folder.name) != normalized_problem:
-            continue
-
-        overall_log = folder / "overall_log.txt"
-        rewards = parse_overall_log_rewards(overall_log)
+        problem = normalize_problem_name(run_folder)
+        rewards = parse_overall_log_rewards(log_path)
         if rewards is None:
             continue
-
-        candidates.append((folder.name, rewards))
-
-    if len(candidates) > max_runs:
-        candidates = candidates[:max_runs]
-
-    return candidates
+        entries.append({
+            "problem": problem,
+            "variant": variant,
+            "run_name": run_folder,
+            "rewards": rewards,
+        })
+    return entries
 
 
 def aggregate_runs(runs):
     if not runs:
         return None
-
-    min_len = min(len(rewards) for _, rewards in runs)
-    matrix = np.stack([rewards[:min_len] for _, rewards in runs], axis=0)
-    iters = np.arange(min_len)
-
+    min_len = min(len(r["rewards"]) for r in runs)
+    matrix = np.stack([r["rewards"][:min_len] for r in runs], axis=0)
     return {
-        "iters": iters,
+        "iters": np.arange(min_len),
         "mean": np.mean(matrix, axis=0),
         "std": np.std(matrix, axis=0),
         "n": len(runs),
-        "run_names": [name for name, _ in runs],
         "min_len": min_len,
     }
 
 
-def discover_available_problems(logs_dir):
-    problems = set()
-    for folder in logs_dir.iterdir():
-        if not folder.is_dir():
-            continue
-        if classify_variant(folder.name) is None:
-            continue
-        problems.add(normalize_problem_name(folder.name))
-    return sorted(problems)
+def plot_problem(problem, data_dict, output_path=None):
+    # Determine common length across all available variants
+    min_len = min(d["min_len"] for d in data_dict.values())
+    iters = np.arange(min_len)
 
-
-def plot_problem(problem, propsp_data, propsv_data, output_path=None):
-    common_len = min(propsp_data["min_len"], propsv_data["min_len"])
-    iters = np.arange(common_len)
-
-    propsp_mean = propsp_data["mean"][:common_len]
-    propsp_std = propsp_data["std"][:common_len]
-    propsv_mean = propsv_data["mean"][:common_len]
-    propsv_std = propsv_data["std"][:common_len]
+    colors = {
+        "props": "#2ca02c",   # green
+        "propsp": "#1f77b4",  # blue
+        "propsv": "#d62728",  # red
+    }
+    labels = {
+        "props": "ProPS",
+        "propsp": "ProPS+",
+        "propsv": "BMPS",
+    }
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    propsp_color = "#1f77b4"
-    propsv_color = "#d62728"
+    for variant in ["props", "propsp", "propsv"]:
+        if variant not in data_dict:
+            continue
+        d = data_dict[variant]
+        mean = d["mean"][:min_len]
+        std = d["std"][:min_len]
+        color = colors[variant]
+        label = labels[variant]
 
-    ax.plot(iters, propsp_mean, color=propsp_color, linewidth=2, label=f"ProPS+ (n={propsp_data['n']})")
-    ax.fill_between(
-        iters,
-        propsp_mean - propsp_std,
-        propsp_mean + propsp_std,
-        color=propsp_color,
-        alpha=0.22,
-    )
+        ax.plot(iters, mean, color=color, linewidth=2, label=label)
+        ax.fill_between(
+            iters,
+            mean - std,
+            mean + std,
+            color=color,
+            alpha=0.22,
+        )
 
-    ax.plot(iters, propsv_mean, color=propsv_color, linewidth=2, label=f"ProPS-V (n={propsv_data['n']})")
-    ax.fill_between(
-        iters,
-        propsv_mean - propsv_std,
-        propsv_mean + propsv_std,
-        color=propsv_color,
-        alpha=0.22,
-    )
-
-    ax.set_title(f"{problem}: mean reward by iteration from overall_log.txt", fontsize=14)
+    # ax.set_title(f"{problem}", fontsize=14)  # no title per request
     ax.set_xlabel("Iteration", fontsize=12)
     ax.set_ylabel("Mean Reward", fontsize=12)
     ax.grid(True, linestyle="--", alpha=0.45)
@@ -199,9 +180,14 @@ def plot_problem(problem, propsp_data, propsv_data, output_path=None):
         plt.show()
 
 
+def discover_available_problems(entries):
+    problems = set(e["problem"] for e in entries)
+    return sorted(problems)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Compare ProPS+ vs ProPS-V mean reward curves from overall_log.txt with variance shading."
+        description="Compare ProPS+, ProPS, and BMPS mean reward curves from overall_log.txt."
     )
     parser.add_argument(
         "--problem",
@@ -216,12 +202,6 @@ def main():
         help="Root logs directory (default: ./logs).",
     )
     parser.add_argument(
-        "--max_runs",
-        type=int,
-        default=10,
-        help="Maximum runs to use per variant (default: 10).",
-    )
-    parser.add_argument(
         "--save",
         type=Path,
         default=None,
@@ -234,7 +214,9 @@ def main():
         print(f"Logs directory not found: {logs_dir}")
         return
 
-    available_problems = discover_available_problems(logs_dir)
+    entries = discover_logs(logs_dir)
+    available_problems = discover_available_problems(entries)
+
     if not args.problem:
         print("Please provide --problem. Available problems:")
         for problem in available_problems:
@@ -242,23 +224,31 @@ def main():
         return
 
     problem = args.problem.lower().strip()
-    propsp_runs = collect_runs(logs_dir, problem, "propsp", args.max_runs)
-    propsv_runs = collect_runs(logs_dir, problem, "propsv", args.max_runs)
 
-    if not propsp_runs or not propsv_runs:
-        print(f"Could not find both ProPS+ and ProPS-V runs for problem '{problem}'.")
+    # Group by variant
+    variant_runs = {"props": [], "propsp": [], "propsv": []}
+    for e in entries:
+        if e["problem"] != problem:
+            continue
+        if e["variant"] in variant_runs:
+            variant_runs[e["variant"]].append(e)
+
+    data_dict = {}
+    for variant, runs in variant_runs.items():
+        if runs:
+            data_dict[variant] = aggregate_runs(runs)
+
+    if not data_dict:
+        print(f"Could not find any runs for problem '{problem}'.")
         print(f"Available problems: {available_problems}")
         return
 
-    propsp_data = aggregate_runs(propsp_runs)
-    propsv_data = aggregate_runs(propsv_runs)
-
     print(f"Problem: {problem}")
-    print(f"  ProPS+ runs used ({propsp_data['n']}): {propsp_data['run_names']}")
-    print(f"  ProPS-V runs used ({propsv_data['n']}): {propsv_data['run_names']}")
-    print(f"  Common plotted iterations: {min(propsp_data['min_len'], propsv_data['min_len'])}")
+    for variant, data in data_dict.items():
+        label = {"props": "ProPS", "propsp": "ProPS+", "propsv": "BMPS"}[variant]
+        print(f"  {label}: {data['n']} runs, {data['min_len']} iterations")
 
-    plot_problem(problem, propsp_data, propsv_data, output_path=args.save)
+    plot_problem(problem, data_dict, output_path=args.save)
 
 
 if __name__ == "__main__":

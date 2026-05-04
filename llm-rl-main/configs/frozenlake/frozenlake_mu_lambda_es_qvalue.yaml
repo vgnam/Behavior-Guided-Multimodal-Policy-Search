@@ -1,0 +1,53 @@
+task: dist_state_mu_lambda_es_qvalue
+num_episodes: 100
+gym_env_name: FrozenLake-v1
+render_mode: null
+logdir: logs/frozenlake_mu_lambda_es_qvalue
+dim_actions:
+- - 0
+  - 1
+  - 2
+  - 3
+dim_states:
+- - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+max_traj_count: 1000
+max_traj_length: 100
+num_evaluation_episodes: 20
+warmup_episodes: 0
+warmup_dir: null
+bias: true
+env_kwargs:
+  is_slippery: true
+
+# (mu, lambda)-ES Q-value hyperparameters
+mu: 16
+lam: 32
+sigma: 0.1
+sigma_decay: 1.0
+min_sigma: 1.0e-12
+max_sigma: null
+param_bound: 10.0
+cxmode: blend
+alpha: 0.5
+cxpb: 0.6
+mutpb: 0.3
+smin: 0.01
+smax: 0.5
+clip: true
+ncores: 1
+candidate_evaluation_episodes: 1

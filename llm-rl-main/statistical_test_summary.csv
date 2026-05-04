@@ -1,0 +1,10 @@
+﻿ProPS-V,Baseline,Common_Problems,Sig_Wins_V,Sig_Wins_Base,Non_Sig
+GemmaVLM,ARS,6,5,0,1
+GemmaVLM,CMA ES,8,6,0,2
+GemmaVLM,MuLambda ES,8,7,0,1
+GemmaVLM,OPENAI ES,2,2,0,0
+GemmaVLM,PROPSP,9,2,0,7
+geminiVLM,ARS,5,4,0,1
+geminiVLM,CMA ES,7,5,0,2
+geminiVLM,MuLambda ES,7,6,0,1
+geminiVLM,PROPSP,8,3,0,5
