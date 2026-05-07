@@ -18,3 +18,7 @@ bias: true
 optimum: 0
 search_step_size: 0.1
 env_desc_file: env_descriptions/fancy_long_simple_reacher.j2
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null

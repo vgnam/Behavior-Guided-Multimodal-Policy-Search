@@ -224,7 +224,7 @@ class Grid2OpCase14Env(gym.Env):
         draw.text((24, 18), f"Grid2Op benchmark: {self.grid2op_env_name}", fill=(20, 20, 20), font=font)
         draw.text(
             (24, 42),
-            "Observation dashboard for ProPS-V. Each tile is one transmission line.",
+            "Observation dashboard for BMPS. Each tile is one transmission line.",
             fill=(20, 20, 20),
             font=font,
         )

@@ -26,6 +26,8 @@ class LLMNumOptimSemanticAgent:
         optimum,
         search_step_size,
         env_desc_file=None,
+        llm_api_key=None,
+        llm_api_base=None,
     ):
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -53,7 +55,11 @@ class LLMNumOptimSemanticAgent:
         self.replay_buffer = EpisodeRewardBufferNoBias(max_size=max_traj_count)
         self.traj_buffer = ReplayBuffer(max_traj_count, max_traj_length)
         self.llm_brain = LLMBrain(
-            llm_si_template, llm_output_conversion_template, llm_model_name
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
         self.logdir = logdir
         self.num_evaluation_episodes = num_evaluation_episodes

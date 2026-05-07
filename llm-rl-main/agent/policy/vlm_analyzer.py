@@ -1,5 +1,5 @@
 """
-Vision-Language Model Analyzer for ProPS-V
+Vision-Language Model Analyzer for BMPS
 
 This module provides VLM integration for analyzing episode frames
 and generating diagnostic feedback for policy optimization.
@@ -32,6 +32,8 @@ class VLMAnalyzer:
         timeout: int = 60,
         template_dir: str = "agent/policy/templates",
         enable_reasoning: bool = False,
+        vlm_api_key: str = None,
+        vlm_api_base: str = None,
     ):
         """
         Initialize VLM analyzer using LiteLLM.
@@ -43,11 +45,15 @@ class VLMAnalyzer:
             timeout: Timeout in seconds for API calls
             template_dir: Directory containing Jinja2 .j2 prompt templates
             enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
+            vlm_api_key: Optional API key for VLM provider
+            vlm_api_base: Optional API base URL for VLM provider
         """
         self.vlm_model_name = vlm_model_name
         self.max_retries = max_retries
         self.timeout = timeout
         self.enable_reasoning = enable_reasoning
+        self.vlm_api_key = vlm_api_key
+        self.vlm_api_base = vlm_api_base
 
         self._jinja_env = Environment(
             loader=FileSystemLoader(template_dir),
@@ -115,12 +121,18 @@ class VLMAnalyzer:
         """
         api_start_time = time.time()
 
-        response = litellm.completion(
-            model=self.vlm_model_name,
-            messages=messages,
-            temperature=temperature,
-            timeout=self.timeout,
-        )
+        kwargs = {
+            "model": self.vlm_model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "timeout": self.timeout,
+        }
+        if self.vlm_api_key is not None:
+            kwargs["api_key"] = self.vlm_api_key
+        if self.vlm_api_base is not None:
+            kwargs["api_base"] = self.vlm_api_base
+
+        response = litellm.completion(**kwargs)
 
         api_time = time.time() - api_start_time
         return response.choices[0].message.content.strip(), api_time

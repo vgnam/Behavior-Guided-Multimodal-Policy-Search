@@ -1,7 +1,7 @@
 """
-ProPS-V Q-Table Agent: Vision-Guided Q-Learning
+BMPS Q-Table Agent: Vision-Guided Q-Learning
 
-This module implements ProPS-V for discrete state spaces (Q-tables).
+This module implements BMPS for discrete state spaces (Q-tables).
 Key components:
 - Q-table policy for discrete state-action spaces
 - Periodic frame sampling
@@ -26,7 +26,7 @@ import time
 
 class LLMNumOptimQTableVisionAgent:
     """
-    ProPS-V Agent for Q-table learning with vision-guided optimization.
+    BMPS Agent for Q-table learning with vision-guided optimization.
     
     Extends standard Q-learning with:
     - Periodic frame sampling
@@ -56,9 +56,13 @@ class LLMNumOptimQTableVisionAgent:
         poisson_lam=2.0,
         neighbor_step=0.1,
         ablate_anchor=None,
+        llm_api_key=None,
+        llm_api_base=None,
+        vlm_api_key=None,
+        vlm_api_base=None,
     ):
         """
-        Initialize ProPS-V Q-Table agent.
+        Initialize BMPS Q-Table agent.
         
         Args:
             logdir: Directory for logging
@@ -106,7 +110,11 @@ class LLMNumOptimQTableVisionAgent:
         
         # LLM brain
         self.llm_brain = LLMBrain(
-            llm_si_template, llm_output_conversion_template, llm_model_name
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
         
         self.logdir = logdir
@@ -123,11 +131,13 @@ class LLMNumOptimQTableVisionAgent:
                 decay_horizon=decay_horizon
             )
             self.vlm_analyzer = VLMAnalyzer(
-                vlm_model_name=vlm_model_name
+                vlm_model_name=vlm_model_name,
+                vlm_api_key=vlm_api_key,
+                vlm_api_base=vlm_api_base,
             )
-            print(f"[ProPS-V Q-Table] Vision features enabled (VLM: {vlm_model_name}, T_decay: {decay_horizon})")
+            print(f"[BMPS Q-Table] Vision features enabled (VLM: {vlm_model_name}, T_decay: {decay_horizon})")
         else:
-            print("[ProPS-V Q-Table] Vision features disabled - using numerical optimization only")
+            print("[BMPS Q-Table] Vision features disabled - using numerical optimization only")
 
     def rollout_episode_with_frames(
         self,
@@ -390,7 +400,7 @@ class LLMNumOptimQTableVisionAgent:
         """
         Train Q-table policy with optional vision-guided feedback.
         
-        Implements ProPS-V for Q-learning.
+        Implements BMPS for Q-learning.
         """
         def parse_parameters(input_text):
             # Parse Q-values from LLM response
@@ -435,7 +445,7 @@ class LLMNumOptimQTableVisionAgent:
                 np.random.RandomState(self.training_episodes)
             )
             
-            print(f"\n[ProPS-V] λ_t = {lambda_t:.3f}, VLM Invocation: {should_invoke_vlm}")
+            print(f"\n[BMPS] λ_t = {lambda_t:.3f}, VLM Invocation: {should_invoke_vlm}")
             
             # ===== STEP 2: Neighborhood Behavioral Sampling + VLM =====
             if should_invoke_vlm:

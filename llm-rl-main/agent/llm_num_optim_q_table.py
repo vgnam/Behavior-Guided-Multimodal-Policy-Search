@@ -22,6 +22,8 @@ class LLMNumOptimQTableAgent:
         num_evaluation_episodes,
         optimum,
         env_kwargs=None,
+        llm_api_key=None,
+        llm_api_base=None,
     ):
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -35,7 +37,11 @@ class LLMNumOptimQTableAgent:
         self.q_table = QTable(actions=actions, states=states)
         self.replay_buffer = EpisodeRewardBufferNoBias(max_size=max_traj_count)
         self.llm_brain = LLMBrain(
-            llm_si_template, llm_output_conversion_template, llm_model_name
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
         self.logdir = logdir
         self.num_evaluation_episodes = num_evaluation_episodes

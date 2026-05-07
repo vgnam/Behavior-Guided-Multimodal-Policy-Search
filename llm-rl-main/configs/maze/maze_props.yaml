@@ -15,3 +15,7 @@ num_evaluation_episodes: 20
 warmup_episodes: 20
 warmup_dir: null
 optimum: 1.0
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null

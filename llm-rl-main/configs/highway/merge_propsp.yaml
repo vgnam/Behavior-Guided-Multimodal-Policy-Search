@@ -20,3 +20,7 @@ search_step_size: 0.5
 env_desc_file: env_descriptions/merge.j2
 env_kwargs:
   flatten_observation: true
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null

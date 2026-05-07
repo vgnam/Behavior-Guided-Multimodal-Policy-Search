@@ -1,6 +1,5 @@
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
-from agent.llm_num_optim_linear_policy_rndm_proj import LLMNumOptimRndmPrjAgent
 from agent.llm_num_optim_linear_policy import LLMNumOptimAgent
 from agent.llm_num_optim_q_table import LLMNumOptimQTableAgent
 from jinja2 import Environment, FileSystemLoader
@@ -27,12 +26,13 @@ def run_training_loop(
     warmup_episodes,
     warmup_dir,
     bias=None,
-    rank=None,
     optimum=1000,
     search_step_size=0.1,
     env_kwargs=None,
+    llm_api_key=None,
+    llm_api_base=None,
 ):
-    assert task in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj", "dist_state_llm_num_optim"]
+    assert task in ["cont_space_llm_num_optim", "dist_state_llm_num_optim"]
 
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
     llm_si_template = jinja2_env.get_template(llm_si_template_name)
@@ -40,7 +40,7 @@ def run_training_loop(
         llm_output_conversion_template_name
     )
 
-    if task in ["cont_space_llm_num_optim", "cont_space_llm_num_optim_rndm_proj"]:
+    if task == "cont_space_llm_num_optim":
         world = ContinualSpaceGeneralWorld(
             gym_env_name,
             render_mode,
@@ -48,39 +48,22 @@ def run_training_loop(
             env_kwargs=env_kwargs,
         )
 
-
-        if task == "cont_space_llm_num_optim":
-            agent = LLMNumOptimAgent(
-                logdir,
-                dim_actions,
-                dim_states,
-                max_traj_count,
-                max_traj_length,
-                llm_si_template,
-                llm_output_conversion_template,
-                llm_model_name,
-                num_evaluation_episodes,
-                bias,
-                optimum,
-                search_step_size,
-            )
-        elif task == "cont_space_llm_num_optim_rndm_proj":
-            agent = LLMNumOptimRndmPrjAgent(
-                logdir,
-                dim_actions,
-                dim_states,
-                max_traj_count,
-                max_traj_length,
-                llm_si_template,
-                llm_output_conversion_template,
-                llm_model_name,
-                num_evaluation_episodes,
-                rank,
-                bias,
-                optimum,
-                search_step_size,
-            )
-
+        agent = LLMNumOptimAgent(
+            logdir,
+            dim_actions,
+            dim_states,
+            max_traj_count,
+            max_traj_length,
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            num_evaluation_episodes,
+            bias,
+            optimum,
+            search_step_size,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
+        )
 
     elif task == "dist_state_llm_num_optim":
         world = DiscreteStateGeneralWorld(
@@ -102,6 +85,8 @@ def run_training_loop(
             num_evaluation_episodes,
             optimum,
             env_kwargs=env_kwargs,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
 
         print('init done')

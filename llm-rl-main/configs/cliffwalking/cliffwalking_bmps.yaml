@@ -1,0 +1,48 @@
+task: dist_state_llm_num_optim_vision
+num_episodes: 400
+gym_env_name: CliffWalking-v0
+render_mode: rgb_array  # Required for frame capture
+logdir: logs/cliffwalking_bmps
+dim_actions: [[0, 1, 2, 3]]
+dim_states:
+  [
+    [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    ],
+  ]
+max_traj_count: 1000
+max_traj_length: 100
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_vision.j2
+llm_output_conversion_template_name: num_optim_vision.j2
+llm_model_name: nvidia_nim/qwen/qwen3-235b-a22b
+num_evaluation_episodes: 20
+warmup_episodes: 20
+warmup_dir: null
+optimum: -15
+env_kwargs:
+  is_slippery: true
+env_desc_file: env_descriptions/cliffwalking3.j2
+
+# BMPS specific parameters
+vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+decay_horizon: 100
+frame_sample_period: 50
+enable_vision: true
+n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
+poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
+neighbor_step: 0.1   # Base step size multiplied by Poisson sample
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null
+# Optional: override VLM API credentials (falls back to env vars if null)
+vlm_api_key: null
+vlm_api_base: null

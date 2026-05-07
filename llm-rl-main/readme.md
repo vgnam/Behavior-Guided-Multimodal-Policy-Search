@@ -1,135 +1,99 @@
-# ProPS and ProPS+
+# Prompted Policy Search (ProPS, ProPS+, BMPS)
 
-This repo serves as the code base for ProPS and ProPS+.
+This repository contains the official implementation for the NeurIPS paper:
 
-ProPS uses LLMs to directly optimize a reinforcement learning policy.
+> **Behavior-Guided Multimodal Policy Search: Leveraging Vision-Language Models for Reinforcement Learning**
 
-ProPS+ is based on ProPS, but also adds the domain description as a context in the prompt, as a optimization guidance.
+## Methods
 
-All the configuration files for each experiments are in the ./configs folder. There are 15 RL domains involved, each domain with a ProPS and ProPS+ training configuration.
+This codebase implements three methods:
 
-In order to run an experiment, please run `python main.py --config <configuration_file>`.
+- **ProPS** (`props`): Uses LLMs to directly optimize a reinforcement learning policy via numerical parameter updates.
+- **ProPS+** (`propsp`): Extends ProPS by incorporating domain-specific descriptions as semantic context in the prompt to guide optimization.
+- **BMPS** (`bmps`): Behavior Landscape-guided Multi-modal Policy Search that integrates vision-language model feedback with policy optimization for visual RL tasks.
 
-For a concrete ProPS-V walkthrough on the maze task used by the default `config.yaml`, see `PROPSV_README.md`. The shortest path is:
+## Repository Structure
 
-`cd llm-rl-main`
+```
+.
+├── main.py                           # Entry point for running experiments
+├── config.yaml                       # Example configuration (FrozenLake + BMPS)
+├── requirements.txt                  # Python dependencies
+├── readme.md                         # This file
+├── agent/                            # Agent implementations
+│   ├── llm_num_optim_linear_policy.py
+│   ├── llm_num_optim_q_table.py
+│   ├── llm_num_optim_linear_policy_semantics.py
+│   ├── llm_num_optim_q_table_semantics.py
+│   ├── llm_num_optim_linear_policy_vision.py
+│   ├── llm_num_optim_q_table_vision.py
+│   └── policy/                       # Policy classes and prompts
+│       ├── templates/                # Jinja2 prompt templates
+│       └── ...
+├── runner/                           # Training loop runners
+│   ├── llm_num_optim_runner.py       # ProPS runner
+│   ├── llm_num_optim_semantics_runner.py  # ProPS+ runner
+│   └── llm_num_optim_vision_runner.py     # BMPS runner
+├── world/                            # Environment wrappers
+│   ├── continuous_space_general_world.py
+│   └── discrete_state_general_world.py
+└── configs/                          # Experiment configurations per domain
+    ├── <domain>/<domain>_props.yaml
+    ├── <domain>/<domain>_propsp.yaml
+    └── <domain>/<domain>_bmps.yaml
+```
 
-`python -m pip install -r requirements.txt`
+## Installation
 
-`python -m pip install -e .\envs\gym-maze-master`
+```bash
+pip install -r requirements.txt
 
-`python main.py --config configs/maze/maze_propsv.yaml`
+# For maze experiments
+pip install -e ./envs/gym-maze-master
 
-## OpenAI-ES Baseline
+# For navigation experiments
+pip install -e ./envs/gym-navigation-main
+```
 
-An OpenAI-ES baseline (linear policy, antithetic sampling, rank-normalized
-updates) is available via:
+## Running Experiments
 
-- task: `cont_space_openai_es`
-- example config: `configs/acrobot/acrobot_openai_es.yaml`
+Each RL domain provides three configuration files (one per method):
 
-Implementation note:
+```bash
+# ProPS
+python main.py --config configs/taxi/taxi_props.yaml
 
-- The ES update flow follows the core equations/patterns from the OpenAI
-	evolution-strategies-starter repository (centered-rank return processing,
-	weighted perturbation aggregation, optimizer update step).
-- OpenAI-ES configs are aligned to the same `num_episodes` values as the
-	corresponding ProPS+ (`*_propsp.yaml`) configs for each problem.
+# ProPS+
+python main.py --config configs/taxi/taxi_propsp.yaml
 
-Run it with:
+# BMPS
+python main.py --config configs/frozenlake/frozenlake_bmps.yaml
+```
 
-`python main.py --config configs/acrobot/acrobot_openai_es.yaml`
+## Quick Start
 
-## CMA-ES Baseline
+Run BMPS on FrozenLake (default `config.yaml`):
 
-A CMA-ES baseline for the same linear-policy setup is also available via:
+```bash
+cd llm-rl-main
+python main.py --config config.yaml
+```
 
-- task: `cont_space_cma_es`
-- task: `dist_state_cma_es`
-- example config: `configs/acrobot/acrobot_cma_es.yaml`
+## Environments
 
-Implementation note:
+The benchmark includes a diverse set of RL domains spanning discrete and continuous control, vision-based tasks, and robotic manipulation. All tasks use the standard [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API. Custom environments are provided under `./envs/`.
 
-- CMA-ES uses the external Python package `cma` (`pycma`).
-- `covariance_type: auto` uses full covariance on smaller policy vectors and falls back to diagonal covariance on larger ones to keep memory and runtime reasonable.
-- CMA-ES prints the current flattened policy parameters after each update and also writes them to `episode_x/parameters_flat.txt`.
-- Warmup is disabled for CMA-ES; keep `warmup_episodes: 0` in the provided configs.
-- Resume support saves the latest strategy state to `logdir/cma_state_latest.pkl`.
-- Matching `*_cma_es.yaml` configs are provided for every environment that already has an `*_openai_es.yaml` config.
+## LLM APIs
 
-Run it with:
+Our implementation supports standard LLM APIs. Please configure your API keys via environment variables before running experiments:
 
-`python main.py --config configs/acrobot/acrobot_cma_es.yaml`
+- `OPENROUTER_API_KEY`
+- `NVIDIA_NIM_API_KEY`
+- `GEMINI_API_KEY`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
 
-Maze example:
 
-`python main.py --config configs/maze/maze_cma_es.yaml`
+## License
 
-Install dependency:
-
-`python -m pip install -r requirements.txt`
-
-## (mu, lambda)-ES Baseline (Optional)
-
-A `(mu, lambda)-ES` baseline is available via:
-
-- task: `cont_space_mu_lambda_es`
-- task: `dist_state_mu_lambda_es`
-- example config: `configs/acrobot/acrobot_mu_lambda_es.yaml`
-
-Dependency note:
-
-- This baseline now supports `EvoLib` (`evolib`) as the preferred backend.
-- `evolib` currently requires Python 3.12+, so it is installed conditionally in `requirements.txt`.
-- On Python versions below 3.12 (for example, Python 3.11), the agent automatically falls back to the built-in NumPy backend.
-- A legacy `neorl` backend is still supported when installed, but it is not recommended because upstream `neorl` pins `tensorflow==1.14.0`.
-
-Backend selection:
-
-- Set `es_backend: evolib` in your `(mu, lambda)-ES` config to request EvoLib.
-- Supported values: `auto`, `evolib`, `neorl`, `numpy`.
-
-# Install the requirements
-
-## RL Tasks
-
-- The RL tasks are based on gymnasium. Please install according to `https://github.com/Farama-Foundation/Gymnasium`
-- There are 2 customized environments in the folders `./envs/gym-maze-master` and `./envs/gym-navigation-main`. If you want to train the maze or navigation agent, please pip install the packages.
-- Grid2Op is supported through the local wrapper `Grid2OpCase14-v0` and configs in `./configs/grid2op/`. On first use, Grid2Op may download the `l2rpn_case14_sandbox` dataset.
-- robosuite is supported through the local wrapper `RoboSuiteLiftDiscrete-v0` and configs in `./configs/robosuite/`. This benchmark uses the `Lift` task with a Panda robot and a small discrete action set.
-- fancy_gym environments are supported via Gymnasium registration (auto-imported in `main.py`) with configs split by problem folders (e.g. `./configs/fancy_simple_reacher/`, `./configs/fancy_long_simple_reacher/`, `./configs/fancy_reacher5d/`).
-- stable_gym environments can be registered without importing `stable_gym.__init__` (see `main.py`) for compatibility. This now includes `stable_gym/MinitaurBulletCost-v1` and `stable_gym/FetchReachCost-v1`.
-
-### Fancy Gym quick examples
-
-Install dependency (already listed in `requirements.txt`):
-
-`pip install fancy_gym`
-
-Run a few included Fancy Gym problems:
-
-`python main.py --config configs/fancy_simple_reacher/fancy_simple_reacher_propsp.yaml`
-
-`python main.py --config configs/fancy_long_simple_reacher/fancy_long_simple_reacher_propsp.yaml`
-
-`python main.py --config configs/fancy_reacher5d/fancy_reacher5d_propsp.yaml`
-
-### Stable Gym cost-task examples
-
-Install dependency (already listed in `requirements.txt`):
-
-`pip install stable-gym`
-
-Run Minitaur and FetchReachCost with OpenAI-ES baseline configs:
-
-`python main.py --config configs/minitaur/minitaur_openai_es.yaml`
-
-`python main.py --config configs/fetch_reach_cost/fetch_reach_cost_openai_es.yaml`
-
-## The LLM APIs
-
-We utilized the standard Google Gemini, Openai, and Anthropic APIs. Please install the packages accordingly.
-
-- `https://ai.google.dev/gemini-api/docs`
-- `https://platform.openai.com/docs/overview`
-- `https://docs.anthropic.com/en/release-notes/api`
+This project is released under the MIT License.

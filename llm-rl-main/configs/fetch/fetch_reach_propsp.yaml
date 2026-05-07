@@ -21,3 +21,7 @@ env_desc_file: env_descriptions/fetch_reach.j2
 env_kwargs:
   flatten_observation: true
   reward_type: dense
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null

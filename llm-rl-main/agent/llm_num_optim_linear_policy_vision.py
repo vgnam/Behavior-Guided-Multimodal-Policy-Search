@@ -1,10 +1,10 @@
 """
-ProPS-V: Vision-Guided Prompted Policy Search
+BMPS: Vision-Guided Prompted Policy Search
 
-This module implements the ProPS-V agent that combines:
+This module implements the BMPS agent that combines:
 1. Numerical optimization (from ProPS)
 2. Semantic reasoning (from ProPS+)  
-3. Vision-guided feedback (new in ProPS-V)
+3. Vision-guided feedback (new in BMPS)
 
 Key components:
 - Periodic frame sampling
@@ -30,9 +30,9 @@ import os
 
 class LLMNumOptimVisionAgent:
     """
-    ProPS-V Agent: Vision-Guided Prompted Policy Search
+    BMPS Agent: Vision-Guided Prompted Policy Search
     
-    Implements the full ProPS-V algorithm with:
+    Implements the full BMPS algorithm with:
     - Periodic frame sampling
     - Adaptive visual guidance schedule  
     - VLM analysis integration
@@ -61,9 +61,13 @@ class LLMNumOptimVisionAgent:
         poisson_lam=2.0,
         neighbor_step=0.1,
         ablate_anchor=None,
+        llm_api_key=None,
+        llm_api_base=None,
+        vlm_api_key=None,
+        vlm_api_base=None,
     ):
         """
-        Initialize ProPS-V agent.
+        Initialize BMPS agent.
         
         Args:
             logdir: Directory for logging
@@ -133,7 +137,9 @@ class LLMNumOptimVisionAgent:
         self.llm_brain = LLMBrain(
             llm_si_template,
             llm_output_conversion_template,
-            llm_model_name
+            llm_model_name,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
         
         # Initialize vision components
@@ -145,7 +151,9 @@ class LLMNumOptimVisionAgent:
                 decay_horizon=decay_horizon
             )
             self.vlm_analyzer = VLMAnalyzer(
-                vlm_model_name=vlm_model_name
+                vlm_model_name=vlm_model_name,
+                vlm_api_key=vlm_api_key,
+                vlm_api_base=vlm_api_base,
             )
         
         self.logdir = logdir
@@ -428,7 +436,7 @@ class LLMNumOptimVisionAgent:
     
     def train_policy(self, world: BaseWorld, logdir):
         """
-        Train policy for one iteration using ProPS-V.
+        Train policy for one iteration using BMPS.
         
         Implements:
         - Periodic frame sampling
@@ -485,7 +493,7 @@ class LLMNumOptimVisionAgent:
                 self.training_episodes,
                 random_state=np.random.RandomState(self.training_episodes)
             )
-            print(f"ProPS-V Iteration {self.training_episodes}")
+            print(f"BMPS Iteration {self.training_episodes}")
             print(f"λ_t = {lambda_t:.3f}")
             print(f"VLM invocation: {use_vision_this_iter}")
 
@@ -513,7 +521,7 @@ class LLMNumOptimVisionAgent:
             cur_anchor, cur_neighbors = self._rollout_neighbors(
                 world, saved_params, "current", logdir
             )
-            visual_analysis = cur_anchor["analysis"]   # keeps existing ProPS-V path
+            visual_analysis = cur_anchor["analysis"]   # keeps existing BMPS path
 
             # Record current anchor in visual_analysis_history (matching original format)
             if visual_analysis is not None:

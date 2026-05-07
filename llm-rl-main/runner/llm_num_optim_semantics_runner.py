@@ -31,6 +31,8 @@ def run_training_loop(
     search_step_size=0.1,
     env_kwargs=None,
     env_desc_file=None,
+    llm_api_key=None,
+    llm_api_base=None,
 ):
     assert task in ["dist_state_llm_num_optim_semantics", "cont_state_llm_num_optim_semantics"]
 
@@ -60,6 +62,8 @@ def run_training_loop(
             optimum,
             env_kwargs=env_kwargs,
             env_desc_file=env_desc_file,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
     else:
         world = ContinualSpaceGeneralWorld(
@@ -83,6 +87,8 @@ def run_training_loop(
             optimum,
             search_step_size,
             env_desc_file=env_desc_file,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
         )
 
     print('init done')

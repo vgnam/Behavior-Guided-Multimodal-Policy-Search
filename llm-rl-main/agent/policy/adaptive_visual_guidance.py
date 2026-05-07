@@ -1,5 +1,5 @@
 """
-Adaptive Visual Guidance for ProPS-V
+Adaptive Visual Guidance for BMPS
 
 This module implements the visual guidance schedule using exponential decay:
 λ_t = 0.995^t
@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 
 class AdaptiveVisualGuidance:
     """
-    Manages the VLM invocation schedule for ProPS-V using exponential decay.
+    Manages the VLM invocation schedule for BMPS using exponential decay.
     
     Lambda (λ_t = 0.995^t) controls the probability of invoking VLM for visual analysis.
     - t=0: λ ≈ 1.0 (100% VLM calls)

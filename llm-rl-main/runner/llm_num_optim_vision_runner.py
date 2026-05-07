@@ -1,7 +1,7 @@
 """
-Runner for ProPS-V: Vision-Guided Prompted Policy Search
+Runner for BMPS: Vision-Guided Prompted Policy Search
 
-This module provides the training loop for ProPS-V agents,
+This module provides the training loop for BMPS agents,
 integrating vision-language model feedback with policy optimization.
 """
 
@@ -46,9 +46,13 @@ def run_training_loop(
     poisson_lam=2.0,
     neighbor_step=0.1,
     ablate_anchor=None,
+    llm_api_key=None,
+    llm_api_base=None,
+    vlm_api_key=None,
+    vlm_api_base=None,
 ):
     """
-    Run ProPS-V training loop.
+    Run BMPS training loop.
     
     Args:
         task: Task type (currently supports "cont_state_llm_num_optim_vision")
@@ -79,7 +83,7 @@ def run_training_loop(
         enable_vision: Whether to enable vision-guided feedback
     """
     assert task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"], \
-        f"ProPS-V runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
+        f"BMPS runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
 
     # Load Jinja2 templates
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
@@ -95,7 +99,7 @@ def run_training_loop(
     # For vision, we need rgb_array rendering to capture frames
     if enable_vision and render_mode is None:
         render_mode = "rgb_array"
-        print(f"[ProPS-V] Enabling rgb_array rendering for frame capture")
+        print(f"[BMPS] Enabling rgb_array rendering for frame capture")
     
     if task == "dist_state_llm_num_optim_vision":
         world = DiscreteStateGeneralWorld(
@@ -125,6 +129,10 @@ def run_training_loop(
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
             ablate_anchor=ablate_anchor,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
+            vlm_api_key=vlm_api_key,
+            vlm_api_base=vlm_api_base,
         )
     else:
         world = ContinualSpaceGeneralWorld(
@@ -155,9 +163,13 @@ def run_training_loop(
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
             ablate_anchor=ablate_anchor,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
+            vlm_api_key=vlm_api_key,
+            vlm_api_base=vlm_api_base,
         )
     
-    print('[ProPS-V] Initialization done')
+    print('[BMPS] Initialization done')
     print(f'  LLM: {llm_model_name}')
     print(f'  VLM: {vlm_model_name}')
     print(f'  Vision Enabled: {enable_vision}')
@@ -168,11 +180,11 @@ def run_training_loop(
     if not warmup_dir:
         warmup_dir = f"{logdir}/warmup"
         os.makedirs(warmup_dir, exist_ok=True)
-        print(f'\n[ProPS-V] Starting warmup with {warmup_episodes} episodes...')
+        print(f'\n[BMPS] Starting warmup with {warmup_episodes} episodes...')
         agent.random_warmup(world, warmup_dir, warmup_episodes)
-        print('[ProPS-V] Warmup complete')
+        print('[BMPS] Warmup complete')
     else:
-        print(f'[ProPS-V] Loading warmup data from {warmup_dir}')
+        print(f'[BMPS] Loading warmup data from {warmup_dir}')
         agent.replay_buffer.load(warmup_dir)
     
     # Training loop
@@ -186,12 +198,12 @@ def run_training_loop(
     vision_stats_file.flush()
     
     print('\n' + '='*70)
-    print(f"[ProPS-V] Starting training for {num_episodes} episodes")
+    print(f"[BMPS] Starting training for {num_episodes} episodes")
     print('='*70 + '\n')
     
     for episode in range(num_episodes):
         print('\n' + '='*70)
-        print(f"ProPS-V Episode: {episode}/{num_episodes}")
+        print(f"BMPS Episode: {episode}/{num_episodes}")
         print('='*70)
         
         # Create episode log directory
@@ -254,7 +266,7 @@ def run_training_loop(
     vision_stats_file.close()
     
     print('\n' + '='*70)
-    print("[ProPS-V] Training Complete!")
+    print("[BMPS] Training Complete!")
     print('='*70)
     print(f"  Final Episode: {episode}")
     print(f"  Total Reward: {total_reward:.2f}")

@@ -28,3 +28,7 @@ env_kwargs:
   observation_features:
     - rho
     - line_status
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null
