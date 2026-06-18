@@ -4,6 +4,12 @@ This repository contains the official implementation for the NeurIPS paper:
 
 > **Behavior-Guided Multimodal Policy Search: Leveraging Vision-Language Models for Reinforcement Learning**
 
+## Technical Report
+
+The full technical report for this project is available at the following link:
+
+- [Technical Report (Google Drive)](https://drive.google.com/drive/folders/1wo-JWb6zx5pGAp9Xdd5sQJ8Iu1JiX60X)
+
 ## Methods
 
 This codebase implements three methods:
