@@ -1,0 +1,61 @@
+# Generated from robosuite_lift_bmps.yaml by scripts/generate_bmps_cma_configs.py.
+# Environment/model settings follow the source BMPS configuration.
+task: cont_state_llm_num_optim_vision_cma
+num_episodes: 100
+gym_env_name: RoboSuiteLiftDiscrete-v0
+render_mode: rgb_array
+logdir: logs/robosuite_lift_bmps_cma
+dim_actions: 9
+dim_states: 64
+max_traj_count: 256
+max_traj_length: 200
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_bmps_cma.j2
+llm_output_conversion_template_name: num_optim_bmps_cma.j2
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
+num_evaluation_episodes: 3
+warmup_episodes: 10
+warmup_dir: null
+bias: true
+optimum: 300
+search_step_size: 0.5
+env_desc_file: env_descriptions/robosuite_lift_discrete.j2
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
+decay_horizon: 50
+frame_sample_period: 10
+enable_vision: true
+env_kwargs:
+  env_name: Lift
+  robot: Panda
+  camera_name: agentview
+  horizon: 200
+  reward_shaping: true
+  state_dim: 64
+  translation_delta: 1.0
+  gripper_open_value: -1.0
+  gripper_close_value: 1.0
+  state_keys:
+  - robot0_proprio-state
+  - object-state
+candidate_evaluation_episodes: 1
+pairwise_max_comparisons: 4
+stack_motion_threshold: 18.0
+stack_background_learning_rate: 0.01
+stack_tint_strength: 0.45
+stack_occupancy_scale: 4.0
+cma_population_size: 13
+cma_sigma: 0.5
+cma_covariance_mode: auto
+cma_full_covariance_max_dim: 128
+cma_lower_bound: -6.0
+cma_upper_bound: 6.0
+trust_region_radius: 3.0
+llm_guidance_alpha: 1.0
+cma_acceptance_margin: 0.0
+cma_restart_distance: 8.0
+cma_restart_margin: 0.0
+cma_seed: 0
+llm_api_key: null
+llm_api_base: null
+vlm_api_key: null
+vlm_api_base: null

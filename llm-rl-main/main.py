@@ -94,6 +94,7 @@ TASK_TO_RUNNER = {
     "cont_state_llm_num_optim_semantics": "runner.llm_num_optim_semantics_runner",
     "cont_state_llm_num_optim_vision": "runner.llm_num_optim_vision_runner",
     "dist_state_llm_num_optim_vision": "runner.llm_num_optim_vision_runner",
+    "cont_state_llm_num_optim_vision_cma": "runner.llm_num_optim_vision_runner",
 }
 
 

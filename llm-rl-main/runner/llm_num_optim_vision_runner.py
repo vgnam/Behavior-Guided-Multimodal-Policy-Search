@@ -8,6 +8,7 @@ integrating vision-language model feedback with policy optimization.
 from world.continuous_space_general_world import ContinualSpaceGeneralWorld
 from world.discrete_state_general_world import DiscreteStateGeneralWorld
 from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
+from agent.llm_num_optim_linear_policy_bmps_cma import LLMNumOptimBMPSCMAAgent
 from agent.llm_num_optim_q_table_vision import LLMNumOptimQTableVisionAgent
 from jinja2 import Environment, FileSystemLoader
 import os
@@ -38,7 +39,7 @@ def run_training_loop(
     search_step_size=0.1,
     env_kwargs=None,
     env_desc_file=None,
-    vlm_model_name="gpt-4o",
+    vlm_model_name="nvidia_nim/google/gemma-4-31b-it",
     decay_horizon=100,
     frame_sample_period=50,
     enable_vision=True,
@@ -50,6 +51,24 @@ def run_training_loop(
     llm_api_base=None,
     vlm_api_key=None,
     vlm_api_base=None,
+    cma_population_size=13,
+    cma_sigma=0.5,
+    cma_covariance_mode="auto",
+    cma_full_covariance_max_dim=128,
+    cma_lower_bound=-6.0,
+    cma_upper_bound=6.0,
+    trust_region_radius=3.0,
+    llm_guidance_alpha=1.0,
+    cma_acceptance_margin=0.0,
+    cma_restart_distance=8.0,
+    cma_restart_margin=0.0,
+    candidate_evaluation_episodes=1,
+    pairwise_max_comparisons=4,
+    stack_motion_threshold=18.0,
+    stack_background_learning_rate=0.01,
+    stack_tint_strength=0.45,
+    stack_occupancy_scale=4.0,
+    cma_seed=None,
 ):
     """
     Run BMPS training loop.
@@ -82,8 +101,12 @@ def run_training_loop(
         frame_sample_period: P — capture a frame every P timesteps for VLM
         enable_vision: Whether to enable vision-guided feedback
     """
-    assert task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"], \
-        f"BMPS runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
+    supported_tasks = [
+        "cont_state_llm_num_optim_vision",
+        "dist_state_llm_num_optim_vision",
+        "cont_state_llm_num_optim_vision_cma",
+    ]
+    assert task in supported_tasks, f"BMPS runner does not support task '{task}'"
 
     # Load Jinja2 templates
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
@@ -134,6 +157,58 @@ def run_training_loop(
             vlm_api_key=vlm_api_key,
             vlm_api_base=vlm_api_base,
         )
+    elif task == "cont_state_llm_num_optim_vision_cma":
+        world = ContinualSpaceGeneralWorld(
+            gym_env_name,
+            render_mode,
+            max_traj_length,
+            env_kwargs=env_kwargs,
+        )
+        agent = LLMNumOptimBMPSCMAAgent(
+            logdir,
+            dim_actions,
+            dim_states,
+            max_traj_count,
+            max_traj_length,
+            llm_si_template,
+            llm_output_conversion_template,
+            llm_model_name,
+            num_evaluation_episodes,
+            bias,
+            optimum,
+            search_step_size,
+            env_desc_file=env_description,
+            vlm_model_name=vlm_model_name,
+            decay_horizon=decay_horizon,
+            frame_sample_period=frame_sample_period,
+            enable_vision=enable_vision,
+            n_neighbors=n_neighbors,
+            poisson_lam=poisson_lam,
+            neighbor_step=neighbor_step,
+            ablate_anchor=ablate_anchor,
+            llm_api_key=llm_api_key,
+            llm_api_base=llm_api_base,
+            vlm_api_key=vlm_api_key,
+            vlm_api_base=vlm_api_base,
+            cma_population_size=cma_population_size,
+            cma_sigma=cma_sigma,
+            cma_covariance_mode=cma_covariance_mode,
+            cma_full_covariance_max_dim=cma_full_covariance_max_dim,
+            cma_lower_bound=cma_lower_bound,
+            cma_upper_bound=cma_upper_bound,
+            trust_region_radius=trust_region_radius,
+            llm_guidance_alpha=llm_guidance_alpha,
+            cma_acceptance_margin=cma_acceptance_margin,
+            cma_restart_distance=cma_restart_distance,
+            cma_restart_margin=cma_restart_margin,
+            candidate_evaluation_episodes=candidate_evaluation_episodes,
+            pairwise_max_comparisons=pairwise_max_comparisons,
+            stack_motion_threshold=stack_motion_threshold,
+            stack_background_learning_rate=stack_background_learning_rate,
+            stack_tint_strength=stack_tint_strength,
+            stack_occupancy_scale=stack_occupancy_scale,
+            cma_seed=cma_seed,
+        )
     else:
         world = ContinualSpaceGeneralWorld(
             gym_env_name,
@@ -174,7 +249,14 @@ def run_training_loop(
     print(f'  VLM: {vlm_model_name}')
     print(f'  Vision Enabled: {enable_vision}')
     print(f'  Decay Horizon: {decay_horizon}')
-    print(f'  Frame Sample Period: {frame_sample_period}')
+    if task == "cont_state_llm_num_optim_vision_cma":
+        print(f'  Frame Capture Period: every {frame_sample_period} steps, then stacked')
+        print(f'  CMA Population: {cma_population_size} (+ baseline and raw LLM proposal)')
+        print(f'  CMA Sigma: {cma_sigma}')
+        print(f'  Trust Region Radius: {trust_region_radius}')
+        print(f'  Pairwise VLM Comparisons: up to {pairwise_max_comparisons}')
+    else:
+        print(f'  Frame Sample Period: {frame_sample_period}')
     
     # Warmup phase
     if not warmup_dir:

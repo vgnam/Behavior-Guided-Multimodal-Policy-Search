@@ -27,7 +27,7 @@ class VLMAnalyzer:
 
     def __init__(
         self,
-        vlm_model_name: str = "gemini/gemini-2.5-flash-lite",
+        vlm_model_name: str = "nvidia_nim/google/gemma-4-31b-it",
         max_retries: int = 3,
         timeout: int = 60,
         template_dir: str = "agent/policy/templates",
@@ -39,8 +39,8 @@ class VLMAnalyzer:
         Initialize VLM analyzer using LiteLLM.
 
         Args:
-            vlm_model_name: LiteLLM model identifier (e.g. "gemini/gemini-2.5-flash-lite",
-                            "openai/gpt-4o", "nvidia_nim/meta/llama-4-scout-17b-16e-instruct")
+            vlm_model_name: LiteLLM model identifier (e.g. "nvidia_nim/google/gemma-4-31b-it",
+                            "nvidia_nim/meta/llama-4-scout-17b-16e-instruct")
             max_retries: Maximum number of retry attempts on failure
             timeout: Timeout in seconds for API calls
             template_dir: Directory containing Jinja2 .j2 prompt templates
@@ -278,6 +278,47 @@ class VLMAnalyzer:
                 time.sleep(5)
 
         return "VLM comparison unavailable", 0.0
+
+    def analyze_stacked_pair(
+        self,
+        image_a: np.ndarray,
+        image_b: np.ndarray,
+        env_description: str,
+        label_a: str = "Policy A",
+        label_b: str = "Policy B",
+    ) -> tuple[str, float]:
+        """Compare two all-frame temporal superposition images.
+
+        Rewards and policy parameters are intentionally omitted from this call so
+        the visual judge cannot simply echo the environment-return ranking.
+        Bradley--Terry aggregation is performed by the caller; this method emits
+        only a pairwise preference, confidence category, and visual evidence.
+        """
+        template = self._jinja_env.get_template("vlm_pairwise_stacked_prompt.j2")
+        prompt = template.render(
+            env_description=env_description,
+            label_a=label_a,
+            label_b=label_b,
+        )
+        messages = self._build_messages(prompt, [image_a, image_b])
+
+        for attempt in range(self.max_retries):
+            try:
+                return self._call_vlm_api(messages, temperature=0.1)
+            except Exception as e:
+                print(
+                    f"[VLM ERROR] Stacked-pair attempt "
+                    f"{attempt + 1}/{self.max_retries}: {e}"
+                )
+                if attempt == self.max_retries - 1:
+                    return (
+                        f"Preferred: TIE\nConfidence: low\n"
+                        f"Evidence: comparison failed: {e}",
+                        0.0,
+                    )
+                time.sleep(5)
+
+        return "Preferred: TIE\nConfidence: low\nEvidence: unavailable", 0.0
 
     def analyze_candidate_diversity(
         self,

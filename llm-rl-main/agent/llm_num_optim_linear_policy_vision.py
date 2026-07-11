@@ -53,7 +53,7 @@ class LLMNumOptimVisionAgent:
         optimum,
         search_step_size,
         env_desc_file=None,
-        vlm_model_name="gpt-4o",
+        vlm_model_name="nvidia_nim/google/gemma-4-31b-it",
         decay_horizon=100,
         frame_sample_period=50,
         enable_vision=True,

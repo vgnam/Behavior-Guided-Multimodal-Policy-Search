@@ -10,7 +10,7 @@ max_traj_length: 50
 template_dir: agent/policy/templates
 llm_si_template_name: num_optim_vision.j2
 llm_output_conversion_template_name: num_optim_vision.j2
-llm_model_name: openrouter/openai/gpt-oss-120b:free
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
 num_evaluation_episodes: 20
 warmup_episodes: 0
 warmup_dir: null
@@ -19,7 +19,7 @@ env_desc_file: env_descriptions/blackjack.j2
 
 # BMPS: vision disabled (Blackjack has no meaningful visual state)
 enable_vision: false
-vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5

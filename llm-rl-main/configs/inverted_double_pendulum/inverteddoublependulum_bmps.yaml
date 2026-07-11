@@ -2,7 +2,7 @@ task: cont_state_llm_num_optim_vision
 num_episodes: 400
 gym_env_name: InvertedDoublePendulum-v5
 render_mode: rgb_array  # Required for frame capture
-logdir: logs/inverteddoublependulum_bmps_gemini-2.5-flash-lite
+logdir: logs/inverteddoublependulum_bmps_gemma-4-31b-it
 dim_actions: 1
 dim_states: 9
 max_traj_count: 1000
@@ -10,7 +10,7 @@ max_traj_length: 1000
 template_dir: agent/policy/templates
 llm_si_template_name: num_optim_vision.j2
 llm_output_conversion_template_name: num_optim_vision.j2
-llm_model_name: gemini/gemini-2.5-flash-lite
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
 num_evaluation_episodes: 20
 warmup_episodes: 20
 warmup_dir: null
@@ -20,7 +20,7 @@ search_step_size: 0.1
 env_desc_file: env_descriptions/inverteddoublependulum.j2
 
 # BMPS specific parameters
-vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 200  # Longer decay for harder balancing task
 frame_sample_period: 50  # Episodes up to 1000 steps
 enable_vision: true

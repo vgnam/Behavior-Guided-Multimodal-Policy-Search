@@ -6,11 +6,15 @@ This repository contains the official implementation for the NeurIPS paper:
 
 ## Methods
 
-This codebase implements three methods:
+This codebase implements four methods:
 
 - **ProPS** (`props`): Uses LLMs to directly optimize a reinforcement learning policy via numerical parameter updates.
 - **ProPS+** (`propsp`): Extends ProPS by incorporating domain-specific descriptions as semantic context in the prompt to guide optimization.
 - **BMPS** (`bmps`): Behavior Landscape-guided Multi-modal Policy Search that integrates vision-language model feedback with policy optimization for visual RL tasks.
+- **BMPS-CMA** (`bmps_cma`): Uses periodically sampled temporal-superposition images,
+  score-free pairwise VLM comparisons, complete-policy LLM proposals, and a
+  Mahalanobis trust region to guide CMA-ES without injecting remote LLM jumps
+  into its covariance evolution paths.
 
 ## Repository Structure
 
@@ -68,7 +72,29 @@ python main.py --config configs/taxi/taxi_propsp.yaml
 
 # BMPS
 python main.py --config configs/frozenlake/frozenlake_bmps.yaml
+
+# BMPS-CMA (continuous linear policy)
+python main.py --config configs/hopper/hopper_linear_policy_bmps_cma.yaml
 ```
+
+Every existing continuous-policy BMPS configuration has a sibling named
+`*_bmps_cma.yaml` under the same environment directory. Regenerate the complete
+set after changing or adding BMPS configs with:
+
+```bash
+python scripts/generate_bmps_cma_configs.py
+```
+
+### BMPS-CMA generation
+
+BMPS-CMA retains the existing prompt representation
+`params[0]: ...; ...; f(params): ...`. The LLM proposes a complete policy. The
+proposal is projected into a trust region around the current numerical CMA mean,
+then a Gaussian population is sampled and ranked only by environment return.
+The initial frame, every `frame_sample_period` step, and the terminal/failure
+frame from the first rollout of each candidate are accumulated online into one
+temporal-superposition PNG. Pairwise VLM feedback from a generation is supplied
+to the LLM on the next generation, preserving a single-population rollout budget.
 
 ## Quick Start
 

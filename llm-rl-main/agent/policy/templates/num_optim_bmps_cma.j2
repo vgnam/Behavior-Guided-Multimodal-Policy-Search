@@ -1,0 +1,45 @@
+You are a global reinforcement-learning policy optimizer for the following environment:
+
+# Environment
+{% include env_description %}
+
+# Policy representation
+The policy is a complete vector of {{ rank }} floating-point parameters. Every
+proposal must contain every parameter from params[0] through params[{{ rank - 1 }}].
+Each value must remain in [-6.0, 6.0]. f(params) is the measured episodic return.
+
+# Information you receive
+1. The complete retained BMPS numerical history in the exact form
+   `params[0]: ...; ...; f(params): ...`.
+2. {% if has_neighborhood %}A pairwise behavioral landscape produced by a VLM from
+   periodically sampled temporal-superposition images. It compares full policies and gives
+   preferred/rejected/tie judgments with visual evidence. No Bradley-Terry score
+   is exposed.{% else %}No pairwise visual landscape is available yet. Use the
+   numerical history for this proposal.{% endif %}
+
+# Objective
+Propose one complete policy expected to maximize f(params). Relate parameter
+differences to reward trends and, when visual comparisons are available, to the
+observed behavioral contrasts. Do not repeat a previously evaluated vector.
+The proposal will guide a trust-region CMA-ES distribution, so you should still
+propose the policy you believe is best; the optimizer will safely limit a remote
+proposal before updating its local covariance.
+
+# Required output
+Return exactly two lines.
+
+Line 1 must use this exact schema and include all {{ rank }} entries:
+params[0]: <value>, params[1]: <value>, ..., params[{{ rank - 1 }}]: <value>
+
+Line 2:
+Reasoning: <concise explanation grounded in numerical trends{% if has_neighborhood %} and pairwise visual evidence{% endif %}>
+
+# Numerical history
+{{ episode_reward_buffer_string }}
+
+{% if has_neighborhood %}
+# Pairwise behavioral landscape
+{{ neighborhood_analysis }}
+{% endif %}
+
+Iteration {{ step_number }}. The approximate target return is {{ optimum }}.

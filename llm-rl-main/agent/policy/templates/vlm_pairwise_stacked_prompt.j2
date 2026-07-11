@@ -1,0 +1,26 @@
+# Environment
+{{ env_description }}
+
+# Visual encoding
+The next two images are temporal superpositions built from frames sampled
+periodically throughout complete policy rollouts, including the initial and
+terminal observations. They do not show multiple agents. Multiple appearances
+or coloured trails show one agent at different timesteps. Time progresses
+approximately from blue/cyan through yellow to red; red emphasizes the terminal
+pose. Static scenery should be interpreted as the environment background.
+
+Image 1 is {{ label_a }} (Policy A).
+Image 2 is {{ label_b }} (Policy B).
+
+# Task
+Compare only visually observable behavior. Prefer the policy that makes better
+goal progress while remaining controlled, stable, and failure-free. Consider
+motion direction, coverage, oscillation, drift, posture, repeated corrections,
+and the terminal outcome. Do not infer or discuss numerical policy parameters or
+environment reward; neither is provided. If the images do not support a clear
+choice, return TIE.
+
+Return exactly three lines:
+Preferred: A | B | TIE
+Confidence: low | medium | high
+Evidence: one concise contrastive explanation grounded in the two images
