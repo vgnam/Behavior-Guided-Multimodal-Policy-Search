@@ -320,6 +320,43 @@ class VLMAnalyzer:
 
         return "Preferred: TIE\nConfidence: low\nEvidence: unavailable", 0.0
 
+    def analyze_frame_sequences_pair(
+        self,
+        frames_a: List[np.ndarray],
+        frames_b: List[np.ndarray],
+        env_description: str,
+        label_a: str = "Policy A",
+        label_b: str = "Policy B",
+    ) -> tuple[str, float]:
+        """Compare two BMPS-style sequences of separately supplied frames."""
+        template = self._jinja_env.get_template("vlm_pairwise_frames_prompt.j2")
+        prompt = template.render(
+            env_description=env_description,
+            label_a=label_a,
+            label_b=label_b,
+            num_frames_a=len(frames_a),
+            num_frames_b=len(frames_b),
+        )
+        messages = self._build_messages(prompt, list(frames_a) + list(frames_b))
+
+        for attempt in range(self.max_retries):
+            try:
+                return self._call_vlm_api(messages, temperature=0.1)
+            except Exception as e:
+                print(
+                    f"[VLM ERROR] Frame-sequence pair attempt "
+                    f"{attempt + 1}/{self.max_retries}: {e}"
+                )
+                if attempt == self.max_retries - 1:
+                    return (
+                        f"Preferred: TIE\nConfidence: low\n"
+                        f"Evidence: comparison failed: {e}",
+                        0.0,
+                    )
+                time.sleep(5)
+
+        return "Preferred: TIE\nConfidence: low\nEvidence: unavailable", 0.0
+
     def analyze_candidate_diversity(
         self,
         candidates: List[Dict[str, Any]],

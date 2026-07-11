@@ -36,6 +36,7 @@ API_KEYS = (
 BMPS_CMA_DEFAULTS = {
     "candidate_evaluation_episodes": 1,
     "pairwise_max_comparisons": 4,
+    "stack_trajectory_frames": False,
     "stack_motion_threshold": 18.0,
     "stack_background_learning_rate": 0.01,
     "stack_tint_strength": 0.45,
@@ -76,7 +77,7 @@ def generate_config(source: Path) -> Path:
         elif key == "logdir":
             value = bmps_cma_logdir(value)
         elif key in {"llm_si_template_name", "llm_output_conversion_template_name"}:
-            value = "num_optim_bmps_cma.j2"
+            value = "num_optim_vision.j2"
         generated[key] = value
 
     generated.update(BMPS_CMA_DEFAULTS)

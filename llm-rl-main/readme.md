@@ -92,9 +92,11 @@ BMPS-CMA retains the existing prompt representation
 proposal is projected into a trust region around the current numerical CMA mean,
 then a Gaussian population is sampled and ranked only by environment return.
 The initial frame, every `frame_sample_period` step, and the terminal/failure
-frame from the first rollout of each candidate are accumulated online into one
-temporal-superposition PNG. Pairwise VLM feedback from a generation is supplied
-to the LLM on the next generation, preserving a single-population rollout budget.
+frame from the first rollout of each candidate are sent as separate images by
+default, matching BMPS. Set `stack_trajectory_frames: true` to collapse those
+sampled frames into one temporal-superposition PNG. Pairwise VLM feedback from a
+generation is supplied to the LLM on the next generation, preserving a
+single-population rollout budget.
 
 ## Quick Start
 

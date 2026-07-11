@@ -64,6 +64,7 @@ def run_training_loop(
     cma_restart_margin=0.0,
     candidate_evaluation_episodes=1,
     pairwise_max_comparisons=4,
+    stack_trajectory_frames=False,
     stack_motion_threshold=18.0,
     stack_background_learning_rate=0.01,
     stack_tint_strength=0.45,
@@ -203,6 +204,7 @@ def run_training_loop(
             cma_restart_margin=cma_restart_margin,
             candidate_evaluation_episodes=candidate_evaluation_episodes,
             pairwise_max_comparisons=pairwise_max_comparisons,
+            stack_trajectory_frames=stack_trajectory_frames,
             stack_motion_threshold=stack_motion_threshold,
             stack_background_learning_rate=stack_background_learning_rate,
             stack_tint_strength=stack_tint_strength,
@@ -250,7 +252,8 @@ def run_training_loop(
     print(f'  Vision Enabled: {enable_vision}')
     print(f'  Decay Horizon: {decay_horizon}')
     if task == "cont_state_llm_num_optim_vision_cma":
-        print(f'  Frame Capture Period: every {frame_sample_period} steps, then stacked')
+        print(f'  Frame Capture Period: every {frame_sample_period} steps')
+        print(f"  Visual Frame Mode: {'stacked' if stack_trajectory_frames else 'separate'}")
         print(f'  CMA Population: {cma_population_size} (+ baseline and raw LLM proposal)')
         print(f'  CMA Sigma: {cma_sigma}')
         print(f'  Trust Region Radius: {trust_region_radius}')

@@ -29,7 +29,7 @@ class EvaluatedCandidate:
     role: str
     params: np.ndarray
     reward: float
-    stacked_image: Optional[np.ndarray]
+    visual_images: list[np.ndarray]
     num_frames: int
     terminated_early: bool
 
@@ -39,10 +39,10 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
 
     The LLM keeps the existing BMPS contract and returns a complete ``params``
     vector.  Its proposal is projected into the current CMA Mahalanobis trust
-    region. Periodically sampled trajectory frames are stacked into temporal
-    superpositions and compared pairwise by the VLM. The resulting score-free
-    preference landscape guides the following generation, avoiding a second
-    rollout population per iteration.
+    region. Periodically sampled trajectory frames are sent separately by
+    default, matching BMPS, or optionally stacked into one temporal
+    superposition. The resulting score-free preference landscape guides the
+    following generation, avoiding a second rollout population per iteration.
     """
 
     def __init__(
@@ -61,6 +61,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         cma_restart_margin=0.0,
         candidate_evaluation_episodes=1,
         pairwise_max_comparisons=4,
+        stack_trajectory_frames=False,
         stack_motion_threshold=18.0,
         stack_background_learning_rate=0.01,
         stack_tint_strength=0.45,
@@ -88,6 +89,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         self.cma_restart_margin = float(cma_restart_margin)
         self.candidate_evaluation_episodes = int(candidate_evaluation_episodes)
         self.pairwise_max_comparisons = int(pairwise_max_comparisons)
+        self.stack_trajectory_frames = bool(stack_trajectory_frames)
         self.cma_seed = cma_seed
         self.stack_frame_period = max(1, configured_frame_period)
 
@@ -138,7 +140,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
 
     def _format_params(self, params: np.ndarray, include_reward: Optional[float] = None) -> str:
         values = np.asarray(params).reshape(-1)
-        line = "; ".join(f"params[{idx}]: {value:.5g}" for idx, value in enumerate(values))
+        line = "; ".join(f"params[{idx}]: {value:.8g}" for idx, value in enumerate(values))
         if include_reward is not None:
             line += f"; f(params): {include_reward:.2f}"
         return line
@@ -163,6 +165,17 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
             )
         return np.array([parsed[index] for index in range(self.rank)], dtype=float)
 
+    def _sanitize_llm_proposal(self, proposal: np.ndarray) -> np.ndarray:
+        """Apply the original BMPS parameter constraint to the LLM proposal."""
+        return np.round(
+            np.clip(
+                np.asarray(proposal, dtype=float).reshape(-1),
+                self.cma_lower_bound,
+                self.cma_upper_bound,
+            ),
+            1,
+        )
+
     @staticmethod
     def _safe_render(world: BaseWorld) -> Optional[np.ndarray]:
         try:
@@ -171,25 +184,25 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         except Exception:
             return None
 
-    def _rollout_with_superposition(
+    def _rollout_with_visuals(
         self,
         world: BaseWorld,
         logging_file,
         capture_visual: bool,
-    ) -> tuple[float, Optional[np.ndarray], int, bool]:
-        """Roll out one episode and stack periodically sampled frames online."""
+    ) -> tuple[float, list[np.ndarray], int, bool]:
+        """Roll out one episode and collect periodically sampled visual frames."""
         state = np.expand_dims(world.reset(), axis=0)
-        stacker = TemporalFrameStacker(**self.stack_kwargs) if capture_visual else None
+        sampled_frames: list[np.ndarray] = []
 
         logging_file.write(
             f"{', '.join(str(x) for x in self.policy.get_parameters().reshape(-1))}\n"
         )
         logging_file.write("parameter ends\n\nstate | action | reward\n")
 
-        if stacker is not None:
+        if capture_visual:
             initial_frame = self._safe_render(world)
             if initial_frame is not None:
-                stacker.add(initial_frame)
+                sampled_frames.append(initial_frame)
 
         step_idx = 0
         done = False
@@ -203,14 +216,14 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
             logging_file.write(f"{state.T[0]} | {action[0]} | {reward}\n")
 
             next_step_idx = step_idx + 1
-            if stacker is not None and (
+            if capture_visual and (
                 next_step_idx % self.stack_frame_period == 0
                 or done
                 or next_step_idx >= self.max_traj_length
             ):
                 frame = self._safe_render(world)
                 if frame is not None:
-                    stacker.add(frame)
+                    sampled_frames.append(frame)
 
             step_idx = next_step_idx
             self.total_steps += 1
@@ -220,9 +233,16 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         terminated_early = step_idx < self.max_traj_length
         logging_file.write(f"Total reward: {total_reward}\n")
         self.total_episodes += 1
-        image = stacker.finalize() if stacker is not None else None
-        frame_count = stacker.frame_count if stacker is not None else 0
-        return total_reward, image, frame_count, terminated_early
+        frame_count = len(sampled_frames)
+        if self.stack_trajectory_frames and sampled_frames:
+            stacker = TemporalFrameStacker(**self.stack_kwargs)
+            for frame in sampled_frames:
+                stacker.add(frame)
+            stacked_image = stacker.finalize()
+            visual_images = [stacked_image] if stacked_image is not None else []
+        else:
+            visual_images = sampled_frames
+        return total_reward, visual_images, frame_count, terminated_early
 
     def _evaluate_candidate(
         self,
@@ -236,7 +256,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         params = self.cma.repair(params)
         self.policy.update_policy(params)
         rewards = []
-        stacked_image = None
+        visual_images: list[np.ndarray] = []
         num_frames = 0
         terminated_early = False
 
@@ -245,28 +265,36 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
                 logdir, f"{identifier}_rollout_{evaluation_idx}.txt"
             )
             with open(log_path, "w", encoding="utf-8") as logging_file:
-                reward, image, frames, terminated = self._rollout_with_superposition(
+                reward, images, frames, terminated = self._rollout_with_visuals(
                     world,
                     logging_file,
                     capture_visual=capture_visual and evaluation_idx == 0,
                 )
             rewards.append(reward)
-            if image is not None:
-                stacked_image = image
+            if images:
+                visual_images = images
                 num_frames = frames
                 terminated_early = terminated
 
-        if stacked_image is not None:
-            Image.fromarray(stacked_image).save(
-                os.path.join(logdir, f"{identifier}_temporal_stack.png")
-            )
+        if visual_images:
+            if self.stack_trajectory_frames:
+                Image.fromarray(visual_images[0]).save(
+                    os.path.join(logdir, f"{identifier}_temporal_stack.png")
+                )
+            else:
+                for frame_index, frame in enumerate(visual_images):
+                    Image.fromarray(frame).save(
+                        os.path.join(
+                            logdir, f"{identifier}_frame_{frame_index:03d}.png"
+                        )
+                    )
 
         return EvaluatedCandidate(
             identifier=identifier,
             role=role,
             params=params.copy(),
             reward=float(np.mean(rewards)),
-            stacked_image=stacked_image,
+            visual_images=visual_images,
             num_frames=num_frames,
             terminated_early=terminated_early,
         )
@@ -304,7 +332,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         lambda_t: float,
     ) -> Optional[str]:
         visual_candidates = [
-            candidate for candidate in candidates if candidate.stacked_image is not None
+            candidate for candidate in candidates if candidate.visual_images
         ]
         anchor = next(
             (candidate for candidate in visual_candidates if candidate.role == "cma_mean"),
@@ -319,13 +347,24 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         env_description = self._render_environment_description()
 
         def compare(target: EvaluatedCandidate) -> tuple[PairwisePreference, float]:
-            response, api_time = self.vlm_analyzer.analyze_stacked_pair(
-                anchor.stacked_image,
-                target.stacked_image,
-                env_description=env_description,
-                label_a=f"{anchor.identifier} (CMA mean)",
-                label_b=f"{target.identifier} ({target.role})",
-            )
+            label_a = f"{anchor.identifier} (CMA mean)"
+            label_b = f"{target.identifier} ({target.role})"
+            if self.stack_trajectory_frames:
+                response, api_time = self.vlm_analyzer.analyze_stacked_pair(
+                    anchor.visual_images[0],
+                    target.visual_images[0],
+                    env_description=env_description,
+                    label_a=label_a,
+                    label_b=label_b,
+                )
+            else:
+                response, api_time = self.vlm_analyzer.analyze_frame_sequences_pair(
+                    anchor.visual_images,
+                    target.visual_images,
+                    env_description=env_description,
+                    label_a=label_a,
+                    label_b=label_b,
+                )
             return (
                 parse_pairwise_response(
                     response,
@@ -463,7 +502,7 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
             neighborhood_analysis=self.pending_behavioral_landscape,
         )
         self.api_call_time += llm_time
-        proposal = self.cma.repair(proposal)
+        proposal = self._sanitize_llm_proposal(proposal)
 
         with open(
             os.path.join(logdir, "llm_proposal_reasoning.txt"), "w", encoding="utf-8"
@@ -482,7 +521,8 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         print(
             f"[BMPS-CMA] proposal distance={projection.mahalanobis_distance:.3f}, "
             f"applied fraction={projection.applied_fraction:.3f}, "
-            f"capture period={self.stack_frame_period if use_vision else 'disabled'}"
+            f"capture period={self.stack_frame_period if use_vision else 'disabled'}, "
+            f"visual mode={'stacked' if self.stack_trajectory_frames else 'separate'}"
         )
 
         results: list[EvaluatedCandidate] = []

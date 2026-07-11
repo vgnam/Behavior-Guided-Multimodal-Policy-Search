@@ -32,11 +32,11 @@ class BMPSCMAGeneratedConfigTest(unittest.TestCase):
                 target_data["task"], "cont_state_llm_num_optim_vision_cma"
             )
             self.assertEqual(
-                target_data["llm_si_template_name"], "num_optim_bmps_cma.j2"
+                target_data["llm_si_template_name"], "num_optim_vision.j2"
             )
             self.assertEqual(
                 target_data["llm_output_conversion_template_name"],
-                "num_optim_bmps_cma.j2",
+                "num_optim_vision.j2",
             )
             self.assertEqual(target_data["gym_env_name"], source_data["gym_env_name"])
             self.assertEqual(target_data["dim_actions"], source_data["dim_actions"])
@@ -48,6 +48,7 @@ class BMPSCMAGeneratedConfigTest(unittest.TestCase):
                 target_data.get("frame_sample_period"),
                 source_data.get("frame_sample_period"),
             )
+            self.assertFalse(target_data["stack_trajectory_frames"])
 
             unknown_keys = set(target_data) - runner_parameters
             self.assertFalse(

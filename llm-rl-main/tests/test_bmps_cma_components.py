@@ -10,6 +10,7 @@ from agent.policy.pairwise_preference import (
 )
 from agent.policy.temporal_frame_stacker import TemporalFrameStacker
 from agent.policy.trust_region_cma import TrustRegionCMA
+from agent.policy.vlm_analyzer import VLMAnalyzer
 from agent.llm_num_optim_linear_policy_bmps_cma import LLMNumOptimBMPSCMAAgent
 
 
@@ -60,6 +61,25 @@ class TrustRegionCMATest(unittest.TestCase):
         )
         self.assertEqual(cma.covariance_mode, "diagonal")
         self.assertEqual(cma.covariance.shape, (20,))
+
+    def test_policy_proposal_keeps_precision_and_is_repaired_to_bounds(self):
+        cma = TrustRegionCMA(
+            mean=np.zeros(2),
+            sigma=0.4,
+            population_size=4,
+            covariance_mode="diagonal",
+        )
+        repaired = cma.repair(np.array([0.123456789, 8.25]))
+        self.assertAlmostEqual(repaired[0], 0.123456789)
+        self.assertGreaterEqual(repaired[1], -6.0)
+        self.assertLessEqual(repaired[1], 6.0)
+
+    def test_llm_proposal_matches_bmps_one_decimal_box_constraint(self):
+        agent = object.__new__(LLMNumOptimBMPSCMAAgent)
+        agent.cma_lower_bound = -6.0
+        agent.cma_upper_bound = 6.0
+        proposal = agent._sanitize_llm_proposal(np.array([1.234, 8.25, -6.06]))
+        np.testing.assert_array_equal(proposal, np.array([1.2, 6.0, -6.0]))
 
 
 class TemporalFrameStackerTest(unittest.TestCase):
@@ -128,6 +148,7 @@ class TemporalFrameStackerTest(unittest.TestCase):
         agent.dim_action = 1
         agent.max_traj_length = 10
         agent.stack_frame_period = 3
+        agent.stack_trajectory_frames = False
         agent.stack_kwargs = {
             "motion_threshold": 5.0,
             "background_learning_rate": 0.0,
@@ -137,15 +158,24 @@ class TemporalFrameStackerTest(unittest.TestCase):
         agent.total_steps = 0
         agent.total_episodes = 0
 
-        reward, image, frame_count, terminated_early = agent._rollout_with_superposition(
+        reward, images, frame_count, terminated_early = agent._rollout_with_visuals(
             FakeWorld(), io.StringIO(), capture_visual=True
         )
 
         # Initial frame + steps 3, 6, 9 + terminal step 10.
         self.assertEqual(frame_count, 5)
+        self.assertEqual(len(images), 5)
         self.assertEqual(reward, 10.0)
         self.assertFalse(terminated_early)
-        self.assertEqual(image.shape, (8, 8, 3))
+        self.assertTrue(all(image.shape == (8, 8, 3) for image in images))
+
+        agent.stack_trajectory_frames = True
+        _, stacked_images, stacked_source_count, _ = agent._rollout_with_visuals(
+            FakeWorld(), io.StringIO(), capture_visual=True
+        )
+        self.assertEqual(stacked_source_count, 5)
+        self.assertEqual(len(stacked_images), 1)
+        self.assertEqual(stacked_images[0].shape, (8, 8, 3))
 
 
 class PairwisePreferenceTest(unittest.TestCase):
@@ -180,6 +210,28 @@ class PairwisePreferenceTest(unittest.TestCase):
         )
         self.assertEqual(ranking[0], "candidate")
         self.assertEqual(ranking[-1], "worst")
+
+    def test_separate_mode_sends_every_sampled_frame_to_vlm(self):
+        analyzer = VLMAnalyzer(template_dir="agent/policy/templates", max_retries=1)
+        captured = {}
+
+        def fake_call(messages, temperature=0.1):
+            captured["messages"] = messages
+            return "Preferred: A\nConfidence: high\nEvidence: A is steadier.", 0.0
+
+        analyzer._call_vlm_api = fake_call
+        frames_a = [np.zeros((4, 4, 3), dtype=np.uint8) for _ in range(3)]
+        frames_b = [np.ones((4, 4, 3), dtype=np.uint8) for _ in range(2)]
+        response, _ = analyzer.analyze_frame_sequences_pair(
+            frames_a,
+            frames_b,
+            env_description="test environment",
+        )
+
+        content = captured["messages"][0]["content"]
+        image_count = sum(item["type"] == "image_url" for item in content)
+        self.assertEqual(image_count, 5)
+        self.assertIn("Preferred: A", response)
 
 
 if __name__ == "__main__":
