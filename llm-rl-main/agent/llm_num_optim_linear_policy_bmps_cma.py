@@ -10,7 +10,6 @@ import time
 from typing import Optional
 
 import numpy as np
-from PIL import Image
 
 from agent.llm_num_optim_linear_policy_vision import LLMNumOptimVisionAgent
 from agent.policy.pairwise_preference import (
@@ -275,19 +274,6 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
                 visual_images = images
                 num_frames = frames
                 terminated_early = terminated
-
-        if visual_images:
-            if self.stack_trajectory_frames:
-                Image.fromarray(visual_images[0]).save(
-                    os.path.join(logdir, f"{identifier}_temporal_stack.png")
-                )
-            else:
-                for frame_index, frame in enumerate(visual_images):
-                    Image.fromarray(frame).save(
-                        os.path.join(
-                            logdir, f"{identifier}_frame_{frame_index:03d}.png"
-                        )
-                    )
 
         return EvaluatedCandidate(
             identifier=identifier,
@@ -586,9 +572,11 @@ class LLMNumOptimBMPSCMAAgent(LLMNumOptimVisionAgent):
         else:
             update_status = "rejected_guidance_kept_previous_cma_state"
 
-        # Keep the exact BMPS history contract: complete params and scalar reward.
-        for candidate in results:
-            self.replay_buffer.add(candidate.params.copy(), candidate.reward)
+        # Match BMPS proposal history: warmup policies are already present, and
+        # each optimization generation contributes only the policy proposed by
+        # the LLM. CMA means and sampled Gaussian candidates stay out of the
+        # numerical prompt history.
+        self.replay_buffer.add(raw_proposal.params.copy(), raw_proposal.reward)
 
         if use_vision:
             landscape = self._build_pairwise_landscape(results, logdir, lambda_t)

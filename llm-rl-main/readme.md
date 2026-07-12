@@ -94,9 +94,12 @@ then a Gaussian population is sampled and ranked only by environment return.
 The initial frame, every `frame_sample_period` step, and the terminal/failure
 frame from the first rollout of each candidate are sent as separate images by
 default, matching BMPS. Set `stack_trajectory_frames: true` to collapse those
-sampled frames into one temporal-superposition PNG. Pairwise VLM feedback from a
-generation is supplied to the LLM on the next generation, preserving a
-single-population rollout budget.
+sampled frames into one temporal-superposition image. Frames are retained only
+in memory for the VLM request and are not written into episode log directories.
+The numerical proposal history contains the warmup policies followed only by
+complete policies proposed by the LLM; CMA means and Gaussian candidates are
+excluded. Pairwise VLM feedback from a generation is supplied to the LLM on the
+next generation, preserving a single-population rollout budget.
 
 ## Quick Start
 
