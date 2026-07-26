@@ -9,6 +9,7 @@ Uses LiteLLM for multi-provider model access.
 
 import base64
 import io
+import math
 import time
 import os
 from typing import List, Dict, Any, Optional
@@ -34,6 +35,7 @@ class VLMAnalyzer:
         enable_reasoning: bool = False,
         vlm_api_key: str = None,
         vlm_api_base: str = None,
+        vlm_frame_mode: str = "stacking",
     ):
         """
         Initialize VLM analyzer using LiteLLM.
@@ -47,6 +49,8 @@ class VLMAnalyzer:
             enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
             vlm_api_key: Optional API key for VLM provider
             vlm_api_base: Optional API base URL for VLM provider
+            vlm_frame_mode: "individual" to send each frame separately or
+                            "stacking" to send one contact sheet per rollout
         """
         self.vlm_model_name = vlm_model_name
         self.max_retries = max_retries
@@ -54,6 +58,11 @@ class VLMAnalyzer:
         self.enable_reasoning = enable_reasoning
         self.vlm_api_key = vlm_api_key
         self.vlm_api_base = vlm_api_base
+        self.vlm_frame_mode = vlm_frame_mode.lower()
+        if self.vlm_frame_mode not in {"individual", "stacking"}:
+            raise ValueError(
+                "vlm_frame_mode must be either 'individual' or 'stacking'"
+            )
 
         self._jinja_env = Environment(
             loader=FileSystemLoader(template_dir),
@@ -77,6 +86,54 @@ class VLMAnalyzer:
         img.save(buffered, format="PNG")
         return buffered.getvalue()
 
+    def stack_frames(
+        self,
+        image_frames: List[np.ndarray],
+        columns: int = 4,
+        max_tile_width: int = 384,
+        max_tile_height: int = 384,
+    ) -> np.ndarray:
+        """Combine a rollout's frames into one chronological contact sheet."""
+        if not image_frames:
+            raise ValueError("Cannot stack an empty frame list")
+
+        pil_frames = []
+        for frame in image_frames:
+            if frame.dtype != np.uint8:
+                frame = (
+                    (frame * 255).astype(np.uint8)
+                    if frame.max() <= 1.0
+                    else frame.astype(np.uint8)
+                )
+            pil_frames.append(Image.fromarray(frame).convert("RGB"))
+
+        scale = min(
+            1.0,
+            max_tile_width / max(image.width for image in pil_frames),
+            max_tile_height / max(image.height for image in pil_frames),
+        )
+        tile_size = (
+            max(1, round(pil_frames[0].width * scale)),
+            max(1, round(pil_frames[0].height * scale)),
+        )
+        rows = math.ceil(len(pil_frames) / columns)
+        sheet = Image.new(
+            "RGB",
+            (columns * tile_size[0], rows * tile_size[1]),
+            color="black",
+        )
+
+        for index, image in enumerate(pil_frames):
+            image = image.copy()
+            image.thumbnail(tile_size, Image.Resampling.LANCZOS)
+            x = (index % columns) * tile_size[0]
+            y = (index // columns) * tile_size[1]
+            offset_x = (tile_size[0] - image.width) // 2
+            offset_y = (tile_size[1] - image.height) // 2
+            sheet.paste(image, (x + offset_x, y + offset_y))
+
+        return np.asarray(sheet)
+
     def _build_messages(
         self,
         text_prompt: str,
@@ -92,6 +149,14 @@ class VLMAnalyzer:
         Returns:
             List of messages in OpenAI chat format with vision content
         """
+        if self.vlm_frame_mode == "stacking" and len(image_frames) > 1:
+            image_frames = [self.stack_frames(image_frames)]
+            text_prompt = (
+                "The attached image is a chronological contact sheet for this "
+                "single rollout. Read cells from left to right, then top to bottom.\n\n"
+                + text_prompt
+            )
+
         content: List[Dict[str, Any]] = [{"type": "text", "text": text_prompt}]
         for frame in image_frames:
             png_bytes = self.frame_to_png_bytes(frame)

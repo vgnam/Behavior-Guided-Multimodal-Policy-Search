@@ -65,6 +65,7 @@ class LLMNumOptimVisionAgent:
         llm_api_base=None,
         vlm_api_key=None,
         vlm_api_base=None,
+        vlm_frame_mode="stacking",
     ):
         """
         Initialize BMPS agent.
@@ -158,6 +159,7 @@ class LLMNumOptimVisionAgent:
                 vlm_model_name=vlm_model_name,
                 vlm_api_key=vlm_api_key,
                 vlm_api_base=vlm_api_base,
+                vlm_frame_mode=vlm_frame_mode,
             )
         
         self.logdir = logdir

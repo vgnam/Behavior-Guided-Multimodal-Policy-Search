@@ -60,6 +60,7 @@ class LLMNumOptimQTableVisionAgent:
         llm_api_base=None,
         vlm_api_key=None,
         vlm_api_base=None,
+        vlm_frame_mode="stacking",
     ):
         """
         Initialize BMPS Q-Table agent.
@@ -138,6 +139,7 @@ class LLMNumOptimQTableVisionAgent:
                 vlm_model_name=vlm_model_name,
                 vlm_api_key=vlm_api_key,
                 vlm_api_base=vlm_api_base,
+                vlm_frame_mode=vlm_frame_mode,
             )
             print(f"[BMPS Q-Table] Vision features enabled (VLM: {vlm_model_name}, T_decay: {decay_horizon})")
         else:

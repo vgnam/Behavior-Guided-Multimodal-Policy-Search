@@ -50,6 +50,7 @@ def run_training_loop(
     llm_api_base=None,
     vlm_api_key=None,
     vlm_api_base=None,
+    vlm_frame_mode="stacking",
 ):
     """
     Run BMPS training loop.
@@ -124,6 +125,7 @@ def run_training_loop(
             decay_horizon=decay_horizon,
             frame_sample_period=frame_sample_period,
             enable_vision=enable_vision,
+            vlm_frame_mode=vlm_frame_mode,
             env_kwargs=env_kwargs,
             n_neighbors=n_neighbors,
             poisson_lam=poisson_lam,
@@ -159,6 +161,7 @@ def run_training_loop(
             decay_horizon=decay_horizon,
             frame_sample_period=frame_sample_period,
             enable_vision=enable_vision,
+            vlm_frame_mode=vlm_frame_mode,
             n_neighbors=n_neighbors,
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
@@ -175,6 +178,7 @@ def run_training_loop(
     print(f'  Vision Enabled: {enable_vision}')
     print(f'  Decay Horizon: {decay_horizon}')
     print(f'  Frame Sample Period: {frame_sample_period}')
+    print(f'  VLM Frame Mode: {vlm_frame_mode}')
     
     # Warmup phase
     if not warmup_dir:
