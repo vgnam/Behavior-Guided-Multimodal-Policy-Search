@@ -68,7 +68,15 @@ python main.py --config configs/taxi/taxi_propsp.yaml
 
 # BMPS
 python main.py --config configs/frozenlake/frozenlake_bmps.yaml
+
+# BMPS with a 2x32 MLP and 32-D latent random-subspace search
+python main.py --config configs/swimmer/swimmer_bmps_mlp.yaml
 ```
+
+Every problem that has a `*_bmps.yaml` config also has a matching
+`*_bmps_mlp.yaml` config. Discrete-state variants one-hot encode the state and
+select the action with `argmax`; continuous variants consume the observation
+vector directly.
 
 ## Quick Start
 

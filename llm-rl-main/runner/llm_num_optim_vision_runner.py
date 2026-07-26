@@ -127,33 +127,83 @@ def run_training_loop(
             max_traj_length,
             env_kwargs=env_kwargs,
         )
-        agent = LLMNumOptimQTableVisionAgent(
-            logdir,
-            dim_actions,
-            dim_states,
-            max_traj_count,
-            max_traj_length,
-            llm_si_template,
-            llm_output_conversion_template,
-            llm_model_name,
-            num_evaluation_episodes,
-            optimum,
-            env_desc_file=env_description,
-            vlm_model_name=vlm_model_name,
-            decay_horizon=decay_horizon,
-            frame_sample_period=frame_sample_period,
-            enable_vision=enable_vision,
-            vlm_frame_mode=vlm_frame_mode,
-            env_kwargs=env_kwargs,
-            n_neighbors=n_neighbors,
-            poisson_lam=poisson_lam,
-            neighbor_step=neighbor_step,
-            ablate_anchor=ablate_anchor,
-            llm_api_key=llm_api_key,
-            llm_api_base=llm_api_base,
-            vlm_api_key=vlm_api_key,
-            vlm_api_base=vlm_api_base,
-        )
+        if policy_type == "mlp":
+            state_values = (
+                dim_states[0]
+                if len(dim_states) == 1 and isinstance(dim_states[0], list)
+                else dim_states
+            )
+            action_values = (
+                dim_actions[0]
+                if len(dim_actions) == 1 and isinstance(dim_actions[0], list)
+                else dim_actions
+            )
+            agent = LLMNumOptimVisionAgent(
+                logdir,
+                len(action_values),
+                len(state_values),
+                max_traj_count,
+                max_traj_length,
+                llm_si_template,
+                llm_output_conversion_template,
+                llm_model_name,
+                num_evaluation_episodes,
+                True if bias is None else bias,
+                optimum,
+                search_step_size,
+                env_desc_file=env_description,
+                vlm_model_name=vlm_model_name,
+                decay_horizon=decay_horizon,
+                frame_sample_period=frame_sample_period,
+                enable_vision=enable_vision,
+                vlm_frame_mode=vlm_frame_mode,
+                n_neighbors=n_neighbors,
+                poisson_lam=poisson_lam,
+                neighbor_step=neighbor_step,
+                ablate_anchor=ablate_anchor,
+                llm_api_key=llm_api_key,
+                llm_api_base=llm_api_base,
+                vlm_api_key=vlm_api_key,
+                vlm_api_base=vlm_api_base,
+                optimization_mode=optimization_mode,
+                latent_dim=latent_dim,
+                projection_seed=projection_seed,
+                projection_scale=projection_scale,
+                projection_refresh_interval=projection_refresh_interval,
+                policy_type=policy_type,
+                hidden_sizes=hidden_sizes,
+                hidden_activation=hidden_activation,
+                output_activation=output_activation,
+                state_encoding="one_hot",
+            )
+        else:
+            agent = LLMNumOptimQTableVisionAgent(
+                logdir,
+                dim_actions,
+                dim_states,
+                max_traj_count,
+                max_traj_length,
+                llm_si_template,
+                llm_output_conversion_template,
+                llm_model_name,
+                num_evaluation_episodes,
+                optimum,
+                env_desc_file=env_description,
+                vlm_model_name=vlm_model_name,
+                decay_horizon=decay_horizon,
+                frame_sample_period=frame_sample_period,
+                enable_vision=enable_vision,
+                vlm_frame_mode=vlm_frame_mode,
+                env_kwargs=env_kwargs,
+                n_neighbors=n_neighbors,
+                poisson_lam=poisson_lam,
+                neighbor_step=neighbor_step,
+                ablate_anchor=ablate_anchor,
+                llm_api_key=llm_api_key,
+                llm_api_base=llm_api_base,
+                vlm_api_key=vlm_api_key,
+                vlm_api_base=vlm_api_base,
+            )
     else:
         world = ContinualSpaceGeneralWorld(
             gym_env_name,
@@ -206,7 +256,7 @@ def run_training_loop(
     print(f'  Decay Horizon: {decay_horizon}')
     print(f'  Frame Sample Period: {frame_sample_period}')
     print(f'  VLM Frame Mode: {vlm_frame_mode}')
-    if task == "cont_state_llm_num_optim_vision":
+    if task == "cont_state_llm_num_optim_vision" or policy_type == "mlp":
         print(f'  Optimization Mode: {optimization_mode}')
         print(f'  Policy Type: {policy_type}')
         if policy_type == "mlp":
@@ -214,6 +264,8 @@ def run_training_loop(
         if optimization_mode == "latent":
             print(f'  Latent Dimension: {agent.rank}/{agent.parameter_dim}')
             print(f'  Projection Scale: {projection_scale}')
+    else:
+        print('  Policy Type: q_table')
     
     # Warmup phase
     if not warmup_dir:

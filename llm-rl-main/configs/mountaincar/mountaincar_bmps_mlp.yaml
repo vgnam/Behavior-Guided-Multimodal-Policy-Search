@@ -1,0 +1,50 @@
+task: cont_state_llm_num_optim_vision
+num_episodes: 400
+gym_env_name: MountainCar-v0
+render_mode: rgb_array  # Required for frame capture
+logdir: logs/mountaincar_bmps_mlp
+dim_actions: 3
+dim_states: 2
+max_traj_count: 1000
+max_traj_length: 1000
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_vision.j2
+llm_output_conversion_template_name: num_optim_vision.j2
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
+num_evaluation_episodes: 20
+warmup_episodes: 20
+warmup_dir: null
+bias: true
+optimum: -120
+search_step_size: 1.0
+env_desc_file: env_descriptions/mountaincar.j2
+
+# BMPS specific parameters
+optimization_mode: latent
+policy_type: mlp
+hidden_sizes: [32, 32]
+hidden_activation: tanh
+output_activation: tanh
+latent_dim: 32
+projection_seed: 42
+projection_scale: 0.25
+projection_refresh_interval: 20
+vlm_frame_mode: individual
+vlm_model_name: openrouter/google/gemma-3-27b-it
+decay_horizon: 100
+frame_sample_period: 50
+enable_vision: true
+n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
+poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
+neighbor_step: 0.1   # Base step size multiplied by Poisson sample
+
+# Ablation study: remove one anchor from neighborhood prompt
+# Options: null, current, best, worst
+ablate_anchor: null
+
+# Optional: override LLM API credentials (falls back to env vars if null)
+llm_api_key: null
+llm_api_base: null
+# Optional: override VLM API credentials (falls back to env vars if null)
+vlm_api_key: null
+vlm_api_base: null

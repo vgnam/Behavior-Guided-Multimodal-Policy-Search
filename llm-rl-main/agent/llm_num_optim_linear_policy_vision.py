@@ -77,6 +77,7 @@ class LLMNumOptimVisionAgent:
         hidden_sizes=None,
         hidden_activation="tanh",
         output_activation="tanh",
+        state_encoding="raw",
     ):
         """
         Initialize BMPS agent.
@@ -112,6 +113,8 @@ class LLMNumOptimVisionAgent:
             hidden_sizes: Hidden layer widths for an MLP policy
             hidden_activation: Activation used by MLP hidden layers
             output_activation: Activation used by the MLP output layer
+            state_encoding: "raw" for vector observations or "one_hot" for
+                integer-valued discrete states
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -136,6 +139,9 @@ class LLMNumOptimVisionAgent:
         self.poisson_lam = poisson_lam
         self.neighbor_step = neighbor_step
         self.ablate_anchor = ablate_anchor
+        self.state_encoding = str(state_encoding).lower()
+        if self.state_encoding not in {"raw", "one_hot"}:
+            raise ValueError("state_encoding must be 'raw' or 'one_hot'")
         
         # Initialize the full policy before constructing its search subspace.
         self.policy_type = str(policy_type).lower()
@@ -215,13 +221,28 @@ class LLMNumOptimVisionAgent:
         self.num_evaluation_episodes = num_evaluation_episodes
         self.training_episodes = 0
         
-        # For bias, add extra dimension to state
-        if self.bias:
-            self.dim_state += 1
-    
     # ------------------------------------------------------------------ #
     #  Neighborhood Behavioral Sampling helpers                           #
     # ------------------------------------------------------------------ #
+
+    def _prepare_policy_state(self, state):
+        """Convert an environment observation to the policy input tensor."""
+        if self.state_encoding == "one_hot":
+            state_index = int(np.asarray(state).reshape(-1)[0])
+            if not 0 <= state_index < self.dim_state:
+                raise ValueError(
+                    f"Discrete state {state_index} is outside [0, {self.dim_state})"
+                )
+            encoded = np.zeros(self.dim_state, dtype=float)
+            encoded[state_index] = 1.0
+            return encoded.reshape(1, -1)
+
+        values = np.asarray(state, dtype=float)
+        if values.ndim == 0:
+            return values.reshape(1)
+        if values.ndim == 1:
+            return np.expand_dims(values, axis=0)
+        return values
 
     def _generate_neighbors(self, params_arr, n):
         """
@@ -374,8 +395,7 @@ class LLMNumOptimVisionAgent:
         Returns:
             Total episodic reward
         """
-        state = world.reset()
-        state = np.expand_dims(state, axis=0)
+        state = self._prepare_policy_state(world.reset())
         
         # Log parameters
         logging_file.write(
@@ -455,13 +475,12 @@ class LLMNumOptimVisionAgent:
                     # Pre-rollout: auto-reset and keep collecting frames for VLM
                     # so we always have a full max_traj_length trajectory
                     episode_num += 1
-                    state = world.reset()
-                    state = np.expand_dims(state, axis=0)
+                    state = self._prepare_policy_state(world.reset())
                     continue
                 else:
                     break
             else:
-                state = next_state
+                state = self._prepare_policy_state(next_state)
             
             if step_idx >= self.max_traj_length:
                 break
