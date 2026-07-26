@@ -60,7 +60,7 @@ class LLMNumOptimQTableVisionAgent:
         llm_api_base=None,
         vlm_api_key=None,
         vlm_api_base=None,
-        vlm_frame_mode="stacking",
+        vlm_frame_mode="overlay",
     ):
         """
         Initialize BMPS Q-Table agent.

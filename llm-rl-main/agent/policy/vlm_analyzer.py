@@ -35,7 +35,7 @@ class VLMAnalyzer:
         enable_reasoning: bool = False,
         vlm_api_key: str = None,
         vlm_api_base: str = None,
-        vlm_frame_mode: str = "stacking",
+        vlm_frame_mode: str = "overlay",
     ):
         """
         Initialize VLM analyzer using LiteLLM.
@@ -49,8 +49,9 @@ class VLMAnalyzer:
             enable_reasoning: If True, prepend chain-of-thought instruction to the prompt
             vlm_api_key: Optional API key for VLM provider
             vlm_api_base: Optional API base URL for VLM provider
-            vlm_frame_mode: "individual" to send each frame separately or
-                            "stacking" to send one contact sheet per rollout
+            vlm_frame_mode: "individual" to send each frame separately,
+                            "stacking" to send one contact sheet per rollout,
+                            or "overlay" to average all frames pixel by pixel
         """
         self.vlm_model_name = vlm_model_name
         self.max_retries = max_retries
@@ -59,9 +60,9 @@ class VLMAnalyzer:
         self.vlm_api_key = vlm_api_key
         self.vlm_api_base = vlm_api_base
         self.vlm_frame_mode = vlm_frame_mode.lower()
-        if self.vlm_frame_mode not in {"individual", "stacking"}:
+        if self.vlm_frame_mode not in {"individual", "stacking", "overlay"}:
             raise ValueError(
-                "vlm_frame_mode must be either 'individual' or 'stacking'"
+                "vlm_frame_mode must be 'individual', 'stacking', or 'overlay'"
             )
 
         self._jinja_env = Environment(
@@ -134,6 +135,37 @@ class VLMAnalyzer:
 
         return np.asarray(sheet)
 
+    def overlay_frames(self, image_frames: List[np.ndarray]) -> np.ndarray:
+        """Average a rollout's frames pixel by pixel into one image."""
+        if not image_frames:
+            raise ValueError("Cannot overlay an empty frame list")
+
+        first_frame = image_frames[0]
+        if first_frame.dtype != np.uint8:
+            first_frame = (
+                (first_frame * 255).astype(np.uint8)
+                if first_frame.max() <= 1.0
+                else first_frame.astype(np.uint8)
+            )
+        first_image = Image.fromarray(first_frame).convert("RGB")
+        target_size = first_image.size
+        composite = np.asarray(first_image, dtype=np.float32).copy()
+
+        for frame_count, frame in enumerate(image_frames[1:], start=2):
+            if frame.dtype != np.uint8:
+                frame = (
+                    (frame * 255).astype(np.uint8)
+                    if frame.max() <= 1.0
+                    else frame.astype(np.uint8)
+                )
+            image = Image.fromarray(frame).convert("RGB")
+            if image.size != target_size:
+                image = image.resize(target_size, Image.Resampling.LANCZOS)
+            frame_array = np.asarray(image, dtype=np.float32)
+            composite += (frame_array - composite) / frame_count
+
+        return np.clip(composite, 0, 255).astype(np.uint8)
+
     def _build_messages(
         self,
         text_prompt: str,
@@ -154,6 +186,14 @@ class VLMAnalyzer:
             text_prompt = (
                 "The attached image is a chronological contact sheet for this "
                 "single rollout. Read cells from left to right, then top to bottom.\n\n"
+                + text_prompt
+            )
+        elif self.vlm_frame_mode == "overlay" and len(image_frames) > 1:
+            image_frames = [self.overlay_frames(image_frames)]
+            text_prompt = (
+                "The attached image is a pixel-level temporal overlay of all "
+                "frames from this single rollout. Static regions remain sharp; "
+                "transparent trails and blurred regions indicate movement over time.\n\n"
                 + text_prompt
             )
 
