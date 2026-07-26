@@ -27,7 +27,7 @@ class VLMAnalyzer:
 
     def __init__(
         self,
-        vlm_model_name: str = "gemini/gemini-2.5-flash-lite",
+        vlm_model_name: str = "openrouter/google/gemma-3-27b-it",
         max_retries: int = 3,
         timeout: int = 60,
         template_dir: str = "agent/policy/templates",

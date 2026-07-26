@@ -22,7 +22,7 @@ env_kwargs:
   flatten_observation: true
 
 # BMPS specific parameters
-vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 enable_vision: true

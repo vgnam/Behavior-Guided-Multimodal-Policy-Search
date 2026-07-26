@@ -20,7 +20,7 @@ search_step_size: 0.1
 env_desc_file: env_descriptions/swimmer.j2
 
 # BMPS specific parameters
-vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor

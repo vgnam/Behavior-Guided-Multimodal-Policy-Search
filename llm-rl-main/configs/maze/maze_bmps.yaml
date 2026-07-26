@@ -18,7 +18,7 @@ optimum: 1.0
 env_desc_file: env_descriptions/maze.j2
 
 # BMPS specific parameters
-vlm_model_name: nvidia_nim/google/gemma-3-27b-it
+vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
 enable_vision: true

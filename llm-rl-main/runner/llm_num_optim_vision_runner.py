@@ -38,7 +38,7 @@ def run_training_loop(
     search_step_size=0.1,
     env_kwargs=None,
     env_desc_file=None,
-    vlm_model_name="gpt-4o",
+    vlm_model_name="openrouter/google/gemma-3-27b-it",
     decay_horizon=100,
     frame_sample_period=50,
     enable_vision=True,
