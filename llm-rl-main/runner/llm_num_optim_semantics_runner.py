@@ -33,6 +33,15 @@ def run_training_loop(
     env_desc_file=None,
     llm_api_key=None,
     llm_api_base=None,
+    policy_type="linear",
+    hidden_sizes=None,
+    hidden_activation="tanh",
+    output_activation="tanh",
+    optimization_mode="direct",
+    latent_dim=32,
+    projection_seed=0,
+    projection_scale=1.0,
+    projection_refresh_interval=0,
 ):
     assert task in ["dist_state_llm_num_optim_semantics", "cont_state_llm_num_optim_semantics"]
 
@@ -89,9 +98,25 @@ def run_training_loop(
             env_desc_file=env_desc_file,
             llm_api_key=llm_api_key,
             llm_api_base=llm_api_base,
+            policy_type=policy_type,
+            hidden_sizes=hidden_sizes,
+            hidden_activation=hidden_activation,
+            output_activation=output_activation,
+            optimization_mode=optimization_mode,
+            latent_dim=latent_dim,
+            projection_seed=projection_seed,
+            projection_scale=projection_scale,
+            projection_refresh_interval=projection_refresh_interval,
         )
 
     print('init done')
+    if task == "cont_state_llm_num_optim_semantics":
+        print(f'  Policy Type: {policy_type}')
+        if policy_type == "mlp":
+            print(f'  Hidden Sizes: {hidden_sizes}')
+        print(f'  Optimization Mode: {optimization_mode}')
+        if optimization_mode == "latent":
+            print(f'  Latent Dimension: {agent.rank}/{agent.parameter_dim}')
 
     if not warmup_dir:
         warmup_dir = f"{logdir}/warmup"

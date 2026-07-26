@@ -4,6 +4,8 @@ from agent.policy.replay_buffer import EpisodeRewardBufferNoBias
 from agent.policy.replay_buffer import ReplayBuffer
 from agent.policy.llm_brain_linear_policy import LLMBrain
 from agent.policy.reward_summary import print_reward_summary
+from agent.policy.mlp_policy import MLPPolicy
+from agent.policy.random_subspace import RandomSubspace
 from world.base_world import BaseWorld
 import numpy as np
 import re
@@ -28,6 +30,15 @@ class LLMNumOptimSemanticAgent:
         env_desc_file=None,
         llm_api_key=None,
         llm_api_base=None,
+        policy_type="linear",
+        hidden_sizes=None,
+        hidden_activation="tanh",
+        output_activation="tanh",
+        optimization_mode="direct",
+        latent_dim=32,
+        projection_seed=0,
+        projection_scale=1.0,
+        projection_refresh_interval=0,
     ):
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -42,18 +53,48 @@ class LLMNumOptimSemanticAgent:
         self.search_step_size = search_step_size
         self.env_desc_file = env_desc_file
 
-        if not self.bias:
-            param_count = dim_action * dim_state
-        else:
-            param_count = dim_action * dim_state + dim_action
-        self.rank = param_count
-
-        if not self.bias:
-            self.policy = LinearPolicyNoBias(
-                dim_actions=dim_action, dim_states=dim_state
+        self.policy_type = str(policy_type).lower()
+        if self.policy_type == "mlp":
+            self.policy = MLPPolicy(
+                dim_actions=dim_action,
+                dim_states=dim_state,
+                hidden_sizes=(
+                    hidden_sizes if hidden_sizes is not None else [32, 32]
+                ),
+                hidden_activation=hidden_activation,
+                output_activation=output_activation,
+                bias=self.bias,
             )
+        elif self.policy_type == "linear":
+            if not self.bias:
+                self.policy = LinearPolicyNoBias(
+                    dim_actions=dim_action, dim_states=dim_state
+                )
+            else:
+                self.policy = LinearPolicy(
+                    dim_actions=dim_action, dim_states=dim_state
+                )
         else:
-            self.policy = LinearPolicy(dim_actions=dim_action, dim_states=dim_state)
+            raise ValueError("policy_type must be 'linear' or 'mlp'")
+
+        self.parameter_dim = self.policy.get_parameters().size
+        self.optimization_mode = str(optimization_mode).lower()
+        if self.optimization_mode not in {"direct", "latent"}:
+            raise ValueError("optimization_mode must be 'direct' or 'latent'")
+        if projection_refresh_interval < 0:
+            raise ValueError("projection_refresh_interval must be non-negative")
+        self.projection_refresh_interval = projection_refresh_interval
+        self.random_subspace = None
+        if self.optimization_mode == "latent":
+            self.random_subspace = RandomSubspace(
+                full_dim=self.parameter_dim,
+                latent_dim=latent_dim,
+                seed=projection_seed,
+                scale=projection_scale,
+            )
+            self.rank = self.random_subspace.latent_dim
+        else:
+            self.rank = self.parameter_dim
         self.replay_buffer = EpisodeRewardBufferNoBias(max_size=max_traj_count)
         self.traj_buffer = ReplayBuffer(max_traj_count, max_traj_length)
         self.llm_brain = LLMBrain(
@@ -116,6 +157,18 @@ class LLMNumOptimSemanticAgent:
 
     def train_policy(self, world: BaseWorld, logdir):
 
+        if (
+            self.random_subspace is not None
+            and self.projection_refresh_interval > 0
+            and self.training_episodes > 0
+            and self.training_episodes % self.projection_refresh_interval == 0
+        ):
+            self.random_subspace.refresh()
+            print(
+                f"[Latent Search] Refreshed projection A_t at iteration "
+                f"{self.training_episodes}"
+            )
+
         def parse_parameters(input_text):
             # This regex looks for integers or floating-point numbers (including optional sign)
             s = input_text.split("\n")[0]
@@ -131,7 +184,12 @@ class LLMNumOptimSemanticAgent:
             assert len(results) == self.rank
             return np.array(results).reshape(-1)
 
-        def str_nd_examples(replay_buffer: EpisodeRewardBufferNoBias, traj_buffer: ReplayBuffer, n):
+        def str_nd_examples(
+            replay_buffer: EpisodeRewardBufferNoBias,
+            traj_buffer: ReplayBuffer,
+            n,
+            reference_params,
+        ):
 
             all_parameters = []
             for weights, reward in replay_buffer.buffer:
@@ -142,6 +200,11 @@ class LLMNumOptimSemanticAgent:
             print('Num trajs in buffer:', len(traj_buffer.buffer))
             print('Num params in buffer:', len(all_parameters))
             for idx, (parameters, reward) in enumerate(all_parameters):
+                if self.random_subspace is not None:
+                    parameters = self.random_subspace.project_delta(
+                        reference_params, parameters
+                    )
+                    parameters = np.round(np.clip(parameters, -6.0, 6.0), 1)
                 l = ""
                 for i in range(n):
                     l += f"params[{i}]: {parameters[i]:.5g}; "
@@ -153,18 +216,39 @@ class LLMNumOptimSemanticAgent:
 
         # Update the policy using llm_brain, q_table and replay_buffer
         print("Updating the policy...")
-        new_parameter_list, reasoning, api_time, llm_prompt_tokens, llm_completion_tokens = self.llm_brain.llm_update_parameters_num_optim_semantics(
-            str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
+        current_full_params = self.policy.get_parameters().reshape(-1).copy()
+        proposed_search_vector, reasoning, api_time, llm_prompt_tokens, llm_completion_tokens = self.llm_brain.llm_update_parameters_num_optim_semantics(
+            str_nd_examples(
+                self.replay_buffer,
+                self.traj_buffer,
+                self.rank,
+                current_full_params,
+            ),
             parse_parameters,
             self.training_episodes,
             self.env_desc_file,
             self.rank,
             self.optimum,
-            self.search_step_size
+            self.search_step_size,
+            latent_mode=self.random_subspace is not None,
+            full_parameter_dim=self.parameter_dim,
+            projection_scale=(
+                self.random_subspace.scale
+                if self.random_subspace is not None
+                else 1.0
+            ),
+            policy_type=self.policy_type,
         )
         self.api_call_time += api_time
         self.total_llm_prompt_tokens += llm_prompt_tokens
         self.total_llm_completion_tokens += llm_completion_tokens
+
+        if self.random_subspace is not None:
+            new_parameter_list = self.random_subspace.apply(
+                current_full_params, proposed_search_vector
+            )
+        else:
+            new_parameter_list = proposed_search_vector
 
         print(self.policy.get_parameters().shape)
         print(new_parameter_list.shape)

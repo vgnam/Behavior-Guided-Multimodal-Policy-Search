@@ -21,6 +21,7 @@ from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
 from agent.policy.random_subspace import RandomSubspace
+from agent.policy.mlp_policy import MLPPolicy
 from world.base_world import BaseWorld
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
@@ -72,6 +73,10 @@ class LLMNumOptimVisionAgent:
         projection_seed=0,
         projection_scale=1.0,
         projection_refresh_interval=0,
+        policy_type="linear",
+        hidden_sizes=None,
+        hidden_activation="tanh",
+        output_activation="tanh",
     ):
         """
         Initialize BMPS agent.
@@ -103,6 +108,10 @@ class LLMNumOptimVisionAgent:
             projection_seed: Seed used to construct the random projection matrix
             projection_scale: Alpha in theta_new = theta_anchor + alpha * A @ z
             projection_refresh_interval: Rebuild A every N iterations (0 disables)
+            policy_type: "linear" or "mlp"
+            hidden_sizes: Hidden layer widths for an MLP policy
+            hidden_activation: Activation used by MLP hidden layers
+            output_activation: Activation used by the MLP output layer
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -128,11 +137,32 @@ class LLMNumOptimVisionAgent:
         self.neighbor_step = neighbor_step
         self.ablate_anchor = ablate_anchor
         
-        # Compute parameter count
-        if not self.bias:
-            param_count = dim_action * dim_state
+        # Initialize the full policy before constructing its search subspace.
+        self.policy_type = str(policy_type).lower()
+        if self.policy_type == "mlp":
+            self.policy = MLPPolicy(
+                dim_actions=dim_action,
+                dim_states=dim_state,
+                hidden_sizes=(
+                    hidden_sizes if hidden_sizes is not None else [32, 32]
+                ),
+                hidden_activation=hidden_activation,
+                output_activation=output_activation,
+                bias=self.bias,
+            )
+        elif self.policy_type == "linear":
+            if not self.bias:
+                self.policy = LinearPolicyNoBias(
+                    dim_actions=dim_action, dim_states=dim_state
+                )
+            else:
+                self.policy = LinearPolicy(
+                    dim_actions=dim_action, dim_states=dim_state
+                )
         else:
-            param_count = dim_action * dim_state + dim_action
+            raise ValueError("policy_type must be 'linear' or 'mlp'")
+
+        param_count = self.policy.get_parameters().size
         self.parameter_dim = param_count
         self.optimization_mode = str(optimization_mode).lower()
         if self.optimization_mode not in {"direct", "latent"}:
@@ -151,16 +181,6 @@ class LLMNumOptimVisionAgent:
             self.rank = self.random_subspace.latent_dim
         else:
             self.rank = param_count
-        
-        # Initialize policy
-        if not self.bias:
-            self.policy = LinearPolicyNoBias(
-                dim_actions=dim_action, dim_states=dim_state
-            )
-        else:
-            self.policy = LinearPolicy(
-                dim_actions=dim_action, dim_states=dim_state
-            )
         
         # Initialize replay buffers
         self.replay_buffer = EpisodeRewardBufferNoBias(max_size=max_traj_count)
@@ -703,6 +723,7 @@ class LLMNumOptimVisionAgent:
                 if self.random_subspace is not None
                 else 1.0
             ),
+            policy_type=self.policy_type,
         )
         self.api_call_time += api_time
         self.total_llm_prompt_tokens += llm_prompt_tokens

@@ -56,6 +56,10 @@ def run_training_loop(
     projection_seed=0,
     projection_scale=1.0,
     projection_refresh_interval=0,
+    policy_type="linear",
+    hidden_sizes=None,
+    hidden_activation="tanh",
+    output_activation="tanh",
 ):
     """
     Run BMPS training loop.
@@ -92,6 +96,10 @@ def run_training_loop(
         projection_seed: Seed for the orthonormal random projection
         projection_scale: Full-space update scale alpha
         projection_refresh_interval: Refresh the projection every N iterations (0 disables)
+        policy_type: Continuous policy architecture, "linear" or "mlp"
+        hidden_sizes: Width of each MLP hidden layer
+        hidden_activation: MLP hidden activation
+        output_activation: MLP output activation
     """
     assert task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"], \
         f"BMPS runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
@@ -185,6 +193,10 @@ def run_training_loop(
             projection_seed=projection_seed,
             projection_scale=projection_scale,
             projection_refresh_interval=projection_refresh_interval,
+            policy_type=policy_type,
+            hidden_sizes=hidden_sizes,
+            hidden_activation=hidden_activation,
+            output_activation=output_activation,
         )
     
     print('[BMPS] Initialization done')
@@ -196,6 +208,9 @@ def run_training_loop(
     print(f'  VLM Frame Mode: {vlm_frame_mode}')
     if task == "cont_state_llm_num_optim_vision":
         print(f'  Optimization Mode: {optimization_mode}')
+        print(f'  Policy Type: {policy_type}')
+        if policy_type == "mlp":
+            print(f'  Hidden Sizes: {hidden_sizes}')
         if optimization_mode == "latent":
             print(f'  Latent Dimension: {agent.rank}/{agent.parameter_dim}')
             print(f'  Projection Scale: {projection_scale}')

@@ -6,7 +6,18 @@ You are good global RL policy optimizer, helping me find the global optimal poli
 # Regarding the parameters **params**:
 **params** is an array of {{ rank }} float numbers.
 **params** values are in the range of [-6.0, 6.0] with 1 decimal place.
-params represent a linear policy. 
+{% if latent_mode %}
+params is the latent update z, not the full {{ policy_type }} policy vector theta.
+The policy has D={{ full_parameter_dim }} parameters and you optimize d={{ rank }} coordinates.
+The optimizer constructs A_t in R^(D x d) from a Gaussian matrix using QR, so A_t^T A_t = I_d.
+Your proposal is decoded by:
+theta_(t+1) = clip(theta_t + alpha A_t z, -6, 6), alpha={{ projection_scale }}.
+Historical policies are projected into the current subspace by:
+z_hat_i = clip(A_t^T (theta_i - theta_t) / alpha, -6, 6).
+Therefore f(params) means the reward of the decoded full policy. Your z is always applied around theta_t.
+{% else %}
+params represent the complete {{ policy_type }} policy parameter vector.
+{% endif %}
 f(params) is the episodic reward of the policy.
 
 # Here's how we'll interact:
@@ -19,7 +30,7 @@ f(params) is the episodic reward of the policy.
 4. We will repeat steps 2-3 until we reach the maximum number of iterations.
 
 # Remember:
-1. **Do not propose previously seen params.**
+1. **Do not propose previously seen params.**{% if latent_mode %} Compare against the projected examples for this iteration.{% endif %}
 2. **The global optimum should be around {{ optimum }}.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
 3. Search both positive and negative values. **During exploration, use search step size of {{ step_size }}**.
 

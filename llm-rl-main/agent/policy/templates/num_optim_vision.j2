@@ -17,7 +17,7 @@ f(params) is the episodic reward of the policy.
 **params** is an array of {{ rank }} float numbers.
 **params** values are in the range of [-6.0, 6.0] with 1 decimal place.
 {% if latent_mode %}
-Here **params means the latent update z**, not the full policy vector theta.
+Here **params means the latent update z**, not the full {{ policy_type }} policy vector theta.
 The full policy has D={{ full_parameter_dim }} parameters, while you only optimize d={{ rank }} latent coordinates (d << D).
 
 The random-subspace mapping used by the optimizer is:
@@ -34,7 +34,7 @@ least-squares directional approximations in the current subspace. For every
 neighborhood, params=0 is that neighborhood's anchor; all anchors use the same A_t.
 Your returned z is always applied to the CURRENT policy theta_t.
 {% else %}
-params represent a linear policy. 
+params represent the complete {{ policy_type }} policy parameter vector.
 f(params) is the episodic reward of the policy.
 {% endif %}
 {% endif %}

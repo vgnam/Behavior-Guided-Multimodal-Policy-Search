@@ -258,7 +258,9 @@ class LLMBrain:
 
     def llm_update_parameters_num_optim_semantics(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
-        rank=None, optimum=None, search_step_size=0.1, actions=None
+        rank=None, optimum=None, search_step_size=0.1, actions=None,
+        latent_mode=False, full_parameter_dim=None, projection_scale=1.0,
+        policy_type="linear",
     ):
         self.reset_llm_conversation()
         system_prompt = self.llm_si_template.render({
@@ -269,6 +271,10 @@ class LLMBrain:
             "optimum": str(optimum),
             "step_size": str(search_step_size),
             "actions": actions,
+            "latent_mode": latent_mode,
+            "full_parameter_dim": full_parameter_dim,
+            "projection_scale": projection_scale,
+            "policy_type": policy_type,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
@@ -283,6 +289,7 @@ class LLMBrain:
         rank=None, optimum=None, search_step_size=0.1, actions=None,
         neighborhood_analysis=None, latent_mode=False,
         full_parameter_dim=None, projection_scale=1.0,
+        policy_type="linear",
     ):
         """
         Update parameters using vision-guided feedback (BMPS).
@@ -323,6 +330,7 @@ class LLMBrain:
             "latent_mode": latent_mode,
             "full_parameter_dim": full_parameter_dim,
             "projection_scale": projection_scale,
+            "policy_type": policy_type,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
