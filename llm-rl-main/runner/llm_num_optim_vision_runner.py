@@ -197,6 +197,21 @@ def run_training_loop(
     vision_stats_file.write("Iteration, Lambda, VLM Invoked, Phase, Num Frames\n")
     vision_stats_file.flush()
     
+    # Token statistics log
+    token_stats_file = open(f"{logdir}/token_statistics.txt", "w", encoding="utf-8")
+    token_stats_file.write("Iteration, LLM Prompt Tokens, LLM Completion Tokens, VLM Prompt Tokens, VLM Completion Tokens, "
+                           "Total LLM Prompt Tokens, Total LLM Completion Tokens, Total VLM Prompt Tokens, Total VLM Completion Tokens, "
+                           "Total Tokens\n")
+    token_stats_file.flush()
+    
+    # Timing statistics log
+    timing_stats_file = open(f"{logdir}/timing_statistics.txt", "w", encoding="utf-8")
+    timing_stats_file.write("Iteration, LLM API Time (s), VLM API Time (s), CPU Time (s), Total Time (s)\n")
+    timing_stats_file.flush()
+    
+    import time as _time
+    wall_start_time = _time.time()
+    
     print('\n' + '='*70)
     print(f"[BMPS] Starting training for {num_episodes} episodes")
     print('='*70 + '\n')
@@ -215,9 +230,20 @@ def run_training_loop(
         # Train policy (with retries)
         for trial_idx in range(5):
             try:
-                cpu_time, api_time, total_episodes, total_steps, total_reward = agent.train_policy(
+                # Save VLM API time before iteration to compute per-iteration VLM time
+                vlm_time_before = agent.vlm_api_time
+                llm_time_before = agent.api_call_time - agent.vlm_api_time
+                
+                iter_start = _time.time()
+                cpu_time, api_time, total_episodes, total_steps, total_reward, \
+                    llm_pt, llm_ct, vlm_pt, vlm_ct = agent.train_policy(
                     world, curr_episode_dir
                 )
+                iter_time = _time.time() - iter_start
+                
+                # Compute per-iteration times
+                iter_vlm_time = agent.vlm_api_time - vlm_time_before
+                iter_llm_time = (agent.api_call_time - agent.vlm_api_time) - llm_time_before
                 
                 # Log overall statistics
                 overall_log_file.write(
@@ -244,10 +270,30 @@ def run_training_loop(
                     )
                     vision_stats_file.flush()
                 
+                # Token statistics
+                total_tokens = (agent.total_llm_prompt_tokens + agent.total_llm_completion_tokens +
+                                agent.total_vlm_prompt_tokens + agent.total_vlm_completion_tokens)
+                token_stats_file.write(
+                    f"{episode}, {llm_pt}, {llm_ct}, {vlm_pt}, {vlm_ct}, "
+                    f"{agent.total_llm_prompt_tokens}, {agent.total_llm_completion_tokens}, "
+                    f"{agent.total_vlm_prompt_tokens}, {agent.total_vlm_completion_tokens}, "
+                    f"{total_tokens}\n"
+                )
+                token_stats_file.flush()
+                
+                # Timing statistics
+                wall_total = _time.time() - wall_start_time
+                timing_stats_file.write(
+                    f"{episode}, {iter_llm_time:.4f}, {iter_vlm_time:.4f}, {cpu_time:.4f}, {wall_total:.4f}\n"
+                )
+                timing_stats_file.flush()
+                
                 print(f"\n[SUCCESS] Trial {trial_idx + 1} succeeded")
                 print(f"  Total Reward: {total_reward:.2f}")
                 print(f"  CPU Time: {cpu_time:.2f}s")
                 print(f"  API Time: {api_time:.2f}s (LLM: {agent.api_call_time:.2f}s, VLM: {agent.vlm_api_time:.2f}s)")
+                print(f"  Tokens - LLM: prompt={llm_pt}, completion={llm_ct} | VLM: prompt={vlm_pt}, completion={vlm_ct}")
+                print(f"  Cumulative Tokens: {total_tokens}")
                 break
                 
             except Exception as e:
@@ -258,12 +304,20 @@ def run_training_loop(
                     print(f"\n[FAILURE] Episode {episode} failed after 5 attempts")
                     overall_log_file.close()
                     vision_stats_file.close()
+                    token_stats_file.close()
+                    timing_stats_file.close()
                     return
                 else:
                     continue
     
     overall_log_file.close()
     vision_stats_file.close()
+    token_stats_file.close()
+    timing_stats_file.close()
+    
+    # Final summary
+    total_tokens = (agent.total_llm_prompt_tokens + agent.total_llm_completion_tokens +
+                    agent.total_vlm_prompt_tokens + agent.total_vlm_completion_tokens)
     
     print('\n' + '='*70)
     print("[BMPS] Training Complete!")
@@ -273,6 +327,11 @@ def run_training_loop(
     print(f"  Total API Time: {api_time:.2f}s")
     print(f"    - LLM Time: {agent.api_call_time:.2f}s")
     print(f"    - VLM Time: {agent.vlm_api_time:.2f}s")
+    print(f"  Total Tokens: {total_tokens}")
+    print(f"    - LLM Prompt Tokens: {agent.total_llm_prompt_tokens}")
+    print(f"    - LLM Completion Tokens: {agent.total_llm_completion_tokens}")
+    print(f"    - VLM Prompt Tokens: {agent.total_vlm_prompt_tokens}")
+    print(f"    - VLM Completion Tokens: {agent.total_vlm_completion_tokens}")
     if enable_vision:
         print(f"  Total VLM Calls: {len(agent.visual_analysis_history)}")
     print(f'\nLogs saved to: {logdir}')

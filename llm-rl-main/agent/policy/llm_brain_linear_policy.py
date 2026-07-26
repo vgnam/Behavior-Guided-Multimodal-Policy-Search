@@ -49,15 +49,21 @@ class LLMBrain:
             try:
                 response = completion(**self._build_completion_kwargs(temperature))
                 text = response["choices"][0]["message"]["content"]
+                # Extract token usage
+                prompt_tokens = 0
+                completion_tokens = 0
+                if hasattr(response, 'usage') and response.usage is not None:
+                    prompt_tokens = getattr(response.usage, 'prompt_tokens', 0) or 0
+                    completion_tokens = getattr(response.usage, 'completion_tokens', 0) or 0
                 # Append assistant response to conversation history
                 self.add_llm_conversation(text, "assistant")
-                return text
+                return text, prompt_tokens, completion_tokens
             except Exception as e:
                 print(f"[LLM ERROR] Attempt {attempt + 1}/5: {e}")
                 if attempt == 4:
                     raise RuntimeError("Failed to get LLM response after 5 attempts") from e
                 time.sleep(10)
-        return ""  # unreachable
+        return "", 0, 0  # unreachable
     
     def query_llm_multiple_response(self, num_responses: int, temperature=1.0):
         for attempt in range(3):
@@ -68,8 +74,14 @@ class LLMBrain:
                     )
                 )
                 responses = [choice.message.content for choice in response.choices]
+                # Extract token usage
+                prompt_tokens = 0
+                completion_tokens = 0
+                if hasattr(response, 'usage') and response.usage is not None:
+                    prompt_tokens = getattr(response.usage, 'prompt_tokens', 0) or 0
+                    completion_tokens = getattr(response.usage, 'completion_tokens', 0) or 0
                 if len(responses) == num_responses:
-                    return responses
+                    return responses, prompt_tokens, completion_tokens
                 else:
                     raise ValueError(f"Expected {num_responses} responses, got {len(responses)}")
             except Exception as e:
@@ -77,7 +89,7 @@ class LLMBrain:
                 if attempt == 2:
                     raise RuntimeError("Failed to get multiple LLM responses after 3 attempts") from e
                 time.sleep(5)
-        return []
+        return [], 0, 0
 
     def parse_parameters(self, parameters_string: str):
         import re
@@ -110,10 +122,10 @@ class LLMBrain:
             {"replay_buffer_string": str(replay_buffer), "parameters_string": str(parameters)}
         )
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, pt1, ct1 = self.query_llm()
 
         self.add_llm_conversation(self.llm_output_conversion_template.render(), "user")
-        raw_params = self.query_llm()
+        raw_params, pt2, ct2 = self.query_llm()
 
         parser = parse_parameters if parse_parameters is not None else self.parse_parameters
         parsed_params = parser(raw_params)
@@ -125,10 +137,10 @@ class LLMBrain:
             {"episode_reward_buffer_string": str(episode_reward_buffer)}
         )
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, pt1, ct1 = self.query_llm()
 
         self.add_llm_conversation(self.llm_output_conversion_template.render(), "user")
-        raw_params = self.query_llm()
+        raw_params, pt2, ct2 = self.query_llm()
 
         parser = parse_parameters if parse_parameters is not None else self.parse_parameters
         parsed_params = parser(raw_params)
@@ -150,12 +162,12 @@ class LLMBrain:
         self.add_llm_conversation(system_prompt, "user")
 
         api_start_time = time.time()
-        reasoning = self.query_llm()
+        reasoning, llm_prompt_tokens, llm_completion_tokens = self.query_llm()
         api_time = time.time() - api_start_time
 
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log, api_time
+        return parsed_params, log, api_time, llm_prompt_tokens, llm_completion_tokens
 
     # --- Các phương thức còn lại giữ nguyên logic, chỉ đảm bảo không dùng model_group ---
     # (Bạn có thể áp dụng cùng mẫu như trên cho các hàm còn lại)
@@ -172,10 +184,10 @@ class LLMBrain:
             "optimum": str(optimum),
         })
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, llm_prompt_tokens, llm_completion_tokens = self.query_llm()
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log
+        return parsed_params, log, llm_prompt_tokens, llm_completion_tokens
 
     def llm_update_parameters_num_optim_imitation(
         self, demonstrations_str, episode_reward_buffer, parse_parameters, step_number, search_std
@@ -188,7 +200,7 @@ class LLMBrain:
             "search_std": str(search_std),
         })
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, _pt, _ct = self.query_llm()
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
         return parsed_params, log
@@ -204,7 +216,7 @@ class LLMBrain:
             "anchor_parameters": str(anchor_parameters),
         })
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, _pt, _ct = self.query_llm()
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
         return parsed_params, log
@@ -221,7 +233,7 @@ class LLMBrain:
             "anchor_parameters": str(anchor_parameters),
         })
         self.add_llm_conversation(system_prompt, "user")
-        reasoning_list = self.query_llm_multiple_response(num_candidates, temperature)
+        reasoning_list, _pt, _ct = self.query_llm_multiple_response(num_candidates, temperature)
 
         param_list = [parse_parameters(r) for r in reasoning_list]
         return system_prompt, param_list, reasoning_list
@@ -238,7 +250,7 @@ class LLMBrain:
             "anchor_parameters": str(anchor_parameters),
         })
         self.add_llm_conversation(system_prompt, "user")
-        reasoning = self.query_llm()
+        reasoning, _pt, _ct = self.query_llm()
         parsed = parse_parameters(reasoning)
         new_candidates[new_idx] = parsed
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
@@ -260,11 +272,11 @@ class LLMBrain:
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
-        reasoning = self.query_llm()
+        reasoning, llm_prompt_tokens, llm_completion_tokens = self.query_llm()
         api_time = time.time() - api_start_time
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log, api_time
+        return parsed_params, log, api_time, llm_prompt_tokens, llm_completion_tokens
 
     def llm_update_parameters_num_optim_vision(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
@@ -307,8 +319,8 @@ class LLMBrain:
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()
-        reasoning = self.query_llm()
+        reasoning, llm_prompt_tokens, llm_completion_tokens = self.query_llm()
         api_time = time.time() - api_start_time
         parsed_params = parse_parameters(reasoning)
         log = "system:\n" + system_prompt + "\n\n\nLLM:\n" + reasoning
-        return parsed_params, log, api_time
+        return parsed_params, log, api_time, llm_prompt_tokens, llm_completion_tokens

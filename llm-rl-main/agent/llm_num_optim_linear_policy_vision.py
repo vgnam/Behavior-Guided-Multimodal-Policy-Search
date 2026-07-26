@@ -94,6 +94,10 @@ class LLMNumOptimVisionAgent:
         self.start_time = time.process_time()
         self.api_call_time = 0
         self.vlm_api_time = 0
+        self.total_llm_prompt_tokens = 0
+        self.total_llm_completion_tokens = 0
+        self.total_vlm_prompt_tokens = 0
+        self.total_vlm_completion_tokens = 0
         self.total_steps = 0
         self.total_episodes = 0
         
@@ -241,30 +245,36 @@ class LLMNumOptimVisionAgent:
             )
             frames = self.frame_sampler.get_frames(entry["trajectory"], frame_indices)
             if not frames or not any(f.get("frame") is not None for f in frames):
-                return idx, None, 0.0
-            analysis, vlm_time = self.vlm_analyzer.analyze_frames(
+                return idx, None, 0.0, 0, 0
+            analysis, vlm_time, vlm_pt, vlm_ct = self.vlm_analyzer.analyze_frames(
                 frames,
                 self.env_desc_file if self.env_desc_file else "RL Environment",
                 entry["reward"],
                 entry["terminated_early"],
                 current_params=entry["params_str"],
             )
-            return idx, analysis, vlm_time
+            return idx, analysis, vlm_time, vlm_pt, vlm_ct
 
         analyses = [None] * len(rollout_data)
         total_vlm_time = 0.0
+        total_vlm_pt = 0
+        total_vlm_ct = 0
         with ThreadPoolExecutor() as executor:
             futures = {
                 executor.submit(_analyze, entry, idx): idx
                 for idx, entry in enumerate(rollout_data)
             }
             for future in as_completed(futures):
-                idx, analysis, vlm_time = future.result()
+                idx, analysis, vlm_time, vlm_pt, vlm_ct = future.result()
                 analyses[idx] = analysis
                 total_vlm_time += vlm_time
+                total_vlm_pt += vlm_pt
+                total_vlm_ct += vlm_ct
 
         self.vlm_api_time += total_vlm_time
         self.api_call_time += total_vlm_time
+        self.total_vlm_prompt_tokens += total_vlm_pt
+        self.total_vlm_completion_tokens += total_vlm_ct
 
         # Assemble results
         results = []
@@ -604,7 +614,7 @@ class LLMNumOptimVisionAgent:
         print("\nUpdating policy with LLM...")
         current_params_for_llm = self.policy.get_parameters().reshape(-1)
         params_str_for_llm = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params_for_llm))
-        new_parameter_list, reasoning, api_time = self.llm_brain.llm_update_parameters_num_optim_vision(
+        new_parameter_list, reasoning, api_time, llm_prompt_tokens, llm_completion_tokens = self.llm_brain.llm_update_parameters_num_optim_vision(
             str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
             parse_parameters,
             self.training_episodes,
@@ -615,6 +625,8 @@ class LLMNumOptimVisionAgent:
             neighborhood_analysis=neighborhood_analysis,
         )
         self.api_call_time += api_time
+        self.total_llm_prompt_tokens += llm_prompt_tokens
+        self.total_llm_completion_tokens += llm_completion_tokens
 
         self.policy.update_policy(new_parameter_list)
 
@@ -657,7 +669,11 @@ class LLMNumOptimVisionAgent:
         _total_steps = self.total_steps
         _total_reward = result
         
-        return _cpu_time, _api_time, _total_episodes, _total_steps, _total_reward
+        # Compute per-iteration VLM tokens (delta from totals accumulated during this iter)
+        iter_vlm_pt = self.total_vlm_prompt_tokens
+        iter_vlm_ct = self.total_vlm_completion_tokens
+        
+        return _cpu_time, _api_time, _total_episodes, _total_steps, _total_reward, llm_prompt_tokens, llm_completion_tokens, iter_vlm_pt, iter_vlm_ct
     
     def evaluate_policy(self, world: BaseWorld, logdir):
         """

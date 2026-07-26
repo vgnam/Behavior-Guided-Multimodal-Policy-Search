@@ -103,6 +103,22 @@ def run_training_loop(
     overall_log_file = open(f"{logdir}/overall_log.txt", "w")
     overall_log_file.write("Iteration, CPU Time, API Time, Total Episodes, Total Steps, Total Reward\n")
     overall_log_file.flush()
+    
+    # Token statistics log
+    token_stats_file = open(f"{logdir}/token_statistics.txt", "w", encoding="utf-8")
+    token_stats_file.write("Iteration, LLM Prompt Tokens, LLM Completion Tokens, VLM Prompt Tokens, VLM Completion Tokens, "
+                           "Total LLM Prompt Tokens, Total LLM Completion Tokens, Total VLM Prompt Tokens, Total VLM Completion Tokens, "
+                           "Total Tokens\n")
+    token_stats_file.flush()
+    
+    # Timing statistics log
+    timing_stats_file = open(f"{logdir}/timing_statistics.txt", "w", encoding="utf-8")
+    timing_stats_file.write("Iteration, LLM API Time (s), VLM API Time (s), CPU Time (s), Total Time (s)\n")
+    timing_stats_file.flush()
+    
+    import time as _time
+    wall_start_time = _time.time()
+    
     for episode in range(num_episodes):
         print(f"Episode: {episode}")
         # create log dir
@@ -112,9 +128,30 @@ def run_training_loop(
         
         for trial_idx in range(5):
             try:
-                cpu_time, api_time, total_episodes, total_steps, total_reward = agent.train_policy(world, curr_episode_dir)
+                iter_start = _time.time()
+                cpu_time, api_time, total_episodes, total_steps, total_reward, \
+                    llm_pt, llm_ct, vlm_pt, vlm_ct = agent.train_policy(world, curr_episode_dir)
+                iter_time = _time.time() - iter_start
+                
                 overall_log_file.write(f"{episode + 1}, {cpu_time}, {api_time}, {total_episodes}, {total_steps}, {total_reward}\n")
                 overall_log_file.flush()
+                
+                # Token statistics
+                total_tokens = (agent.total_llm_prompt_tokens + agent.total_llm_completion_tokens)
+                token_stats_file.write(
+                    f"{episode + 1}, {llm_pt}, {llm_ct}, {vlm_pt}, {vlm_ct}, "
+                    f"{agent.total_llm_prompt_tokens}, {agent.total_llm_completion_tokens}, 0, 0, "
+                    f"{total_tokens}\n"
+                )
+                token_stats_file.flush()
+                
+                # Timing statistics
+                wall_total = _time.time() - wall_start_time
+                timing_stats_file.write(
+                    f"{episode + 1}, {api_time:.4f}, 0.0000, {cpu_time:.4f}, {wall_total:.4f}\n"
+                )
+                timing_stats_file.flush()
+                
                 print(f"{trial_idx + 1}th trial attempt succeeded in training")
                 break
             except Exception as e:
@@ -127,3 +164,5 @@ def run_training_loop(
             print(f"Episode {episode} failed to train after 5 attempts")
             break
     overall_log_file.close()
+    token_stats_file.close()
+    timing_stats_file.close()

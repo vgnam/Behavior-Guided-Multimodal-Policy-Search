@@ -108,7 +108,7 @@ class VLMAnalyzer:
         self,
         messages: List[Dict[str, Any]],
         temperature: float = 0.7,
-    ) -> tuple[str, float]:
+    ) -> tuple[str, float, int, int]:
         """
         Call VLM via LiteLLM.
 
@@ -117,7 +117,7 @@ class VLMAnalyzer:
             temperature: Sampling temperature
 
         Returns:
-            Tuple of (response_text, api_time)
+            Tuple of (response_text, api_time, prompt_tokens, completion_tokens)
         """
         api_start_time = time.time()
 
@@ -135,7 +135,12 @@ class VLMAnalyzer:
         response = litellm.completion(**kwargs)
 
         api_time = time.time() - api_start_time
-        return response.choices[0].message.content.strip(), api_time
+        prompt_tokens = 0
+        completion_tokens = 0
+        if hasattr(response, 'usage') and response.usage is not None:
+            prompt_tokens = getattr(response.usage, 'prompt_tokens', 0) or 0
+            completion_tokens = getattr(response.usage, 'completion_tokens', 0) or 0
+        return response.choices[0].message.content.strip(), api_time, prompt_tokens, completion_tokens
 
     def create_analysis_prompt(
         self,
@@ -173,7 +178,7 @@ class VLMAnalyzer:
         episode_reward: float,
         terminated_early: bool = False,
         current_params=None,
-    ) -> tuple[str, float]:
+    ) -> tuple[str, float, int, int]:
         """
         Analyze sampled episode frames using VLM and return diagnostic feedback.
 
@@ -184,7 +189,7 @@ class VLMAnalyzer:
             terminated_early: Whether episode terminated early
 
         Returns:
-            Tuple of (analysis_text, api_time)
+            Tuple of (analysis_text, api_time, vlm_prompt_tokens, vlm_completion_tokens)
         """
         # Create text prompt
         text_prompt = self.create_analysis_prompt(
@@ -204,15 +209,15 @@ class VLMAnalyzer:
 
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
-                return analysis, api_time
+                analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens = self._call_vlm_api(messages, temperature=0.7)
+                return analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens
             except Exception as e:
                 print(f"[VLM ERROR] Attempt {attempt + 1}/{self.max_retries}: {e}")
                 if attempt == self.max_retries - 1:
-                    return f"VLM analysis failed after {self.max_retries} attempts: {e}", 0.0
+                    return f"VLM analysis failed after {self.max_retries} attempts: {e}", 0.0, 0, 0
                 time.sleep(5)
 
-        return "VLM analysis unavailable", 0.0
+        return "VLM analysis unavailable", 0.0, 0, 0
 
     def analyze_trajectory_comparison(
         self,
@@ -221,7 +226,7 @@ class VLMAnalyzer:
         reward_current: float,
         reward_previous: float,
         env_description: str
-    ) -> tuple[str, float]:
+    ) -> tuple[str, float, int, int]:
         """
         Compare two trajectories visually to identify improvements or regressions.
 
@@ -233,7 +238,7 @@ class VLMAnalyzer:
             env_description: Environment description
 
         Returns:
-            Tuple of (comparative_analysis, api_time)
+            Tuple of (comparative_analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens)
         """
         template = self._jinja_env.get_template("vlm_comparison_prompt.j2")
         prompt = template.render(
@@ -268,23 +273,23 @@ class VLMAnalyzer:
         )
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
+                analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens = self._call_vlm_api(messages, temperature=0.7)
                 print(f"[VLM] Comparison response received in {api_time:.1f}s ({len(analysis)} chars)")
-                return analysis, api_time
+                return analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens
             except Exception as e:
                 print(f"[VLM ERROR] Comparison attempt {attempt + 1}/{self.max_retries}: {e}")
                 if attempt == self.max_retries - 1:
-                    return f"VLM comparison failed after {self.max_retries} attempts: {e}", 0.0
+                    return f"VLM comparison failed after {self.max_retries} attempts: {e}", 0.0, 0, 0
                 time.sleep(5)
 
-        return "VLM comparison unavailable", 0.0
+        return "VLM comparison unavailable", 0.0, 0, 0
 
     def analyze_candidate_diversity(
         self,
         candidates: List[Dict[str, Any]],
         env_description: str,
         frames_per_candidate: int = 2,
-    ) -> tuple[str, float]:
+    ) -> tuple[str, float, int, int]:
         """
         Assess behavioral diversity across multiple policy candidates visually.
 
@@ -301,10 +306,10 @@ class VLMAnalyzer:
             frames_per_candidate: Max frames to include per candidate (default 2)
 
         Returns:
-            Tuple of (diversity_analysis_text, api_time)
+            Tuple of (diversity_analysis_text, api_time, vlm_prompt_tokens, vlm_completion_tokens)
         """
         if len(candidates) < 2:
-            return "Diversity analysis requires at least 2 candidates.", 0.0
+            return "Diversity analysis requires at least 2 candidates.", 0.0, 0, 0
 
         # Render template
         template = self._jinja_env.get_template("vlm_diversity_prompt.j2")
@@ -342,12 +347,12 @@ class VLMAnalyzer:
 
         for attempt in range(self.max_retries):
             try:
-                analysis, api_time = self._call_vlm_api(messages, temperature=0.7)
+                analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens = self._call_vlm_api(messages, temperature=0.7)
                 print(
                     f"[VLM] Diversity response received in {api_time:.1f}s "
                     f"({len(analysis)} chars)"
                 )
-                return analysis, api_time
+                return analysis, api_time, vlm_prompt_tokens, vlm_completion_tokens
             except Exception as e:
                 print(
                     f"[VLM ERROR] Diversity attempt {attempt + 1}/{self.max_retries}: {e}"
@@ -355,8 +360,8 @@ class VLMAnalyzer:
                 if attempt == self.max_retries - 1:
                     return (
                         f"VLM diversity analysis failed after {self.max_retries} attempts: {e}",
-                        0.0,
+                        0.0, 0, 0,
                     )
                 time.sleep(5)
 
-        return "VLM diversity analysis unavailable", 0.0
+        return "VLM diversity analysis unavailable", 0.0, 0, 0
