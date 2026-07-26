@@ -23,7 +23,7 @@ env_desc_file: env_descriptions/swimmer.j2
 vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
-vlm_frame_mode: overlay  # individual, stacking (grid), or overlay (pixel mean)
+vlm_frame_mode: individual  # individual, stacking (grid), or overlay (pixel mean)
 n_neighbors: 5        # Number of Poisson-perturbed neighbors per anchor
 poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
 neighbor_step: 0.1   # Base step size multiplied by Poisson sample
