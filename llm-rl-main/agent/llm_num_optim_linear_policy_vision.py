@@ -20,6 +20,7 @@ from agent.policy.llm_brain_linear_policy import LLMBrain
 from agent.policy.frame_sampler import FrameSampler
 from agent.policy.adaptive_visual_guidance import AdaptiveVisualGuidance
 from agent.policy.vlm_analyzer import VLMAnalyzer
+from agent.policy.random_subspace import RandomSubspace
 from world.base_world import BaseWorld
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
@@ -66,6 +67,11 @@ class LLMNumOptimVisionAgent:
         vlm_api_key=None,
         vlm_api_base=None,
         vlm_frame_mode="overlay",
+        optimization_mode="direct",
+        latent_dim=32,
+        projection_seed=0,
+        projection_scale=1.0,
+        projection_refresh_interval=0,
     ):
         """
         Initialize BMPS agent.
@@ -91,6 +97,12 @@ class LLMNumOptimVisionAgent:
             n_neighbors: Number of Poisson-perturbed neighbors per anchor
             poisson_lam: Lambda (mean) of Poisson distribution for step sizes
             neighbor_step: Base step size multiplied by Poisson sample
+            optimization_mode: "direct" for full-space updates or "latent" for
+                low-dimensional random-subspace updates
+            latent_dim: Number of coordinates exposed to the LLM in latent mode
+            projection_seed: Seed used to construct the random projection matrix
+            projection_scale: Alpha in theta_new = theta_anchor + alpha * A @ z
+            projection_refresh_interval: Rebuild A every N iterations (0 disables)
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -121,7 +133,24 @@ class LLMNumOptimVisionAgent:
             param_count = dim_action * dim_state
         else:
             param_count = dim_action * dim_state + dim_action
-        self.rank = param_count
+        self.parameter_dim = param_count
+        self.optimization_mode = str(optimization_mode).lower()
+        if self.optimization_mode not in {"direct", "latent"}:
+            raise ValueError("optimization_mode must be 'direct' or 'latent'")
+        if projection_refresh_interval < 0:
+            raise ValueError("projection_refresh_interval must be non-negative")
+        self.projection_refresh_interval = projection_refresh_interval
+        self.random_subspace = None
+        if self.optimization_mode == "latent":
+            self.random_subspace = RandomSubspace(
+                full_dim=param_count,
+                latent_dim=latent_dim,
+                seed=projection_seed,
+                scale=projection_scale,
+            )
+            self.rank = self.random_subspace.latent_dim
+        else:
+            self.rank = param_count
         
         # Initialize policy
         if not self.bias:
@@ -176,29 +205,36 @@ class LLMNumOptimVisionAgent:
 
     def _generate_neighbors(self, params_arr, n):
         """
-        Generate n parameter vectors near params_arr using Poisson perturbation.
+        Generate n policy/search-vector pairs using Poisson perturbation.
 
         For each dimension d:
             steps  ~ Poisson(poisson_lam)          # non-negative integer steps
             sign   ~ Uniform({-1, +1})
             delta  = steps * sign * neighbor_step  # keeps values on 1-dp grid
-            new[d] = clip(round(params_arr[d] + delta, 1), -6.0, 6.0)
+            direct: theta' = clip(round(theta + delta, 1), -6, 6)
+            latent: z = delta, theta' = clip(theta + alpha * A_t @ z, -6, 6)
 
         Args:
             params_arr: 1-D numpy array of current parameter values
             n: Number of neighbors to generate
 
         Returns:
-            List of n numpy arrays, each perturbed from params_arr
+            List of (full policy vector, displayed search vector) tuples
         """
         rng = np.random.default_rng()
         neighbors = []
         for _ in range(n):
-            steps = rng.poisson(self.poisson_lam, size=len(params_arr))
-            signs = rng.choice([-1, 1], size=len(params_arr))
+            search_dim = self.rank if self.random_subspace is not None else len(params_arr)
+            steps = rng.poisson(self.poisson_lam, size=search_dim)
+            signs = rng.choice([-1, 1], size=search_dim)
             delta = steps * signs * self.neighbor_step
-            neighbor = np.round(np.clip(params_arr + delta, -6.0, 6.0), 1)
-            neighbors.append(neighbor)
+            if self.random_subspace is not None:
+                search_vector = np.round(np.clip(delta, -6.0, 6.0), 1)
+                neighbor = self.random_subspace.apply(params_arr, search_vector)
+            else:
+                neighbor = np.round(np.clip(params_arr + delta, -6.0, 6.0), 1)
+                search_vector = neighbor
+            neighbors.append((neighbor, search_vector))
         return neighbors
 
     def _rollout_neighbors(self, world, anchor_params, label, logdir):
@@ -219,21 +255,29 @@ class LLMNumOptimVisionAgent:
             neighbor_results: list of dicts {params_str, reward, analysis} for the
                               n perturbed neighbors, sorted by reward descending
         """
-        # Build the full candidate list: anchor first, then n neighbors
-        all_params = [anchor_params] + self._generate_neighbors(anchor_params, self.n_neighbors)
+        # In latent mode, every neighborhood uses the same A_t and its anchor is
+        # z=0. In direct mode the displayed vector is the full policy itself.
+        anchor_search_vector = (
+            np.zeros(self.rank) if self.random_subspace is not None else anchor_params
+        )
+        candidates = [(anchor_params, anchor_search_vector)]
+        candidates.extend(self._generate_neighbors(anchor_params, self.n_neighbors))
         rollout_data = []
 
         # --- Sequential rollouts ----------------------------------------
-        for idx, params in enumerate(all_params):
+        for idx, (params, search_vector) in enumerate(candidates):
             self.policy.update_policy(params)
             log_file = f"{logdir}/nb_{label}_{idx}.txt"
             with open(log_file, "w") as f:
                 reward, traj, term_early = self.rollout_episode(
                     world, f, record=False, capture_frames=True
                 )
-            params_str = ", ".join(f"params[{j}]: {v:.5g}" for j, v in enumerate(params))
+            params_str = ", ".join(
+                f"params[{j}]: {v:.5g}" for j, v in enumerate(search_vector)
+            )
             rollout_data.append({
                 "params": params,
+                "search_vector": search_vector,
                 "params_str": params_str,
                 "reward": reward,
                 "trajectory": traj,
@@ -466,6 +510,18 @@ class LLMNumOptimVisionAgent:
         llm_ct_before = self.total_llm_completion_tokens
         vlm_pt_before = self.total_vlm_prompt_tokens
         vlm_ct_before = self.total_vlm_completion_tokens
+
+        if (
+            self.random_subspace is not None
+            and self.projection_refresh_interval > 0
+            and self.training_episodes > 0
+            and self.training_episodes % self.projection_refresh_interval == 0
+        ):
+            self.random_subspace.refresh()
+            print(
+                f"[Latent Search] Refreshed projection A_t at iteration "
+                f"{self.training_episodes}"
+            )
         
         def parse_parameters(input_text):
             """Parse parameters from LLM output."""
@@ -481,7 +537,7 @@ class LLMNumOptimVisionAgent:
             assert len(results) == self.rank, f"Expected {self.rank} params, got {len(results)}"
             return np.array(results).reshape(-1)
         
-        def str_nd_examples(replay_buffer, traj_buffer, n):
+        def str_nd_examples(replay_buffer, traj_buffer, n, reference_params):
             """Format numerical examples for prompt."""
             all_parameters = []
             for weights, reward in replay_buffer.buffer:
@@ -490,6 +546,13 @@ class LLMNumOptimVisionAgent:
             
             text = ""
             for idx, (parameters, reward) in enumerate(all_parameters):
+                if self.random_subspace is not None:
+                    # Least-squares coordinates in the current subspace:
+                    # z_hat = A_t^T (theta_i - theta_t) / alpha.
+                    parameters = self.random_subspace.project_delta(
+                        reference_params, parameters
+                    )
+                    parameters = np.round(np.clip(parameters, -6.0, 6.0), 1)
                 l = ""
                 for i in range(n):
                     l += f"params[{i}]: {parameters[i]:.5g}; "
@@ -618,10 +681,14 @@ class LLMNumOptimVisionAgent:
 
         # ===== STEP 4: Update policy using LLM with vision context =====
         print("\nUpdating policy with LLM...")
-        current_params_for_llm = self.policy.get_parameters().reshape(-1)
-        params_str_for_llm = ", ".join(f"params[{i}]: {v:.5g}" for i, v in enumerate(current_params_for_llm))
-        new_parameter_list, reasoning, api_time, llm_prompt_tokens, llm_completion_tokens = self.llm_brain.llm_update_parameters_num_optim_vision(
-            str_nd_examples(self.replay_buffer, self.traj_buffer, self.rank),
+        current_full_params = self.policy.get_parameters().reshape(-1).copy()
+        proposed_search_vector, reasoning, api_time, llm_prompt_tokens, llm_completion_tokens = self.llm_brain.llm_update_parameters_num_optim_vision(
+            str_nd_examples(
+                self.replay_buffer,
+                self.traj_buffer,
+                self.rank,
+                current_full_params,
+            ),
             parse_parameters,
             self.training_episodes,
             self.env_desc_file,
@@ -629,11 +696,25 @@ class LLMNumOptimVisionAgent:
             optimum=self.optimum,
             search_step_size=self.search_step_size,
             neighborhood_analysis=neighborhood_analysis,
+            latent_mode=self.random_subspace is not None,
+            full_parameter_dim=self.parameter_dim,
+            projection_scale=(
+                self.random_subspace.scale
+                if self.random_subspace is not None
+                else 1.0
+            ),
         )
         self.api_call_time += api_time
         self.total_llm_prompt_tokens += llm_prompt_tokens
         self.total_llm_completion_tokens += llm_completion_tokens
 
+        if self.random_subspace is not None:
+            # theta_{t+1} = clip(theta_t + alpha * A_t @ z_t, -6, 6)
+            new_parameter_list = self.random_subspace.apply(
+                current_full_params, proposed_search_vector
+            )
+        else:
+            new_parameter_list = proposed_search_vector
         self.policy.update_policy(new_parameter_list)
 
         # Log parameters and reasoning (reasoning now contains visual_analysis in system prompt)

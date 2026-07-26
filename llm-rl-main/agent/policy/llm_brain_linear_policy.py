@@ -281,7 +281,8 @@ class LLMBrain:
     def llm_update_parameters_num_optim_vision(
         self, episode_reward_buffer, parse_parameters, step_number, env_desc_file,
         rank=None, optimum=None, search_step_size=0.1, actions=None,
-        neighborhood_analysis=None,
+        neighborhood_analysis=None, latent_mode=False,
+        full_parameter_dim=None, projection_scale=1.0,
     ):
         """
         Update parameters using vision-guided feedback (BMPS).
@@ -301,6 +302,9 @@ class LLMBrain:
             search_step_size: Step size for exploration (linear policy only)
             actions: Action space description (Q-table only, None for linear)
             neighborhood_analysis: Formatted neighborhood landscape string (None if VLM not invoked)
+            latent_mode: Whether params represent a low-dimensional update z
+            full_parameter_dim: Dimension D of the decoded policy vector
+            projection_scale: Alpha used by theta_new = theta + alpha * A @ z
             
         Returns:
             Tuple of (parsed_params, log, api_time)
@@ -316,6 +320,9 @@ class LLMBrain:
             "actions": actions,
             "neighborhood_analysis": neighborhood_analysis,
             "has_neighborhood": neighborhood_analysis is not None,
+            "latent_mode": latent_mode,
+            "full_parameter_dim": full_parameter_dim,
+            "projection_scale": projection_scale,
         })
         self.add_llm_conversation(system_prompt, "user")
         api_start_time = time.time()

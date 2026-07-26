@@ -93,6 +93,58 @@ Our implementation supports standard LLM APIs. Please configure your API keys vi
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 
+## Scaling BMPS to Many Policy Parameters
+
+For a policy vector `theta` with `D` parameters, direct prompting requires the
+LLM to generate all `D` values. BMPS can instead optimize a local latent vector
+`z` with `d << D` using an orthonormal random subspace.
+
+At iteration `t`, construct the projection matrix as
+
+```text
+G_t[i,j] ~ Normal(0, 1),    G_t in R^(D x d)
+A_t = qr(G_t),              A_t^T A_t = I_d
+```
+
+The LLM outputs only `z_t in R^d`. It is decoded to the full policy by
+
+```text
+theta_(t+1) = clip(theta_t + alpha A_t z_t, -6, 6).
+```
+
+Here `alpha` controls the full-space update magnitude. Because the columns of
+`A_t` are orthonormal, `||A_t z_t||_2 = ||z_t||_2` before clipping. Historical
+policy `theta_i` is shown to the LLM through its least-squares projection
+
+```text
+z_hat_i = clip(A_t^T (theta_i - theta_t) / alpha, -6, 6).
+```
+
+Neighborhood sampling also happens in latent space. For every coordinate,
+
+```text
+k_j ~ Poisson(lambda),      s_j ~ Uniform({-1, +1})
+z_neighbor[j] = h s_j k_j
+theta_neighbor = clip(theta_anchor + alpha A_t z_neighbor, -6, 6),
+```
+
+where `h = neighbor_step`. CURRENT, BEST, and WORST use the same `A_t` in one
+iteration; `z=0` denotes each neighborhood's own anchor. The final LLM proposal
+is always decoded around the CURRENT policy.
+
+Enable it in a continuous BMPS config:
+
+```yaml
+optimization_mode: latent       # direct or latent
+latent_dim: 8                    # d; automatically capped at D
+projection_seed: 42
+projection_scale: 1.0           # alpha
+projection_refresh_interval: 20 # 0 keeps A fixed; N refreshes every N iterations
+```
+
+Start with `d` around `sqrt(D)` to `2*sqrt(D)`. Increase `d` when the search is
+too constrained; decrease it when prompts are too large or updates are noisy.
+
 
 ## License
 

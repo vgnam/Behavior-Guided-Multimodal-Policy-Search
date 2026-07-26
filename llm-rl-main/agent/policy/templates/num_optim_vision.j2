@@ -16,8 +16,27 @@ f(params) is the episodic reward of the policy.
 {% else %}
 **params** is an array of {{ rank }} float numbers.
 **params** values are in the range of [-6.0, 6.0] with 1 decimal place.
+{% if latent_mode %}
+Here **params means the latent update z**, not the full policy vector theta.
+The full policy has D={{ full_parameter_dim }} parameters, while you only optimize d={{ rank }} latent coordinates (d << D).
+
+The random-subspace mapping used by the optimizer is:
+
+1. Sample G_t in R^(D x d), with each G_t[i,j] ~ Normal(0, 1).
+2. Orthonormalize its columns: A_t = qr(G_t), so A_t^T A_t = I_d.
+3. Decode your proposal z into the full policy:
+   theta_(t+1) = clip(theta_t + alpha A_t z, -6, 6), where alpha={{ projection_scale }}.
+4. Project a historical policy theta_i into the current latent coordinates:
+   z_hat_i = clip(A_t^T (theta_i - theta_t) / alpha, -6, 6).
+
+Thus f(params) below means f(theta_t + alpha A_t z). Historical z_hat values are
+least-squares directional approximations in the current subspace. For every
+neighborhood, params=0 is that neighborhood's anchor; all anchors use the same A_t.
+Your returned z is always applied to the CURRENT policy theta_t.
+{% else %}
 params represent a linear policy. 
 f(params) is the episodic reward of the policy.
+{% endif %}
 {% endif %}
 
 # Here's how we'll interact:
@@ -35,7 +54,7 @@ f(params) is the episodic reward of the policy.
 5. We will repeat steps 2-4 until we reach the maximum number of iterations.
 
 # Remember:
-1. **Do not propose previously seen params.**
+1. **Do not propose previously seen params.**{% if latent_mode %} In latent mode, compare against the projected examples for the current iteration.{% endif %}
 2. **The global optimum should be around {{ optimum }}.** If you are below that, this is just a local optimum. You should explore instead of exploiting.
 {% if actions %}
 3. Search all the possible values of params.
