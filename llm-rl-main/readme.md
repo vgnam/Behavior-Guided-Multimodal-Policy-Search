@@ -87,6 +87,25 @@ cd llm-rl-main
 python main.py --config config.yaml
 ```
 
+Any config/runner parameter can be overridden from the command line without
+editing the config file. Use kebab-case names for CLI options:
+
+```bash
+python main.py --config configs/swimmer/swimmer_bmps.yaml \
+  --vlm-frame-mode stacking \
+  --num-episodes 400 \
+  --enable-vision true \
+  --hidden-sizes '[16, 16]'
+```
+
+Values use YAML syntax, so booleans, numbers, `null`, lists, and dictionaries
+such as `--env-kwargs '{"flatten_observation": true}'` are supported. If an
+option is omitted, the value from the config is used. The available VLM frame
+modes are `individual`, `stacking`, and `overlay`.
+
+Each run automatically gets a timestamped log directory, for example
+`logs/swimmer_bmps_20260726_143015`.
+
 ## Environments
 
 The benchmark includes a diverse set of RL domains spanning discrete and continuous control, vision-based tasks, and robotic manipulation. All tasks use the standard [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API. Custom environments are provided under `./envs/`.

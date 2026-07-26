@@ -22,7 +22,7 @@ env_desc_file: env_descriptions/hopper.j2
 # BMPS specific parameters
 optimization_mode: latent
 policy_type: mlp
-hidden_sizes: [32, 32]
+hidden_sizes: [8, 8]
 hidden_activation: tanh
 output_activation: tanh
 latent_dim: 32

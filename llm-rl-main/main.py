@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import inspect
 import importlib
 import os
@@ -97,6 +98,22 @@ TASK_TO_RUNNER = {
 }
 
 
+def _parse_cli_value(value):
+    """Parse CLI values using YAML syntax (scalars, lists, and dictionaries)."""
+    return yaml.safe_load(value)
+
+
+def _cli_option_name(config_key):
+    """Convert a config key such as ``vlm_frame_mode`` to a CLI option."""
+    return "--" + config_key.replace("_", "-")
+
+
+def _timestamped_logdir(logdir):
+    """Append the run creation time to a configured log directory."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{os.path.normpath(logdir)}_{timestamp}"
+
+
 def _load_runner(task):
     try:
         module_path = TASK_TO_RUNNER[task]
@@ -106,19 +123,51 @@ def _load_runner(task):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
         "--config",
         type=str,
         default="config.yaml",
         help="Path to the config file",
     )
-    args = parser.parse_args()
 
-    with open(args.config, "r") as f:
+    # Parse only --config first so that the complete set of CLI options can be
+    # generated from both the selected config and the runner signature.
+    bootstrap_args, _ = parser.parse_known_args()
+
+    with open(bootstrap_args.config, "r") as f:
         config = yaml.safe_load(f)
 
     runner_module = _load_runner(config["task"])
+    runner_params = inspect.signature(runner_module.run_training_loop).parameters
+    cli_keys = set(config) | set(runner_params)
+
+    for key in sorted(cli_keys):
+        if key == "config" or key == "kwargs":
+            continue
+        parser.add_argument(
+            _cli_option_name(key),
+            dest=key,
+            type=_parse_cli_value,
+            default=argparse.SUPPRESS,
+            metavar="VALUE",
+            help=f"Override config value: {key}",
+        )
+
+    parser.add_argument("-h", "--help", action="help", help="Show this help message")
+
+    args = parser.parse_args()
+    cli_overrides = vars(args)
+    cli_overrides.pop("config", None)
+    config.update(cli_overrides)
+
+    # Give every run its own timestamped log directory without modifying the
+    # YAML file. This also ensures runners with an explicitly supplied
+    # warmup_dir can still open files in the log directory.
+    config["logdir"] = _timestamped_logdir(config["logdir"])
+    os.makedirs(config["logdir"], exist_ok=True)
+    print(f"[BMPS] Log directory: {config['logdir']}")
+
     runner_module.run_training_loop(**config)
 
 
