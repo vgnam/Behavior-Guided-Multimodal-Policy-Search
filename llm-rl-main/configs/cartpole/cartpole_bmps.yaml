@@ -20,6 +20,8 @@ search_step_size: 1.0
 env_desc_file: env_descriptions/cartpole.j2
 
 # BMPS specific parameters
+optimization_mode: direct
+vlm_frame_mode: individual
 vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100  # T_decay: iterations to phase out visual guidance (Eq. 3)
 frame_sample_period: 50  # P: capture a frame every P timesteps for VLM

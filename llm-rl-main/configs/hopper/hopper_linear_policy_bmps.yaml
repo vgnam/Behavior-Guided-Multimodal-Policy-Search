@@ -20,6 +20,8 @@ search_step_size: 0.1
 env_desc_file: env_descriptions/hopper.j2
 
 # BMPS specific parameters
+optimization_mode: direct
+vlm_frame_mode: individual
 vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100  # T_decay: iterations to phase out visual guidance
 frame_sample_period: 50  # Hopper episodes up to 1000 steps, sample every 100

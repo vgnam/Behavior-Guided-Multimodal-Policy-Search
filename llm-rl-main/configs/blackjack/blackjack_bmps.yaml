@@ -18,6 +18,8 @@ optimum: 0.1
 env_desc_file: env_descriptions/blackjack.j2
 
 # BMPS: vision disabled (Blackjack has no meaningful visual state)
+optimization_mode: direct
+vlm_frame_mode: individual
 enable_vision: false
 vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100

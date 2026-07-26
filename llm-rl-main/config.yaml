@@ -19,10 +19,9 @@ optimum: 250
 search_step_size: 0.1
 env_desc_file: env_descriptions/swimmer.j2
 
-# Scale BMPS to high-dimensional policies with a local random subspace.
-# Full policy: theta_(t+1) = clip(theta_t + alpha * A_t @ z_t, -6, 6)
-# Swimmer has D = 2*8 + 2 = 18 full parameters; the LLM only outputs d = 8.
-optimization_mode: latent  # direct or latent
+# Direct mode makes the LLM output all D = 2*8 + 2 = 18 Swimmer parameters.
+optimization_mode: direct  # direct or latent
+# The latent settings below are inactive unless optimization_mode is latent.
 latent_dim: 8
 projection_seed: 42
 projection_scale: 1.0      # alpha

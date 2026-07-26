@@ -20,6 +20,8 @@ env_kwargs:
   is_slippery: true
 
 # BMPS specific parameters
+optimization_mode: direct
+vlm_frame_mode: individual
 vlm_model_name: openrouter/google/gemma-3-27b-it
 decay_horizon: 100
 frame_sample_period: 50
