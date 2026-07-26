@@ -203,9 +203,11 @@ def run_training_loop(
     
     # Token statistics log
     token_stats_file = open(f"{logdir}/token_statistics.txt", "w", encoding="utf-8")
-    token_stats_file.write("Iteration, LLM Prompt Tokens, LLM Completion Tokens, VLM Prompt Tokens, VLM Completion Tokens, "
-                           "Total LLM Prompt Tokens, Total LLM Completion Tokens, Total VLM Prompt Tokens, Total VLM Completion Tokens, "
-                           "Total Tokens\n")
+    token_stats_file.write("Iteration, Iteration LLM Prompt Tokens, Iteration LLM Completion Tokens, "
+                           "Iteration VLM Prompt Tokens, Iteration VLM Completion Tokens, "
+                           "Cumulative LLM Prompt Tokens, Cumulative LLM Completion Tokens, "
+                           "Cumulative VLM Prompt Tokens, Cumulative VLM Completion Tokens, "
+                           "Cumulative Total Tokens\n")
     token_stats_file.flush()
     
     # Timing statistics log
@@ -296,7 +298,13 @@ def run_training_loop(
                 print(f"  Total Reward: {total_reward:.2f}")
                 print(f"  CPU Time: {cpu_time:.2f}s")
                 print(f"  API Time: {api_time:.2f}s (LLM: {agent.api_call_time:.2f}s, VLM: {agent.vlm_api_time:.2f}s)")
-                print(f"  Tokens - LLM: prompt={llm_pt}, completion={llm_ct} | VLM: prompt={vlm_pt}, completion={vlm_ct}")
+                print(f"  Tokens (Iteration) - LLM: prompt={llm_pt}, completion={llm_ct} | VLM: prompt={vlm_pt}, completion={vlm_ct}")
+                print(
+                    f"  Tokens (Cumulative) - LLM: prompt={agent.total_llm_prompt_tokens}, "
+                    f"completion={agent.total_llm_completion_tokens} | "
+                    f"VLM: prompt={agent.total_vlm_prompt_tokens}, "
+                    f"completion={agent.total_vlm_completion_tokens}"
+                )
                 print(f"  Cumulative Tokens: {total_tokens}")
                 break
                 

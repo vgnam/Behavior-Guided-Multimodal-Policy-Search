@@ -414,6 +414,11 @@ class LLMNumOptimQTableVisionAgent:
         
         Implements BMPS for Q-learning.
         """
+        llm_pt_before = self.total_llm_prompt_tokens
+        llm_ct_before = self.total_llm_completion_tokens
+        vlm_pt_before = self.total_vlm_prompt_tokens
+        vlm_ct_before = self.total_vlm_completion_tokens
+
         def parse_parameters(input_text):
             # Parse Q-values from LLM response
             s = input_text.split("\n")[0]
@@ -612,10 +617,12 @@ class LLMNumOptimQTableVisionAgent:
         _total_steps = self.total_steps
         _total_reward = result
         
-        iter_vlm_pt = self.total_vlm_prompt_tokens
-        iter_vlm_ct = self.total_vlm_completion_tokens
+        iter_llm_pt = self.total_llm_prompt_tokens - llm_pt_before
+        iter_llm_ct = self.total_llm_completion_tokens - llm_ct_before
+        iter_vlm_pt = self.total_vlm_prompt_tokens - vlm_pt_before
+        iter_vlm_ct = self.total_vlm_completion_tokens - vlm_ct_before
         
-        return _cpu_time, _api_time, _total_episodes, _total_steps, _total_reward, llm_prompt_tokens, llm_completion_tokens, iter_vlm_pt, iter_vlm_ct
+        return _cpu_time, _api_time, _total_episodes, _total_steps, _total_reward, iter_llm_pt, iter_llm_ct, iter_vlm_pt, iter_vlm_ct
     
     def evaluate_policy(self, world: BaseWorld, logdir):
         """Evaluate current Q-table policy."""
