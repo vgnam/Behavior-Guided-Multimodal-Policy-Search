@@ -30,7 +30,7 @@ projection_seed: 42
 projection_scale: 0.25
 projection_refresh_interval: 20
 vlm_frame_mode: individual
-vlm_model_name: openrouter/google/gemma-3-27b-it
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5

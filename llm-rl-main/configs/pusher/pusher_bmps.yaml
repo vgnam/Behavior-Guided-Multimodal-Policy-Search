@@ -22,7 +22,7 @@ env_desc_file: env_descriptions/pusher.j2
 # BMPS specific parameters
 optimization_mode: direct
 vlm_frame_mode: individual
-vlm_model_name: openrouter/google/gemma-3-27b-it
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 100
 frame_sample_period: 50
 n_neighbors: 5
