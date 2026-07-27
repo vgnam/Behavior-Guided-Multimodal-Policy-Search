@@ -1,0 +1,25 @@
+This benchmark wraps robosuite's `Door` task with a Panda arm and sparse reward.
+
+Objective:
+- Reach the handle, manipulate the latch, and pull the door open.
+- Success occurs when the door hinge angle exceeds 0.3 radians.
+
+State:
+- The wrapper returns a 64-dimensional `float32` vector.
+- It concatenates `robot0_proprio-state` with `object-state`.
+- Object features describe the door, handle, hinge, and their positions relative to the end effector.
+
+Action space:
+- There are 15 discrete actions.
+- Action 0 does nothing; actions 1-6 move the end effector along +/-x, +/-y, and +/-z.
+- Actions 7-8 close and open the gripper.
+- Actions 9-14 rotate the end effector around +/-x, +/-y, and +/-z.
+
+Reward:
+- Sparse reward is enabled with `reward_shaping=False`.
+- Each timestep receives `1.0` after the hinge angle exceeds 0.3 radians, and `0.0` otherwise.
+- Reaching or rotating the latch without opening the door receives no numerical reward.
+
+Visual guidance:
+- Useful progress includes approaching the handle, aligning the gripper, rotating the latch, and pulling the door.
+- Failure modes include missing the handle, pushing in the wrong direction, or repeatedly opening and closing the gripper.

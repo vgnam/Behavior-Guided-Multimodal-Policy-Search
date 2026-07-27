@@ -1,12 +1,12 @@
 task: cont_state_llm_num_optim_semantics
 num_episodes: 100
-gym_env_name: RoboSuiteLiftDiscrete-v0
+gym_env_name: RoboSuiteDoorDiscrete-v0
 render_mode: null
-logdir: logs/robosuite_lift_propsp
-dim_actions: 9
+logdir: logs/robosuite_door_propsp
+dim_actions: 15
 dim_states: 64
 max_traj_count: 256
-max_traj_length: 200
+max_traj_length: 400
 template_dir: agent/policy/templates
 llm_si_template_name: num_optim_semantics.j2
 llm_output_conversion_template_name: num_optim_semantics.j2
@@ -17,21 +17,23 @@ warmup_dir: null
 bias: true
 optimum: 300
 search_step_size: 0.5
-env_desc_file: env_descriptions/robosuite_lift_discrete.j2
+env_desc_file: env_descriptions/robosuite_door_discrete.j2
+
 env_kwargs:
-  env_name: Lift
+  env_name: Door
   robot: Panda
   camera_name: agentview
-  horizon: 200
+  horizon: 400
   reward_shaping: false
   state_dim: 64
-  translation_delta: 1.0
+  translation_delta: 0.5
+  rotation_delta: 0.5
+  include_rotation_actions: true
   gripper_open_value: -1.0
   gripper_close_value: 1.0
   state_keys:
     - robot0_proprio-state
     - object-state
 
-# Optional: override LLM API credentials (falls back to env vars if null)
 llm_api_key: null
 llm_api_base: null

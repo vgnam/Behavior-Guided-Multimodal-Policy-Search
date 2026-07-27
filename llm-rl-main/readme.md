@@ -106,6 +106,38 @@ modes are `individual`, `stacking`, and `overlay`.
 Each run automatically gets a timestamped log directory, for example
 `logs/swimmer_bmps_20260726_143015`.
 
+## Training a robosuite PPO baseline
+
+The robosuite wrappers expose low-dimensional state observations and discrete
+Cartesian / gripper actions. Train the Stable-Baselines3 PPO baseline with
+Python 3.10 from the `llm-rl-main` directory:
+
+```bash
+# Lift (64-D state, 9 actions)
+py -3.10 train_robosuite_ppo.py --task lift --reward-mode sparse \
+  --total-timesteps 1000000
+
+# Door (64-D state, 15 actions)
+py -3.10 train_robosuite_ppo.py --task door --reward-mode sparse \
+  --total-timesteps 2000000
+
+# Easier single-object PickPlace sanity check (64-D state, 15 actions)
+py -3.10 train_robosuite_ppo.py --task pick-place-can --reward-mode sparse \
+  --total-timesteps 2000000
+
+# Full four-object PickPlace (106-D state, 15 actions)
+py -3.10 train_robosuite_ppo.py --task pick-place --reward-mode dense \
+  --total-timesteps 5000000
+```
+
+Use `--check-env` for an SB3 compatibility check before training. PPO
+hyperparameters can be overridden directly, for example
+`--hidden-sizes 128,128 --n-steps 4096 --batch-size 128`. Each run writes to a
+timestamped directory under `logs/` and saves checkpoints, evaluation results,
+the final model, and the observation-normalization statistics. Full PickPlace
+with sparse rewards is substantially harder, so start with `pick-place-can` or
+dense rewards when validating the setup.
+
 ## Environments
 
 The benchmark includes a diverse set of RL domains spanning discrete and continuous control, vision-based tasks, and robotic manipulation. All tasks use the standard [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API. Custom environments are provided under `./envs/`.

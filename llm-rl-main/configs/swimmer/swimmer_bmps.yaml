@@ -21,7 +21,7 @@ env_desc_file: env_descriptions/swimmer.j2
 
 # BMPS specific parameters
 optimization_mode: direct
-vlm_frame_mode: stacking
+vlm_frame_mode: individual
 vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 100
 frame_sample_period: 50

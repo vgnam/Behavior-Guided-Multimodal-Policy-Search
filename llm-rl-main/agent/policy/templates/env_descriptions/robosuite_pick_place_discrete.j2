@@ -1,0 +1,25 @@
+This benchmark wraps robosuite's full `PickPlace` task with a Panda arm and sparse reward.
+
+Objective:
+- Pick up Milk, Bread, Cereal, and Can objects and place each one in its corresponding bin.
+- Full success requires all four objects to be placed correctly.
+
+State:
+- The wrapper returns a 106-dimensional `float32` vector.
+- It concatenates 50 proprioceptive features with 56 object features.
+- Object features include each object's pose and its pose relative to the end effector.
+
+Action space:
+- There are 15 discrete actions.
+- Action 0 does nothing; actions 1-6 translate the end effector along Cartesian axes.
+- Actions 7-8 close and open the gripper.
+- Actions 9-14 rotate the end effector around the Cartesian axes.
+
+Reward:
+- Sparse reward is enabled with `reward_shaping=False`.
+- Each correctly placed object contributes `0.25` reward per timestep; all four contribute `1.0`.
+- Reaching, grasping, lifting, and hovering over a bin receive no reward until an object is placed correctly.
+
+Visual guidance:
+- Useful progress includes choosing one object, aligning the gripper, grasping, lifting, moving to the matching bin, and releasing.
+- Failure modes include targeting the wrong bin, dropping objects, colliding with other objects, or oscillating between targets.

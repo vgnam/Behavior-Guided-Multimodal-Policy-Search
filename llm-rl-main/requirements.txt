@@ -3,6 +3,7 @@ stable-gym
 fancy_gym
 grid2op
 robosuite
+stable-baselines3>=2.5,<3
 numpy
 matplotlib
 pyyaml

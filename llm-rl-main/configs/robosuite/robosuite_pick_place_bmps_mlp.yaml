@@ -1,12 +1,12 @@
 task: cont_state_llm_num_optim_vision
 num_episodes: 100
-gym_env_name: RoboSuiteLiftDiscrete-v0
+gym_env_name: RoboSuitePickPlaceDiscrete-v0
 render_mode: rgb_array
-logdir: logs/robosuite_lift_bmps_mlp
-dim_actions: 9
-dim_states: 64
+logdir: logs/robosuite_pick_place_bmps_mlp
+dim_actions: 15
+dim_states: 106
 max_traj_count: 256
-max_traj_length: 200
+max_traj_length: 800
 template_dir: agent/policy/templates
 llm_si_template_name: num_optim_vision.j2
 llm_output_conversion_template_name: num_optim_vision.j2
@@ -15,11 +15,10 @@ num_evaluation_episodes: 3
 warmup_episodes: 10
 warmup_dir: null
 bias: true
-optimum: 300
+optimum: 600
 search_step_size: 0.5
-env_desc_file: env_descriptions/robosuite_lift_discrete.j2
+env_desc_file: env_descriptions/robosuite_pick_place_discrete.j2
 
-# BMPS specific parameters
 optimization_mode: latent
 policy_type: mlp
 hidden_sizes: [32, 32]
@@ -32,33 +31,30 @@ projection_refresh_interval: 20
 vlm_frame_mode: individual
 vlm_model_name: nvidia_nim/google/gemma-4-31b-it
 decay_horizon: 50
-frame_sample_period: 10
+frame_sample_period: 40
 n_neighbors: 3
 poisson_lam: 2.0
 neighbor_step: 0.1
 enable_vision: true
 
 env_kwargs:
-  env_name: Lift
+  env_name: PickPlace
   robot: Panda
   camera_name: agentview
-  horizon: 200
+  horizon: 800
   reward_shaping: false
-  state_dim: 64
-  translation_delta: 1.0
+  state_dim: 106
+  translation_delta: 0.5
+  rotation_delta: 0.5
+  include_rotation_actions: true
   gripper_open_value: -1.0
   gripper_close_value: 1.0
   state_keys:
     - robot0_proprio-state
     - object-state
 
-# Ablation study: remove one anchor from neighborhood prompt
-# Options: null, current, best, worst
 ablate_anchor: null
-
-# Optional: override LLM API credentials (falls back to env vars if null)
 llm_api_key: null
 llm_api_base: null
-# Optional: override VLM API credentials (falls back to env vars if null)
 vlm_api_key: null
 vlm_api_base: null

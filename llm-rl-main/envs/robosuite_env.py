@@ -19,12 +19,15 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
         image_width=256,
         horizon=200,
         control_freq=20,
-        reward_shaping=True,
+        reward_shaping=False,
         state_keys=None,
         state_dim=64,
         translation_delta=1.0,
+        rotation_delta=1.0,
+        include_rotation_actions=False,
         gripper_open_value=-1.0,
         gripper_close_value=1.0,
+        seed=None,
         env_kwargs=None,
     ):
         super().__init__()
@@ -45,8 +48,11 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
         self.state_keys = tuple(state_keys or ["robot0_proprio-state", "object-state"])
         self.state_dim = int(state_dim)
         self.translation_delta = float(translation_delta)
+        self.rotation_delta = float(rotation_delta)
+        self.include_rotation_actions = bool(include_rotation_actions)
         self.gripper_open_value = float(gripper_open_value)
         self.gripper_close_value = float(gripper_close_value)
+        self.seed_value = seed
         self.extra_env_kwargs = dict(env_kwargs or {})
 
         self._env = None
@@ -59,7 +65,7 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
         self._action_dim = None
 
         self._build_env()
-        self.action_space = spaces.Discrete(9)
+        self.action_space = spaces.Discrete(15 if self.include_rotation_actions else 9)
         self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -105,6 +111,8 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
         kwargs.setdefault("camera_names", self.camera_name)
         kwargs.setdefault("camera_heights", self.image_height)
         kwargs.setdefault("camera_widths", self.image_width)
+        if self.seed_value is not None:
+            kwargs.setdefault("seed", int(self.seed_value))
 
         self._env = suite.make(**kwargs)
 
@@ -162,6 +170,18 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
             action[-1] = self.gripper_close_value
         elif action_idx == 8:
             action[-1] = self.gripper_open_value
+        elif action_idx == 9 and self._action_dim >= 4:
+            action[3] = self.rotation_delta
+        elif action_idx == 10 and self._action_dim >= 4:
+            action[3] = -self.rotation_delta
+        elif action_idx == 11 and self._action_dim >= 5:
+            action[4] = self.rotation_delta
+        elif action_idx == 12 and self._action_dim >= 5:
+            action[4] = -self.rotation_delta
+        elif action_idx == 13 and self._action_dim >= 6:
+            action[5] = self.rotation_delta
+        elif action_idx == 14 and self._action_dim >= 6:
+            action[5] = -self.rotation_delta
 
         return np.clip(action, self._action_low, self._action_high)
 
@@ -176,11 +196,18 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
             6: "move -z",
             7: "close gripper",
             8: "open gripper",
+            9: "rotate +x",
+            10: "rotate -x",
+            11: "rotate +y",
+            12: "rotate -y",
+            13: "rotate +z",
+            14: "rotate -z",
         }
         return labels[int(action_idx)]
 
     def reset(self, seed=None, options=None):
-        del seed, options
+        super().reset(seed=seed)
+        del options
         obs = self._env.reset()
         self._last_obs = obs
         self._last_image = self._extract_image(obs)
@@ -204,7 +231,13 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
 
         info = dict(info)
         info["benchmark_action"] = self._action_label(action_idx)
-        return self._extract_state(obs), float(reward), bool(done), False, info
+        check_success = getattr(self._env, "_check_success", None)
+        info["is_success"] = bool(check_success()) if callable(check_success) else False
+
+        # robosuite's `done` flag is its horizon limit, so expose it through
+        # Gymnasium's truncation channel. Task success itself does not end an
+        # episode in these benchmarks.
+        return self._extract_state(obs), float(reward), False, bool(done), info
 
     def render(self):
         if self.render_mode == "rgb_array":
@@ -221,8 +254,34 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
             self._env = None
 
 
-if "RoboSuiteLiftDiscrete-v0" not in gym.registry:
-    gym.register(
-        id="RoboSuiteLiftDiscrete-v0",
-        entry_point=RoboSuiteLiftDiscreteEnv,
-    )
+_REGISTERED_ROBOSUITE_ENVS = {
+    "RoboSuiteLiftDiscrete-v0": {
+        "env_name": "Lift",
+        "state_dim": 64,
+        "include_rotation_actions": False,
+    },
+    "RoboSuiteDoorDiscrete-v0": {
+        "env_name": "Door",
+        "state_dim": 64,
+        "include_rotation_actions": True,
+    },
+    "RoboSuitePickPlaceDiscrete-v0": {
+        "env_name": "PickPlace",
+        "state_dim": 106,
+        "include_rotation_actions": True,
+    },
+    # Easier single-object variant, useful as a PPO sanity-check baseline.
+    "RoboSuitePickPlaceCanDiscrete-v0": {
+        "env_name": "PickPlaceCan",
+        "state_dim": 64,
+        "include_rotation_actions": True,
+    },
+}
+
+for env_id, default_kwargs in _REGISTERED_ROBOSUITE_ENVS.items():
+    if env_id not in gym.registry:
+        gym.register(
+            id=env_id,
+            entry_point=RoboSuiteLiftDiscreteEnv,
+            kwargs=default_kwargs,
+        )

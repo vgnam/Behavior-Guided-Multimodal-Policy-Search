@@ -2,7 +2,7 @@ This benchmark wraps robosuite's `Lift` task with a Panda arm as a small discret
 
 Objective:
 - Grasp the cube on the table and lift it upward.
-- The benchmark uses robosuite's dense `reward_shaping=True` reward, so partial progress such as reaching, grasping, and lifting is rewarded.
+- The benchmark uses robosuite's sparse `reward_shaping=False` reward, so only successfully lifting the cube is rewarded.
 
 State:
 - The wrapper builds a 64-dimensional state vector.
@@ -33,10 +33,10 @@ Policy:
 - The full policy therefore has `64 * 9 + 9 = 585` parameters.
 
 Reward:
-- The wrapper uses robosuite dense reward shaping.
-- Higher reward generally means the arm is better aligned with the cube, has grasped it more successfully, or has lifted it higher.
-- Because this is a shaped reward, useful intermediate behaviors matter; a policy does not need to solve the task completely to improve.
-- With a horizon of 200, a strong policy should produce clearly positive episodic reward and visibly lift the cube.
+- The wrapper uses robosuite sparse reward.
+- A timestep receives reward `1.0` when the cube is more than 4 cm above the table, and `0.0` otherwise.
+- Reaching the cube, aligning the gripper, and grasping without lifting receive no numerical reward.
+- With a horizon of 200, a successful policy should visibly lift the cube and keep it raised to accumulate episodic reward.
 
 Practical strategy hints:
 - A good policy usually approaches the cube horizontally, lowers the gripper, closes the gripper near contact, then moves upward.
