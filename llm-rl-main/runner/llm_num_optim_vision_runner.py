@@ -62,6 +62,7 @@ def run_training_loop(
     hidden_sizes=None,
     hidden_activation="tanh",
     output_activation="tanh",
+    max_total_tokens=None,
 ):
     """
     Run BMPS training loop.
@@ -104,9 +105,14 @@ def run_training_loop(
         hidden_sizes: Width of each MLP hidden layer
         hidden_activation: MLP hidden activation
         output_activation: MLP output activation
+        max_total_tokens: Stop after cumulative LLM and VLM usage reaches this budget.
+            The final iteration may overshoot the budget because token usage is
+            only known after the API calls complete. ``None`` disables the limit.
     """
     assert task in ["cont_state_llm_num_optim_vision", "dist_state_llm_num_optim_vision"], \
         f"BMPS runner only supports 'cont_state_llm_num_optim_vision' or 'dist_state_llm_num_optim_vision', got '{task}'"
+    if max_total_tokens is not None and max_total_tokens <= 0:
+        raise ValueError("max_total_tokens must be a positive integer or None")
 
     # Load Jinja2 templates
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
@@ -290,6 +296,36 @@ def run_training_loop(
     else:
         print(f'[BMPS] Loading warmup data from {warmup_dir}')
         agent.replay_buffer.load(warmup_dir)
+
+    best_reward = float("-inf")
+    best_parameters = None
+    best_source = None
+
+    def update_best_result(source):
+        """Track and persist the best evaluated policy seen so far."""
+        nonlocal best_reward, best_parameters, best_source
+        if not agent.replay_buffer.buffer:
+            return
+
+        parameters, reward = max(agent.replay_buffer.buffer, key=lambda item: item[1])
+        reward = float(reward)
+        if reward <= best_reward:
+            return
+
+        best_reward = reward
+        best_parameters = np.asarray(parameters).reshape(-1).copy()
+        best_source = source
+        with open(f"{logdir}/best_result.txt", "w", encoding="utf-8") as best_file:
+            best_file.write(f"Best reward: {best_reward}\n")
+            best_file.write(f"Found at: {best_source}\n")
+            best_file.write(
+                "Parameters: "
+                + np.array2string(best_parameters, separator=", ", threshold=np.inf)
+                + "\n"
+            )
+        print(f"[BEST] New best reward: {best_reward:.6f} ({best_source})")
+
+    update_best_result("warmup")
     
     # Training loop
     overall_log_file = open(f"{logdir}/overall_log.txt", "w", encoding="utf-8")
@@ -322,6 +358,7 @@ def run_training_loop(
     print(f"[BMPS] Starting training for {num_episodes} episodes")
     print('='*70 + '\n')
     
+    token_budget_reached = False
     for episode in range(num_episodes):
         print('\n' + '='*70)
         print(f"BMPS Episode: {episode}/{num_episodes}")
@@ -406,6 +443,14 @@ def run_training_loop(
                     f"completion={agent.total_vlm_completion_tokens}"
                 )
                 print(f"  Cumulative Tokens: {total_tokens}")
+                update_best_result(f"iteration {episode}")
+                print(f"  Best Reward Found: {best_reward:.6f} ({best_source})")
+                if max_total_tokens is not None and total_tokens >= max_total_tokens:
+                    token_budget_reached = True
+                    print(
+                        f"[STOP] Total-token budget reached: "
+                        f"{total_tokens:,}/{max_total_tokens:,}"
+                    )
                 break
                 
             except Exception as e:
@@ -421,6 +466,9 @@ def run_training_loop(
                     return
                 else:
                     continue
+
+        if token_budget_reached:
+            break
     
     overall_log_file.close()
     vision_stats_file.close()
@@ -435,7 +483,14 @@ def run_training_loop(
     print("[BMPS] Training Complete!")
     print('='*70)
     print(f"  Final Episode: {episode}")
-    print(f"  Total Reward: {total_reward:.2f}")
+    print(f"  Final Iteration Reward: {total_reward:.2f}")
+    print(f"  Best Reward Found: {best_reward:.6f} ({best_source})")
+    if best_parameters is not None:
+        print(
+            "  Best Parameters: "
+            + np.array2string(best_parameters, separator=", ", threshold=50, edgeitems=5)
+        )
+    print(f"  Best result saved to: {logdir}/best_result.txt")
     print(f"  Total API Time: {api_time:.2f}s")
     print(f"    - LLM Time: {agent.api_call_time:.2f}s")
     print(f"    - VLM Time: {agent.vlm_api_time:.2f}s")

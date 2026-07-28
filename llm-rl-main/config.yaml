@@ -1,5 +1,8 @@
 task: cont_state_llm_num_optim_vision
 num_episodes: 400
+# Optional cumulative LLM + VLM token budget. The run may exceed this by one
+# iteration because usage is known only after the API calls return.
+max_total_tokens: null
 gym_env_name: Swimmer-v5
 render_mode: rgb_array  # Required for frame capture
 logdir: logs/swimmer_bmps_ablation_6_1

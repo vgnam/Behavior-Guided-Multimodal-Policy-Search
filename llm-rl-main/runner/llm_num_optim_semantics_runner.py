@@ -42,8 +42,11 @@ def run_training_loop(
     projection_seed=0,
     projection_scale=1.0,
     projection_refresh_interval=0,
+    max_total_tokens=None,
 ):
     assert task in ["dist_state_llm_num_optim_semantics", "cont_state_llm_num_optim_semantics"]
+    if max_total_tokens is not None and max_total_tokens <= 0:
+        raise ValueError("max_total_tokens must be a positive integer or None")
 
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
     llm_si_template = jinja2_env.get_template(llm_si_template_name)
@@ -124,6 +127,36 @@ def run_training_loop(
         agent.random_warmup(world, warmup_dir, warmup_episodes)
     else:
         agent.replay_buffer.load(warmup_dir)
+
+    best_reward = float("-inf")
+    best_parameters = None
+    best_source = None
+
+    def update_best_result(source):
+        """Track and persist the best evaluated policy seen so far."""
+        nonlocal best_reward, best_parameters, best_source
+        if not agent.replay_buffer.buffer:
+            return
+
+        parameters, reward = max(agent.replay_buffer.buffer, key=lambda item: item[1])
+        reward = float(reward)
+        if reward <= best_reward:
+            return
+
+        best_reward = reward
+        best_parameters = np.asarray(parameters).reshape(-1).copy()
+        best_source = source
+        with open(f"{logdir}/best_result.txt", "w", encoding="utf-8") as best_file:
+            best_file.write(f"Best reward: {best_reward}\n")
+            best_file.write(f"Found at: {best_source}\n")
+            best_file.write(
+                "Parameters: "
+                + np.array2string(best_parameters, separator=", ", threshold=np.inf)
+                + "\n"
+            )
+        print(f"[BEST] New best reward: {best_reward:.6f} ({best_source})")
+
+    update_best_result("warmup")
     
     overall_log_file = open(f"{logdir}/overall_log.txt", "w")
     overall_log_file.write("Iteration, CPU Time, API Time, Total Episodes, Total Steps, Total Reward\n")
@@ -144,6 +177,7 @@ def run_training_loop(
     import time as _time
     wall_start_time = _time.time()
     
+    token_budget_reached = False
     for episode in range(num_episodes):
         print(f"Episode: {episode}")
         # create log dir
@@ -176,6 +210,16 @@ def run_training_loop(
                     f"{episode + 1}, {api_time:.4f}, 0.0000, {cpu_time:.4f}, {wall_total:.4f}\n"
                 )
                 timing_stats_file.flush()
+
+                update_best_result(f"iteration {episode + 1}")
+                print(f"Best Reward Found: {best_reward:.6f} ({best_source})")
+
+                if max_total_tokens is not None and total_tokens >= max_total_tokens:
+                    token_budget_reached = True
+                    print(
+                        f"[STOP] Total-token budget reached: "
+                        f"{total_tokens:,}/{max_total_tokens:,}"
+                    )
                 
                 print(f"{trial_idx + 1}th trial attempt succeeded in training")
                 break
@@ -185,9 +229,20 @@ def run_training_loop(
                 )
                 traceback.print_exc()
                 continue
+        if token_budget_reached:
+            break
         if trial_idx == 4:
             print(f"Episode {episode} failed to train after 5 attempts")
             break
     overall_log_file.close()
     token_stats_file.close()
     timing_stats_file.close()
+
+    print("\n[PropSP] Training Complete!")
+    print(f"  Best Reward Found: {best_reward:.6f} ({best_source})")
+    if best_parameters is not None:
+        print(
+            "  Best Parameters: "
+            + np.array2string(best_parameters, separator=", ", threshold=50, edgeitems=5)
+        )
+    print(f"  Best result saved to: {logdir}/best_result.txt")

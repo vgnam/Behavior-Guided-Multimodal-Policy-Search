@@ -1,5 +1,6 @@
 task: cont_state_llm_num_optim_semantics
 num_episodes: 395
+max_total_tokens: 15000000
 gym_env_name: Swimmer-v5
 render_mode: null
 logdir: logs/swimmer_propsp

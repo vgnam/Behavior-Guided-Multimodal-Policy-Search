@@ -31,8 +31,11 @@ def run_training_loop(
     env_kwargs=None,
     llm_api_key=None,
     llm_api_base=None,
+    max_total_tokens=None,
 ):
     assert task in ["cont_space_llm_num_optim", "dist_state_llm_num_optim"]
+    if max_total_tokens is not None and max_total_tokens <= 0:
+        raise ValueError("max_total_tokens must be a positive integer or None")
 
     jinja2_env = Environment(loader=FileSystemLoader(template_dir))
     llm_si_template = jinja2_env.get_template(llm_si_template_name)
@@ -117,6 +120,7 @@ def run_training_loop(
     import time as _time
     wall_start_time = _time.time()
     
+    token_budget_reached = False
     for episode in range(num_episodes):
         print(f"Episode: {episode}")
         # create log dir
@@ -149,6 +153,13 @@ def run_training_loop(
                     f"{episode + 1}, {api_time:.4f}, 0.0000, {cpu_time:.4f}, {wall_total:.4f}\n"
                 )
                 timing_stats_file.flush()
+
+                if max_total_tokens is not None and total_tokens >= max_total_tokens:
+                    token_budget_reached = True
+                    print(
+                        f"[STOP] Total-token budget reached: "
+                        f"{total_tokens:,}/{max_total_tokens:,}"
+                    )
                 
                 print(f"{trial_idx + 1}th trial attempt succeeded in training")
                 break
@@ -162,6 +173,8 @@ def run_training_loop(
                     print(f"All {trial_idx + 1} trials failed. Train terminated")
                     exit(1)
                 continue
+        if token_budget_reached:
+            break
     overall_log_file.close()
     token_stats_file.close()
     timing_stats_file.close()

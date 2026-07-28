@@ -1,5 +1,6 @@
 task: cont_state_llm_num_optim_vision
 num_episodes: 400
+max_total_tokens: 15000000
 gym_env_name: Swimmer-v5
 render_mode: rgb_array  # Required for frame capture
 logdir: logs/swimmer_bmps
