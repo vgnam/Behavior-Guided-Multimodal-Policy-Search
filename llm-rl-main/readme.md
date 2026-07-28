@@ -103,6 +103,18 @@ such as `--env-kwargs '{"flatten_observation": true}'` are supported. If an
 option is omitted, the value from the config is used. The available VLM frame
 modes are `individual`, `stacking`, and `overlay`.
 
+Environment rollouts for an anchor and its neighbors stay sequential because
+they share one environment. Their VLM API analyses can run concurrently and
+can be tuned for each machine or API rate limit:
+
+```yaml
+parallel_vlm_calls: true  # false sends VLM requests sequentially
+vlm_max_workers: 4        # null uses ThreadPoolExecutor's default
+```
+
+Override these without editing YAML via `--parallel-vlm-calls false` or
+`--vlm-max-workers 2`.
+
 Each run automatically gets a timestamped log directory, for example
 `logs/swimmer_bmps_20260726_143015`.
 

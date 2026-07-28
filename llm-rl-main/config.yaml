@@ -29,6 +29,10 @@ n_neighbors: 6        # Number of Poisson-perturbed neighbors per anchor
 poisson_lam: 2.0      # Lambda (mean) of Poisson distribution for step sizes
 neighbor_step: 0.1   # Base step size multiplied by Poisson sample
 enable_vision: true
+# Analyze the anchor and its neighbors with concurrent VLM API calls.
+# Disable on low-resource machines or set a conservative worker limit.
+parallel_vlm_calls: true
+vlm_max_workers: 4
 
 # Ablation study: remove one anchor from neighborhood prompt
 # Options: null, current, best, worst

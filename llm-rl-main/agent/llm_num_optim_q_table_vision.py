@@ -56,6 +56,8 @@ class LLMNumOptimQTableVisionAgent:
         poisson_lam=2.0,
         neighbor_step=0.1,
         ablate_anchor=None,
+        parallel_vlm_calls=True,
+        vlm_max_workers=None,
         llm_api_key=None,
         llm_api_base=None,
         vlm_api_key=None,
@@ -84,6 +86,9 @@ class LLMNumOptimQTableVisionAgent:
             n_neighbors: Number of Poisson-perturbed neighbors per anchor
             poisson_lam: Lambda (mean) of Poisson distribution for step sizes
             neighbor_step: Base step size multiplied by Poisson sample
+            parallel_vlm_calls: Analyze anchor and neighbor rollouts concurrently
+            vlm_max_workers: Maximum concurrent VLM requests. ``None`` uses the
+                ThreadPoolExecutor default; ignored when parallel calls are disabled
         """
         self.start_time = time.process_time()
         self.api_call_time = 0
@@ -107,6 +112,10 @@ class LLMNumOptimQTableVisionAgent:
         self.poisson_lam = poisson_lam
         self.neighbor_step = neighbor_step
         self.ablate_anchor = ablate_anchor
+        self.parallel_vlm_calls = bool(parallel_vlm_calls)
+        if vlm_max_workers is not None and vlm_max_workers < 1:
+            raise ValueError("vlm_max_workers must be positive or None")
+        self.vlm_max_workers = vlm_max_workers
         self.visual_analysis_history = []  # Store visual analyses
         
         # Q-table policy
@@ -296,7 +305,7 @@ class LLMNumOptimQTableVisionAgent:
     def _rollout_neighbors(self, world, anchor_params, label, logdir, env_description):
         """
         Roll out the anchor Q-table and n Poisson-perturbed neighbors.
-        Rollouts sequential; VLM calls parallel via ThreadPoolExecutor.
+        Rollouts sequential; VLM calls parallel or sequential by configuration.
         Restores original Q-table after all rollouts.
 
         Returns:
@@ -327,7 +336,7 @@ class LLMNumOptimQTableVisionAgent:
         # Restore original Q-table immediately after rollouts
         self.q_table.mapping = saved_mapping
 
-        # --- Parallel VLM analysis --------------------------------------
+        # --- Optional parallel VLM analysis -----------------------------
         def _analyze(entry, idx):
             frame_indices = self.frame_sampler.sample_frames(
                 entry["trajectory"], entry["terminated_early"], self.max_traj_length
@@ -348,13 +357,21 @@ class LLMNumOptimQTableVisionAgent:
         total_vlm_time = 0.0
         total_vlm_pt = 0
         total_vlm_ct = 0
-        with ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(_analyze, entry, idx): idx
-                for idx, entry in enumerate(rollout_data)
-            }
-            for future in as_completed(futures):
-                idx, analysis, vlm_time, vlm_pt, vlm_ct = future.result()
+        if self.parallel_vlm_calls and len(rollout_data) > 1:
+            with ThreadPoolExecutor(max_workers=self.vlm_max_workers) as executor:
+                futures = [
+                    executor.submit(_analyze, entry, idx)
+                    for idx, entry in enumerate(rollout_data)
+                ]
+                completed = (future.result() for future in as_completed(futures))
+                for idx, analysis, vlm_time, vlm_pt, vlm_ct in completed:
+                    analyses[idx] = analysis
+                    total_vlm_time += vlm_time
+                    total_vlm_pt += vlm_pt
+                    total_vlm_ct += vlm_ct
+        else:
+            for idx, entry in enumerate(rollout_data):
+                idx, analysis, vlm_time, vlm_pt, vlm_ct = _analyze(entry, idx)
                 analyses[idx] = analysis
                 total_vlm_time += vlm_time
                 total_vlm_pt += vlm_pt

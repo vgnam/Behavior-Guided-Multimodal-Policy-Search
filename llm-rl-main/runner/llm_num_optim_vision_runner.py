@@ -46,6 +46,8 @@ def run_training_loop(
     poisson_lam=2.0,
     neighbor_step=0.1,
     ablate_anchor=None,
+    parallel_vlm_calls=True,
+    vlm_max_workers=None,
     llm_api_key=None,
     llm_api_base=None,
     vlm_api_key=None,
@@ -91,6 +93,8 @@ def run_training_loop(
         decay_horizon: T_decay for visual guidance annealing (Eq. 3)
         frame_sample_period: P — capture a frame every P timesteps for VLM
         enable_vision: Whether to enable vision-guided feedback
+        parallel_vlm_calls: Call the VLM for anchor and neighbors concurrently
+        vlm_max_workers: Maximum number of concurrent VLM calls
         optimization_mode: Full-space "direct" search or random-subspace "latent" search
         latent_dim: Number of latent coordinates exposed to the LLM
         projection_seed: Seed for the orthonormal random projection
@@ -161,6 +165,8 @@ def run_training_loop(
                 poisson_lam=poisson_lam,
                 neighbor_step=neighbor_step,
                 ablate_anchor=ablate_anchor,
+                parallel_vlm_calls=parallel_vlm_calls,
+                vlm_max_workers=vlm_max_workers,
                 llm_api_key=llm_api_key,
                 llm_api_base=llm_api_base,
                 vlm_api_key=vlm_api_key,
@@ -199,6 +205,8 @@ def run_training_loop(
                 poisson_lam=poisson_lam,
                 neighbor_step=neighbor_step,
                 ablate_anchor=ablate_anchor,
+                parallel_vlm_calls=parallel_vlm_calls,
+                vlm_max_workers=vlm_max_workers,
                 llm_api_key=llm_api_key,
                 llm_api_base=llm_api_base,
                 vlm_api_key=vlm_api_key,
@@ -234,6 +242,8 @@ def run_training_loop(
             poisson_lam=poisson_lam,
             neighbor_step=neighbor_step,
             ablate_anchor=ablate_anchor,
+            parallel_vlm_calls=parallel_vlm_calls,
+            vlm_max_workers=vlm_max_workers,
             llm_api_key=llm_api_key,
             llm_api_base=llm_api_base,
             vlm_api_key=vlm_api_key,
@@ -256,6 +266,9 @@ def run_training_loop(
     print(f'  Decay Horizon: {decay_horizon}')
     print(f'  Frame Sample Period: {frame_sample_period}')
     print(f'  VLM Frame Mode: {vlm_frame_mode}')
+    print(f'  Parallel VLM Calls: {parallel_vlm_calls}')
+    if parallel_vlm_calls:
+        print(f'  VLM Max Workers: {vlm_max_workers or "executor default"}')
     if task == "cont_state_llm_num_optim_vision" or policy_type == "mlp":
         print(f'  Optimization Mode: {optimization_mode}')
         print(f'  Policy Type: {policy_type}')
