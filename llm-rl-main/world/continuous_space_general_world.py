@@ -15,6 +15,7 @@ class ContinualSpaceGeneralWorld(BaseWorld):
         self.gym_env_name = gym_env_name
         self.render_mode = render_mode
         self.env_kwargs = dict(env_kwargs or {})
+        self._new_reward_enabled = False
         self.env = self._make_env()
         self.steps = 0
         self.accu_reward = 0
@@ -66,11 +67,19 @@ class ContinualSpaceGeneralWorld(BaseWorld):
         return env
 
     def reset(self, new_reward=False):
-        if hasattr(self, "env") and self.env is not None:
+        new_reward = bool(new_reward)
+        should_recreate = (
+            not hasattr(self, "env")
+            or self.env is None
+            or new_reward != self._new_reward_enabled
+        )
+        if should_recreate and hasattr(self, "env") and self.env is not None:
             close = getattr(self.env, "close", None)
             if callable(close):
                 close()
-        self.env = self._make_env(new_reward=new_reward)
+        if should_recreate:
+            self.env = self._make_env(new_reward=new_reward)
+            self._new_reward_enabled = new_reward
 
         state, _ = self.env.reset()
         self.steps = 0

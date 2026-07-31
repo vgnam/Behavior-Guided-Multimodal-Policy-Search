@@ -32,6 +32,11 @@ except ModuleNotFoundError:
     robosuite_env = None
 
 try:
+    from envs import air_hockey_env  # noqa: F401
+except ModuleNotFoundError:
+    air_hockey_env = None
+
+try:
     importlib.import_module("fancy_gym")
 except Exception:
     fancy_gym = None

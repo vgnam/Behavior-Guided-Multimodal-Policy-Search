@@ -1,0 +1,56 @@
+task: cont_state_llm_num_optim_vision
+num_episodes: 100
+gym_env_name: AirHockeyJuggle-v0
+render_mode: rgb_array
+logdir: logs/air_hockey_juggle_bmps
+dim_actions: 2
+dim_states: 30
+max_traj_count: 256
+max_traj_length: 250
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_vision.j2
+llm_output_conversion_template_name: num_optim_vision.j2
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
+num_evaluation_episodes: 3
+warmup_episodes: 10
+warmup_dir: null
+bias: true
+optimum: 250
+search_step_size: 0.1
+env_desc_file: env_descriptions/air_hockey_juggle.j2
+
+# A 30-32-32-2 policy has 2,114 parameters, so expose a compact search
+# subspace to the LLM instead of serializing the complete MLP.
+optimization_mode: latent
+policy_type: mlp
+hidden_sizes: [32, 32]
+hidden_activation: tanh
+output_activation: tanh
+latent_dim: 32
+projection_seed: 42
+projection_scale: 0.25
+projection_refresh_interval: 20
+
+# BMPS visual-neighborhood settings.
+vlm_frame_mode: stacking
+vlm_model_name: nvidia_nim/google/gemma-4-31b-it
+decay_horizon: 50
+frame_sample_period: 20
+n_neighbors: 3
+poisson_lam: 2.0
+neighbor_step: 0.1
+enable_vision: true
+parallel_vlm_calls: true
+vlm_max_workers: 4
+ablate_anchor: null
+
+env_kwargs:
+  config_path: air-hockey-rl/configs/new_juggle/sysid_best_params_hist2.yaml
+  seed: 0
+  renderer_orientation: vertical
+  show_target_position: true
+
+llm_api_key: null
+llm_api_base: null
+vlm_api_key: null
+vlm_api_base: null

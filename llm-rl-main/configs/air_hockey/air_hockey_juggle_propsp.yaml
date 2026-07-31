@@ -1,0 +1,38 @@
+task: cont_state_llm_num_optim_semantics
+num_episodes: 100
+gym_env_name: AirHockeyJuggle-v0
+render_mode: null
+logdir: logs/air_hockey_juggle_propsp
+dim_actions: 2
+dim_states: 30
+max_traj_count: 256
+max_traj_length: 250
+template_dir: agent/policy/templates
+llm_si_template_name: num_optim_semantics.j2
+llm_output_conversion_template_name: num_optim_semantics.j2
+llm_model_name: nvidia_nim/openai/gpt-oss-120b
+num_evaluation_episodes: 3
+warmup_episodes: 10
+warmup_dir: null
+bias: true
+optimum: 250
+search_step_size: 0.1
+env_desc_file: env_descriptions/air_hockey_juggle.j2
+
+# Match the BMPS policy class and search dimension for a fair comparison.
+optimization_mode: latent
+policy_type: mlp
+hidden_sizes: [32, 32]
+hidden_activation: tanh
+output_activation: tanh
+latent_dim: 32
+projection_seed: 42
+projection_scale: 0.25
+projection_refresh_interval: 20
+
+env_kwargs:
+  config_path: air-hockey-rl/configs/new_juggle/sysid_best_params_hist2.yaml
+  seed: 0
+
+llm_api_key: null
+llm_api_base: null

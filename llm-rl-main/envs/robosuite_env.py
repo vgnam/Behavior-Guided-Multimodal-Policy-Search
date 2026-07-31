@@ -82,8 +82,12 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
             ) from exc
 
         try:
-            return load_composite_controller_config(controller="BASIC", robot=self.robot)
+            # With robosuite >= 1.5, omitting ``controller`` selects the
+            # robot-specific default. For Panda this avoids loading unused
+            # left-arm, torso, head, base, and leg controller sections.
+            return load_composite_controller_config(robot=self.robot)
         except TypeError:
+            # Compatibility fallback for older robosuite controller loaders.
             return load_composite_controller_config(controller="BASIC")
 
     def _build_env(self):
@@ -103,6 +107,13 @@ class RoboSuiteLiftDiscreteEnv(gym.Env):
         kwargs.setdefault("controller_configs", controller_config)
         kwargs.setdefault("has_renderer", self.render_mode == "human")
         kwargs.setdefault("has_offscreen_renderer", use_camera_obs)
+        # robosuite's hard-reset path only destroys the previous MjSim
+        # explicitly when using its "mujoco" renderer backend. The default
+        # "mjviewer" value leaves the old offscreen GL context for cyclic GC,
+        # which may run later inside a VLM worker thread and crash macOS in
+        # glDeleteTextures. This keeps hard-reset semantics while ensuring
+        # native renderer cleanup happens synchronously in reset().
+        kwargs.setdefault("renderer", "mujoco")
         kwargs.setdefault("use_camera_obs", use_camera_obs)
         kwargs.setdefault("use_object_obs", True)
         kwargs.setdefault("reward_shaping", self.reward_shaping)

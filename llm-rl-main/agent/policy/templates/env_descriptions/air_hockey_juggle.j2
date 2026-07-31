@@ -1,0 +1,41 @@
+This benchmark is the canonical Box2D task from air-hockey-rl, which models
+an air-hockey robot learning a policy intended for later sim-to-real transfer.
+
+Objective:
+- Keep the green puck in the upper half of the table for as long as possible.
+- The controlled red paddle starts on the lower half of the table.
+- A complete episode lasts at most 250 control steps.
+
+State:
+- The policy receives a 30-dimensional history vector.
+- state[0:15] contains five paddle observations, oldest to newest.
+- state[15:30] contains five puck observations, oldest to newest.
+- Each history observation is [x_position, y_position, valid_flag].
+- A valid flag of 0 means the position was occluded; 1 means it was observed.
+- Current paddle position is state[12:14].
+- Current puck position is state[27:29].
+- Coordinates are in metres. Negative x is the upper/opponent half; positive x
+  is the lower/paddle half.
+
+Action space:
+- action[0] and action[1] are continuous values clipped to [-1, 1].
+- action[0] requests paddle displacement along the table's x direction.
+- action[1] requests paddle displacement across the table's y direction.
+- Magnitude 1 corresponds to approximately 0.26 m in x and 0.12 m in y before
+  workspace clipping and internal PID control.
+
+Reward and termination:
+- Each normal step gives reward 1 while the puck is in the upper half and 0
+  while it is in the lower half.
+- The time-limit truncation reward is 0.
+- An episode can end early when the puck hits the bottom edge or passes behind
+  the paddle.
+- The maximum possible undiscounted return is approximately 250.
+
+Visual guidance:
+- The puck is green and the controlled paddle is red.
+- Good behavior intercepts a returning puck before it passes the paddle and
+  sends it back toward negative x while staying inside the paddle workspace.
+- Failure modes include moving away from the incoming puck, arriving late,
+  trapping the paddle at a side boundary, or hitting the puck toward the
+  bottom edge.
